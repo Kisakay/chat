@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, KeyRound, MessageSquareText, ShieldCheck, User, UserPlus, Zap } from "lucide-react";
 import { api, setToken } from "../lib/api.ts";
+import { useT } from "../lib/i18n.ts";
 import type { User as UserType } from "../lib/types.ts";
 import { Button, FlowerMark, Input, Spinner } from "./ui.tsx";
 import { RecoverDialog, RegisterDialog } from "./dialogs.tsx";
 import { AccessRequestModal } from "./ReviewPage.tsx";
 
-const PERKS = [
-  { icon: ShieldCheck, text: "Private by design — no cookies, no tracking" },
-  { icon: Zap, text: "Your own models, streamed in real time" },
-];
-
 export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
+  const { t } = useT();
   const [username, setUsername] = useState("admin");
   const [key, setKey] = useState("");
   const [error, setError] = useState("");
@@ -23,6 +20,11 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [registrationOn, setRegistrationOn] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestOn, setRequestOn] = useState(false);
+
+  const PERKS = [
+    { icon: ShieldCheck, text: t("login.perk1") },
+    { icon: Zap, text: t("login.perk2") },
+  ];
   // TOTP second step (set when the server answers totpRequired).
   const [totpToken, setTotpToken] = useState<string | null>(null);
   const [totpUsername, setTotpUsername] = useState("");
@@ -52,7 +54,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
       setToken(res.token);
       onLogin(res.user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("login.failed"));
     } finally {
       setBusy(false);
     }
@@ -80,8 +82,8 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
         <div className="rounded-[2rem] border border-white/60 bg-white/80 p-8 shadow-2xl shadow-accent-900/5 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
           <div className="mb-2 flex flex-col items-center text-center">
             <FlowerMark size={68} dynamic={false} className="mb-4 drop-shadow-lg" />
-            <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-            <p className="mt-1 text-sm opacity-60">Sign in to KisAssistant to continue</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t("login.welcome")}</h1>
+            <p className="mt-1 text-sm opacity-60">{t("login.subtitle")}</p>
           </div>
 
           {totpToken ? (
@@ -129,8 +131,8 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
-                placeholder="Username"
-                aria-label="Username"
+                placeholder={t("login.usernamePh")}
+                aria-label={t("login.usernamePh")}
                 required
               />
             </div>
@@ -143,8 +145,8 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
                 autoComplete="current-password"
-                placeholder="Access key"
-                aria-label="Access key"
+                placeholder={t("login.keyPh")}
+                aria-label={t("login.keyPh")}
                 required
               />
             </div>
@@ -189,13 +191,13 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
               onClick={() => setRequestOpen(true)}
             >
               <MessageSquareText size={16} />
-              Request access
+              {t("login.requestAccess")}
             </Button>
           )}
           <AccessRequestModal open={requestOpen} onClose={() => setRequestOpen(false)} />
           {recoveryOn && (
             <button onClick={() => setRecoverOpen(true)} className="mt-3 w-full text-center text-sm opacity-60 transition hover:opacity-100 hover:underline">
-              Forgot your access key?
+              {t("login.forgot")}
             </button>
           )}
           <RecoverDialog open={recoverOpen} onClose={() => setRecoverOpen(false)} from={recoveryFrom} />

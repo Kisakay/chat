@@ -1,7 +1,5 @@
 import { useSyncExternalStore } from "react";
 
-import { useSyncExternalStore } from "react";
-
 /**
  * Platform i18n — TypeScript dictionaries (NOT JSON).
  * English is the source of truth: `StringKey = keyof typeof en`, and every
@@ -58,7 +56,8 @@ const en = {
   "login.forgot": "Forgot your access key?",
   "login.perk1": "Private by design — no cookies, no tracking",
   "login.perk2": "Your own models, streamed in real time",
-  "login.adminNote": "Admin key lives in the server .env; user keys are issued by the admin.",
+  "login.adminNote":
+    "Admin key lives in the server .env; user keys are issued by the admin.",
 
   "sidebar.newChat": "New chat",
   "sidebar.collapse": "Collapse sidebar",
@@ -97,10 +96,12 @@ const en = {
   "chat.removeAttach": "Remove {name}",
   "chat.ocrOpt": "Transcribe image",
   "chat.unavailable": "(unavailable)",
-  "chat.ocrHint": "JPG, PNG, WEBP — OCR on the server, you review the text first",
+  "chat.ocrHint":
+    "JPG, PNG, WEBP — OCR on the server, you review the text first",
   "chat.textOpt": "Attach text file",
   "chat.textHint": "TXT or Markdown, max 500KB",
-  "chat.attachNote": "Uploads go through platform tools only. Images are sent to the model as reviewed text — never as raw images.",
+  "chat.attachNote":
+    "Uploads go through platform tools only. Images are sent to the model as reviewed text — never as raw images.",
   "chat.wiki": "Wiki & docs",
 
   "attach.tooBigImg": "Image too large (max 5MB).",
@@ -117,29 +118,38 @@ const en = {
   "dlg.topicHint": "A short theme tag, e.g. cooking, rust, travel.",
   "dlg.noTopic": "No topic",
   "dlg.recoverTitle": "Recover access key",
-  "dlg.recoverIntro": "Enter your username. You'll receive a link that issues a fresh key (the old one stops working).",
+  "dlg.recoverIntro":
+    "Enter your username. You'll receive a link that issues a fresh key (the old one stops working).",
   "dlg.sendLink": "Send reset link",
   "dlg.reqFailed": "Request failed",
-  "dlg.recoverSent": "If @{user} exists and has a recovery email, a reset link is on its way{fromPart} (valid 60 minutes, single use).",
+  "dlg.recoverSent":
+    "If @{user} exists and has a recovery email, a reset link is on its way{fromPart} (valid 60 minutes, single use).",
   "dlg.recoverSentFrom": " from {from}",
-  "dlg.spamNote": "Check your inbox — and your spam folder, the message may have landed there.",
-  "dlg.noMailNote": "Nothing arrives? Then no recovery email is set on your account and the reset is not possible — please contact the site administrator.",
+  "dlg.spamNote":
+    "Check your inbox — and your spam folder, the message may have landed there.",
+  "dlg.noMailNote":
+    "Nothing arrives? Then no recovery email is set on your account and the reset is not possible — please contact the site administrator.",
   "dlg.registerTitle": "Create an account",
-  "dlg.regWelcome": "Welcome, @{user}! Your access key — copy it now, it won't be shown again.",
+  "dlg.regWelcome":
+    "Welcome, @{user}! Your access key — copy it now, it won't be shown again.",
   "dlg.regContinue": "Copy & continue to login",
   "dlg.regFailed": "Registration failed",
   "dlg.emailOpt": "Email (optional, for key recovery)",
   "dlg.shareTitle": "Share publicly",
   "dlg.shareCreating": "Creating public link…",
-  "dlg.shareIntro": "Anyone with this link can read {title}. No login required.",
+  "dlg.shareIntro":
+    "Anyone with this link can read {title}. No login required.",
   "dlg.unshare": "Unshare",
   "dlg.reviewOcr": "Review transcription",
   "dlg.reviewText": "Review text attachment",
   "dlg.transcribing": "Transcribing the image on the server (OCR)…",
   "dlg.uploadingTools": "Uploading through platform tools…",
-  "dlg.ocrExpl": "The image was transcribed to text on the server — the model receives this text, never the image. Fix any reading mistakes below, then attach.",
-  "dlg.textExpl": "The file was uploaded through platform tools. Its text content is attached to your message. Edit below if needed, then attach.",
-  "dlg.truncWarn": "Transcription truncated to the server limit — the end is missing.",
+  "dlg.ocrExpl":
+    "The image was transcribed to text on the server — the model receives this text, never the image. Fix any reading mistakes below, then attach.",
+  "dlg.textExpl":
+    "The file was uploaded through platform tools. Its text content is attached to your message. Edit below if needed, then attach.",
+  "dlg.truncWarn":
+    "Transcription truncated to the server limit — the end is missing.",
   "dlg.attachBtn": "Attach to message",
   "dlg.chars": "{n} chars",
 
@@ -157,13 +167,15 @@ const en = {
   "settings.uploading": "Uploading…",
   "settings.avatarHint": "jpg · png · webp — max 5MB — 5 changes per 2h",
   "settings.email": "Recovery email",
-  "settings.emailHint": "Optional. Used only to send you a fresh access key if you lose it.",
+  "settings.emailHint":
+    "Optional. Used only to send you a fresh access key if you lose it.",
   "settings.accent": "Accent color",
   "settings.accentHint": "Applied instantly, saved on this device.",
   "settings.customColor": "Custom color",
   "settings.customAria": "Custom accent color",
   "settings.accentAria": "Accent: {label}",
-  "settings.featHint": "Turn composer capabilities on or off. Applied instantly, saved on this device.",
+  "settings.featHint":
+    "Turn composer capabilities on or off. Applied instantly, saved on this device.",
 
   "accent.preset.emerald": "Emerald",
   "accent.preset.rose": "Rose",
@@ -175,15 +187,19 @@ const en = {
   "accent.preset.pink": "Pink",
 
   "feat.thinking.label": "Thinking",
-  "feat.thinking.hint": "Ask the model to reason step-by-step before answering.",
+  "feat.thinking.hint":
+    "Ask the model to reason step-by-step before answering.",
   "feat.attachments.label": "Attachments",
-  "feat.attachments.hint": "Attach images (OCR transcription) and text files to messages.",
+  "feat.attachments.hint":
+    "Attach images (OCR transcription) and text files to messages.",
   "feat.deepSearch.label": "Deep search",
-  "feat.deepSearch.hint": "Let the assistant search the web for fresh sources. Coming soon.",
+  "feat.deepSearch.hint":
+    "Let the assistant search the web for fresh sources. Coming soon.",
   "feat.soon": "(soon)",
 
   "admin.title": "Accounts",
-  "admin.intro": "No-KYC accounts: you create a username, hand the access key to its owner once. Keys are stored hashed — regenerate to rotate.",
+  "admin.intro":
+    "No-KYC accounts: you create a username, hand the access key to its owner once. Keys are stored hashed — regenerate to rotate.",
   "admin.keyOnce": "Key for @{user} — shown once, copy it now:",
   "admin.newAccount": "New account",
   "admin.email": "Email (recovery)",
@@ -209,12 +225,14 @@ const en = {
   "admin.regenKey": "Regenerate key (revokes old sessions)",
   "admin.deleteAccount": "Delete account",
   "admin.deleteTitle": "Delete @{user}?",
-  "admin.deleteMsg": "This permanently removes the account, all its conversations and its shares.",
+  "admin.deleteMsg":
+    "This permanently removes the account, all its conversations and its shares.",
   "admin.prevPage": "Previous page",
   "admin.nextPage": "Next page",
 
   "ollama.models": "Ollama models",
-  "ollama.desc": "Download models from the Ollama library to your Ollama host, or remove local ones. Admin only.",
+  "ollama.desc":
+    "Download models from the Ollama library to your Ollama host, or remove local ones. Admin only.",
   "ollama.pulling": "Pulling {name}",
   "ollama.customTag": "Custom model tag",
   "ollama.customHint": "e.g. llama3.2:3b, or a full library name",
@@ -223,7 +241,8 @@ const en = {
   "ollama.noneYet": "No local Ollama models yet.",
   "ollama.catalog": "Catalog",
   "ollama.delTitle": "Delete {name}?",
-  "ollama.delMsg": "The model is removed from the Ollama host. Pull it again anytime.",
+  "ollama.delMsg":
+    "The model is removed from the Ollama host. Pull it again anytime.",
   "ollama.contacting": "Contacting Ollama…",
   "ollama.pullingSt": "Pulling…",
   "ollama.doneSt": "Done",
@@ -249,18 +268,23 @@ const en = {
   "center.locked": "Admins only",
   "center.lockedSub": "Log in with the admin account to open the Admin Center.",
   "center.regTitle": "Public registration",
-  "center.regDesc": "Show the Register button on the login page. Off = admin-created accounts only.",
+  "center.regDesc":
+    "Show the Register button on the login page. Off = admin-created accounts only.",
   "center.accTitle": "Access requests (wishlist)",
-  "center.accDescOn": "Unavailable while public registration is on — it replaces the wishlist.",
-  "center.accDescOff": "Show Request access on the login page. Visitors reserve a username and plead their case; you triage them in the Access tab.",
+  "center.accDescOn":
+    "Unavailable while public registration is on — it replaces the wishlist.",
+  "center.accDescOff":
+    "Show Request access on the login page. Visitors reserve a username and plead their case; you triage them in the Access tab.",
   "center.ocrTitle": "OCR tool",
-  "center.ocrDesc": "Server-side image transcription for attachments. Requires the tesseract binary.",
+  "center.ocrDesc":
+    "Server-side image transcription for attachments. Requires the tesseract binary.",
   "center.mailTitle": "Key recovery emails",
   "center.mailChecking": "Checking…",
   "center.mailFrom": "Enabled — sent from {from}",
   "center.mailDefault": "Enabled — sent from the configured sender",
   "center.mailOff": "Disabled — set SMTP_HOST on the server to enable",
-  "center.mailNote": "SMTP credentials live in the server environment (see docs/OPERATIONS.md), never in this UI. Users set their recovery address in profile settings or at account creation.",
+  "center.mailNote":
+    "SMTP credentials live in the server environment (see docs/OPERATIONS.md), never in this UI. Users set their recovery address in profile settings or at account creation.",
   "center.on": "On",
   "center.off": "Off",
 
@@ -274,18 +298,22 @@ const en = {
 
   "reset.checking": "Checking link…",
   "reset.invalid": "Link invalid",
-  "reset.invalidSub": "This reset link is unknown, already used, or expired. Request a new one from the login page.",
+  "reset.invalidSub":
+    "This reset link is unknown, already used, or expired. Request a new one from the login page.",
   "reset.readyTitle": "Reset key for @{user}?",
-  "reset.readySub": "This issues a fresh access key immediately. Your old key stops working.",
+  "reset.readySub":
+    "This issues a fresh access key immediately. Your old key stops working.",
   "reset.issue": "Issue new key",
   "reset.issuing": "Issuing…",
   "reset.doneTitle": "New key ready",
-  "reset.doneSub": "Copy it now — it won't be shown again. Then log in with it.",
+  "reset.doneSub":
+    "Copy it now — it won't be shown again. Then log in with it.",
   "reset.goLogin": "Go to login",
   "reset.failed": "Reset failed",
 
   "app.deleteConvTitle": "Delete conversation?",
-  "app.deleteConvMsg": "“{title}” and all its messages will be permanently removed.",
+  "app.deleteConvMsg":
+    "“{title}” and all its messages will be permanently removed.",
 } as const;
 
 export type StringKey = keyof typeof en;
@@ -329,7 +357,8 @@ const es: Dict = {
   "login.forgot": "¿Olvidaste tu clave de acceso?",
   "login.perk1": "Privado por diseño — sin cookies ni rastreo",
   "login.perk2": "Tus propios modelos, en tiempo real",
-  "login.adminNote": "La clave de admin vive en el .env del servidor; las claves de usuario las emite el admin.",
+  "login.adminNote":
+    "La clave de admin vive en el .env del servidor; las claves de usuario las emite el admin.",
 
   "sidebar.newChat": "Nuevo chat",
   "sidebar.collapse": "Ocultar barra lateral",
@@ -371,7 +400,8 @@ const es: Dict = {
   "chat.ocrHint": "JPG, PNG, WEBP — OCR en el servidor, revisas el texto antes",
   "chat.textOpt": "Adjuntar archivo de texto",
   "chat.textHint": "TXT o Markdown, máx. 500KB",
-  "chat.attachNote": "Las subidas usan solo herramientas de la plataforma. Las imágenes llegan al modelo como texto revisado — nunca como imágenes.",
+  "chat.attachNote":
+    "Las subidas usan solo herramientas de la plataforma. Las imágenes llegan al modelo como texto revisado — nunca como imágenes.",
   "chat.wiki": "Wiki y docs",
 
   "attach.tooBigImg": "Imagen muy grande (máx. 5MB).",
@@ -388,15 +418,19 @@ const es: Dict = {
   "dlg.topicHint": "Etiqueta corta, p. ej. cocina, rust, viajes.",
   "dlg.noTopic": "Sin tema",
   "dlg.recoverTitle": "Recuperar clave de acceso",
-  "dlg.recoverIntro": "Escribe tu usuario. Recibirás un enlace que emite una clave nueva (la anterior deja de funcionar).",
+  "dlg.recoverIntro":
+    "Escribe tu usuario. Recibirás un enlace que emite una clave nueva (la anterior deja de funcionar).",
   "dlg.sendLink": "Enviar enlace",
   "dlg.reqFailed": "Solicitud fallida",
-  "dlg.recoverSent": "Si @{user} existe y tiene email de recuperación, un enlace va en camino{fromPart} (válido 60 minutos, un solo uso).",
+  "dlg.recoverSent":
+    "Si @{user} existe y tiene email de recuperación, un enlace va en camino{fromPart} (válido 60 minutos, un solo uso).",
   "dlg.recoverSentFrom": " desde {from}",
   "dlg.spamNote": "Revisa tu bandeja — y el spam, puede haber caído allí.",
-  "dlg.noMailNote": "¿No llega nada? Entonces no hay email de recuperación en tu cuenta y no es posible — contacta al administrador del sitio.",
+  "dlg.noMailNote":
+    "¿No llega nada? Entonces no hay email de recuperación en tu cuenta y no es posible — contacta al administrador del sitio.",
   "dlg.registerTitle": "Crear una cuenta",
-  "dlg.regWelcome": "¡Bienvenido, @{user}! Tu clave de acceso — cópiala ahora, no se mostrará de nuevo.",
+  "dlg.regWelcome":
+    "¡Bienvenido, @{user}! Tu clave de acceso — cópiala ahora, no se mostrará de nuevo.",
   "dlg.regContinue": "Copiar e ir al login",
   "dlg.regFailed": "Registro fallido",
   "dlg.emailOpt": "Email (opcional, para recuperar la clave)",
@@ -408,9 +442,12 @@ const es: Dict = {
   "dlg.reviewText": "Revisar adjunto de texto",
   "dlg.transcribing": "Transcribiendo la imagen en el servidor (OCR)…",
   "dlg.uploadingTools": "Subiendo con herramientas de la plataforma…",
-  "dlg.ocrExpl": "La imagen se transcribió a texto en el servidor — el modelo recibe este texto, nunca la imagen. Corrige errores abajo y adjunta.",
-  "dlg.textExpl": "El archivo se subió con herramientas de la plataforma. Su texto se adjunta a tu mensaje. Edita si quieres y adjunta.",
-  "dlg.truncWarn": "Transcripción recortada al límite del servidor — falta el final.",
+  "dlg.ocrExpl":
+    "La imagen se transcribió a texto en el servidor — el modelo recibe este texto, nunca la imagen. Corrige errores abajo y adjunta.",
+  "dlg.textExpl":
+    "El archivo se subió con herramientas de la plataforma. Su texto se adjunta a tu mensaje. Edita si quieres y adjunta.",
+  "dlg.truncWarn":
+    "Transcripción recortada al límite del servidor — falta el final.",
   "dlg.attachBtn": "Adjuntar al mensaje",
   "dlg.chars": "{n} caracteres",
 
@@ -428,13 +465,16 @@ const es: Dict = {
   "settings.uploading": "Subiendo…",
   "settings.avatarHint": "jpg · png · webp — máx. 5MB — 5 cambios por 2h",
   "settings.email": "Email de recuperación",
-  "settings.emailHint": "Opcional. Solo para enviarte una clave nueva si la pierdes.",
+  "settings.emailHint":
+    "Opcional. Solo para enviarte una clave nueva si la pierdes.",
   "settings.accent": "Color de acento",
-  "settings.accentHint": "Se aplica al instante, se guarda en este dispositivo.",
+  "settings.accentHint":
+    "Se aplica al instante, se guarda en este dispositivo.",
   "settings.customColor": "Color personalizado",
   "settings.customAria": "Color de acento personalizado",
   "settings.accentAria": "Acento: {label}",
-  "settings.featHint": "Activa funciones del editor. Al instante, en este dispositivo.",
+  "settings.featHint":
+    "Activa funciones del editor. Al instante, en este dispositivo.",
 
   "accent.preset.emerald": "Esmeralda",
   "accent.preset.rose": "Rosa",
@@ -446,15 +486,19 @@ const es: Dict = {
   "accent.preset.pink": "Rosa fuerte",
 
   "feat.thinking.label": "Razonamiento",
-  "feat.thinking.hint": "Pide al modelo razonar paso a paso antes de responder.",
+  "feat.thinking.hint":
+    "Pide al modelo razonar paso a paso antes de responder.",
   "feat.attachments.label": "Adjuntos",
-  "feat.attachments.hint": "Adjunta imágenes (transcripción OCR) y archivos de texto.",
+  "feat.attachments.hint":
+    "Adjunta imágenes (transcripción OCR) y archivos de texto.",
   "feat.deepSearch.label": "Búsqueda profunda",
-  "feat.deepSearch.hint": "Deja al asistente buscar fuentes frescas. Próximamente.",
+  "feat.deepSearch.hint":
+    "Deja al asistente buscar fuentes frescas. Próximamente.",
   "feat.soon": "(pronto)",
 
   "admin.title": "Cuentas",
-  "admin.intro": "Cuentas sin KYC: creas un usuario, entregas la clave una vez. Se guardan con hash — regenera para rotar.",
+  "admin.intro":
+    "Cuentas sin KYC: creas un usuario, entregas la clave una vez. Se guardan con hash — regenera para rotar.",
   "admin.keyOnce": "Clave para @{user} — se muestra una vez, cópiala ahora:",
   "admin.newAccount": "Nueva cuenta",
   "admin.email": "Email (recuperación)",
@@ -485,7 +529,8 @@ const es: Dict = {
   "admin.nextPage": "Página siguiente",
 
   "ollama.models": "Modelos Ollama",
-  "ollama.desc": "Descarga modelos de la librería Ollama a tu host, o elimina los locales. Solo admin.",
+  "ollama.desc":
+    "Descarga modelos de la librería Ollama a tu host, o elimina los locales. Solo admin.",
   "ollama.pulling": "Descargando {name}",
   "ollama.customTag": "Etiqueta personalizada",
   "ollama.customHint": "p. ej. llama3.2:3b, o un nombre de librería",
@@ -494,7 +539,8 @@ const es: Dict = {
   "ollama.noneYet": "Aún no hay modelos Ollama locales.",
   "ollama.catalog": "Catálogo",
   "ollama.delTitle": "¿Eliminar {name}?",
-  "ollama.delMsg": "El modelo se elimina del host Ollama. Descárgalo de nuevo cuando quieras.",
+  "ollama.delMsg":
+    "El modelo se elimina del host Ollama. Descárgalo de nuevo cuando quieras.",
   "ollama.contacting": "Contactando Ollama…",
   "ollama.pullingSt": "Descargando…",
   "ollama.doneSt": "Listo",
@@ -520,18 +566,22 @@ const es: Dict = {
   "center.locked": "Solo admins",
   "center.lockedSub": "Inicia sesión como admin para abrir el Centro de admin.",
   "center.regTitle": "Registro público",
-  "center.regDesc": "Muestra el botón Registrarse en el login. Off = solo cuentas del admin.",
+  "center.regDesc":
+    "Muestra el botón Registrarse en el login. Off = solo cuentas del admin.",
   "center.accTitle": "Solicitudes de acceso (lista)",
   "center.accDescOn": "No disponible con registro público — lo reemplaza.",
-  "center.accDescOff": "Muestra Solicitar acceso en el login. Triaje en la pestaña Acceso.",
+  "center.accDescOff":
+    "Muestra Solicitar acceso en el login. Triaje en la pestaña Acceso.",
   "center.ocrTitle": "Herramienta OCR",
-  "center.ocrDesc": "Transcripción de imágenes en el servidor. Requiere tesseract.",
+  "center.ocrDesc":
+    "Transcripción de imágenes en el servidor. Requiere tesseract.",
   "center.mailTitle": "Emails de recuperación",
   "center.mailChecking": "Verificando…",
   "center.mailFrom": "Activado — enviados desde {from}",
   "center.mailDefault": "Activado — enviados desde el remitente configurado",
   "center.mailOff": "Desactivado — configura SMTP_HOST en el servidor",
-  "center.mailNote": "Las credenciales SMTP viven en el servidor (ver docs/OPERATIONS.md), nunca aquí. El email se define en el perfil o al crear la cuenta.",
+  "center.mailNote":
+    "Las credenciales SMTP viven en el servidor (ver docs/OPERATIONS.md), nunca aquí. El email se define en el perfil o al crear la cuenta.",
   "center.on": "Sí",
   "center.off": "No",
 
@@ -545,13 +595,16 @@ const es: Dict = {
 
   "reset.checking": "Verificando enlace…",
   "reset.invalid": "Enlace inválido",
-  "reset.invalidSub": "Este enlace no existe, ya se usó o expiró. Pide uno nuevo en el login.",
+  "reset.invalidSub":
+    "Este enlace no existe, ya se usó o expiró. Pide uno nuevo en el login.",
   "reset.readyTitle": "¿Nueva clave para @{user}?",
-  "reset.readySub": "Emite una clave nueva al instante. La anterior deja de funcionar.",
+  "reset.readySub":
+    "Emite una clave nueva al instante. La anterior deja de funcionar.",
   "reset.issue": "Emitir nueva clave",
   "reset.issuing": "Emitiendo…",
   "reset.doneTitle": "Nueva clave lista",
-  "reset.doneSub": "Cópiala ahora — no se mostrará de nuevo. Inicia sesión con ella.",
+  "reset.doneSub":
+    "Cópiala ahora — no se mostrará de nuevo. Inicia sesión con ella.",
   "reset.goLogin": "Ir al login",
   "reset.failed": "Recuperación fallida",
 
@@ -597,7 +650,8 @@ const fr: Dict = {
   "login.forgot": "Clé d'accès oubliée ?",
   "login.perk1": "Privé par conception — sans cookies ni suivi",
   "login.perk2": "Vos propres modèles, en temps réel",
-  "login.adminNote": "La clé admin vit dans le .env du serveur ; les clés utilisateur sont émises par l'admin.",
+  "login.adminNote":
+    "La clé admin vit dans le .env du serveur ; les clés utilisateur sont émises par l'admin.",
 
   "sidebar.newChat": "Nouveau chat",
   "sidebar.collapse": "Masquer la barre latérale",
@@ -628,7 +682,8 @@ const fr: Dict = {
   "chat.selectModel": "Choisir un modèle…",
   "chat.you": "Vous",
   "chat.greet": "Comment puis-je aider, {name} ?",
-  "chat.greetSub": "Choisissez un modèle, puis écrivez ci-dessous. Markdown pris en charge.",
+  "chat.greetSub":
+    "Choisissez un modèle, puis écrivez ci-dessous. Markdown pris en charge.",
   "chat.thinking": "Réflexion…",
   "chat.placeholder": "Écrivez à KisAssistant…",
   "chat.send": "Envoyer",
@@ -636,10 +691,12 @@ const fr: Dict = {
   "chat.removeAttach": "Retirer {name}",
   "chat.ocrOpt": "Transcrire une image",
   "chat.unavailable": "(indisponible)",
-  "chat.ocrHint": "JPG, PNG, WEBP — OCR sur le serveur, vous relisez le texte avant",
+  "chat.ocrHint":
+    "JPG, PNG, WEBP — OCR sur le serveur, vous relisez le texte avant",
   "chat.textOpt": "Joindre un fichier texte",
   "chat.textHint": "TXT ou Markdown, 500 Ko max",
-  "chat.attachNote": "Les envois passent uniquement par les outils de la plateforme. Les images arrivent au modèle comme texte relu — jamais brutes.",
+  "chat.attachNote":
+    "Les envois passent uniquement par les outils de la plateforme. Les images arrivent au modèle comme texte relu — jamais brutes.",
   "chat.wiki": "Wiki et docs",
 
   "attach.tooBigImg": "Image trop lourde (5 Mo max).",
@@ -656,15 +713,20 @@ const fr: Dict = {
   "dlg.topicHint": "Courte étiquette, p. ex. cuisine, rust, voyages.",
   "dlg.noTopic": "Sans sujet",
   "dlg.recoverTitle": "Récupérer la clé d'accès",
-  "dlg.recoverIntro": "Entrez votre nom d'utilisateur. Vous recevrez un lien qui émet une clé neuve (l'ancienne cesse de fonctionner).",
+  "dlg.recoverIntro":
+    "Entrez votre nom d'utilisateur. Vous recevrez un lien qui émet une clé neuve (l'ancienne cesse de fonctionner).",
   "dlg.sendLink": "Envoyer le lien",
   "dlg.reqFailed": "Requête échouée",
-  "dlg.recoverSent": "Si @{user} existe avec un email de récupération, un lien est en route{fromPart} (valide 60 minutes, usage unique).",
+  "dlg.recoverSent":
+    "Si @{user} existe avec un email de récupération, un lien est en route{fromPart} (valide 60 minutes, usage unique).",
   "dlg.recoverSentFrom": " depuis {from}",
-  "dlg.spamNote": "Vérifiez votre boîte — et les spams, le message a pu y atterrir.",
-  "dlg.noMailNote": "Rien ne vient ? Alors aucun email de récupération n'est défini et c'est impossible — contactez l'administrateur du site.",
+  "dlg.spamNote":
+    "Vérifiez votre boîte — et les spams, le message a pu y atterrir.",
+  "dlg.noMailNote":
+    "Rien ne vient ? Alors aucun email de récupération n'est défini et c'est impossible — contactez l'administrateur du site.",
   "dlg.registerTitle": "Créer un compte",
-  "dlg.regWelcome": "Bienvenue, @{user} ! Votre clé d'accès — copiez-la vite, elle ne sera plus affichée.",
+  "dlg.regWelcome":
+    "Bienvenue, @{user} ! Votre clé d'accès — copiez-la vite, elle ne sera plus affichée.",
   "dlg.regContinue": "Copier et aller au login",
   "dlg.regFailed": "Inscription échouée",
   "dlg.emailOpt": "Email (optionnel, pour récupérer la clé)",
@@ -676,9 +738,12 @@ const fr: Dict = {
   "dlg.reviewText": "Relire la pièce jointe",
   "dlg.transcribing": "Transcription de l'image sur le serveur (OCR)…",
   "dlg.uploadingTools": "Envoi via les outils de la plateforme…",
-  "dlg.ocrExpl": "L'image a été transcrite en texte sur le serveur — le modèle reçoit ce texte, jamais l'image. Corrigez ci-dessous puis joignez.",
-  "dlg.textExpl": "Le fichier a été envoyé via les outils de la plateforme. Son texte est joint à votre message. Modifiez si besoin puis joignez.",
-  "dlg.truncWarn": "Transcription tronquée à la limite serveur — la fin manque.",
+  "dlg.ocrExpl":
+    "L'image a été transcrite en texte sur le serveur — le modèle reçoit ce texte, jamais l'image. Corrigez ci-dessous puis joignez.",
+  "dlg.textExpl":
+    "Le fichier a été envoyé via les outils de la plateforme. Son texte est joint à votre message. Modifiez si besoin puis joignez.",
+  "dlg.truncWarn":
+    "Transcription tronquée à la limite serveur — la fin manque.",
   "dlg.attachBtn": "Joindre au message",
   "dlg.chars": "{n} caractères",
 
@@ -702,7 +767,8 @@ const fr: Dict = {
   "settings.customColor": "Couleur perso",
   "settings.customAria": "Couleur d'accent personnalisée",
   "settings.accentAria": "Accent : {label}",
-  "settings.featHint": "Activez les fonctions du composer. Aussitôt, sur cet appareil.",
+  "settings.featHint":
+    "Activez les fonctions du composer. Aussitôt, sur cet appareil.",
 
   "accent.preset.emerald": "Émeraude",
   "accent.preset.rose": "Rose",
@@ -716,13 +782,16 @@ const fr: Dict = {
   "feat.thinking.label": "Réflexion",
   "feat.thinking.hint": "Demande au modèle de raisonner étape par étape.",
   "feat.attachments.label": "Pièces jointes",
-  "feat.attachments.hint": "Joindre images (transcription OCR) et fichiers texte.",
+  "feat.attachments.hint":
+    "Joindre images (transcription OCR) et fichiers texte.",
   "feat.deepSearch.label": "Recherche profonde",
-  "feat.deepSearch.hint": "Laisse l'assistant chercher des sources fraîches. Bientôt.",
+  "feat.deepSearch.hint":
+    "Laisse l'assistant chercher des sources fraîches. Bientôt.",
   "feat.soon": "(bientôt)",
 
   "admin.title": "Comptes",
-  "admin.intro": "Comptes sans KYC : vous créez un pseudo, remettez la clé une fois. Stockées hachées — régénérez pour tourner.",
+  "admin.intro":
+    "Comptes sans KYC : vous créez un pseudo, remettez la clé une fois. Stockées hachées — régénérez pour tourner.",
   "admin.keyOnce": "Clé pour @{user} — affichée une fois, copiez-la :",
   "admin.newAccount": "Nouveau compte",
   "admin.email": "Email (récupération)",
@@ -748,12 +817,14 @@ const fr: Dict = {
   "admin.regenKey": "Régénérer la clé (révoque les sessions)",
   "admin.deleteAccount": "Supprimer le compte",
   "admin.deleteTitle": "Supprimer @{user} ?",
-  "admin.deleteMsg": "Supprime définitivement le compte, ses conversations et ses partages.",
+  "admin.deleteMsg":
+    "Supprime définitivement le compte, ses conversations et ses partages.",
   "admin.prevPage": "Page précédente",
   "admin.nextPage": "Page suivante",
 
   "ollama.models": "Modèles Ollama",
-  "ollama.desc": "Téléchargez des modèles Ollama sur votre hôte, ou retirez les locaux. Admin uniquement.",
+  "ollama.desc":
+    "Téléchargez des modèles Ollama sur votre hôte, ou retirez les locaux. Admin uniquement.",
   "ollama.pulling": "Téléchargement de {name}",
   "ollama.customTag": "Tag personnalisé",
   "ollama.customHint": "p. ex. llama3.2:3b, ou un nom de bibliothèque",
@@ -762,7 +833,8 @@ const fr: Dict = {
   "ollama.noneYet": "Aucun modèle Ollama local.",
   "ollama.catalog": "Catalogue",
   "ollama.delTitle": "Supprimer {name} ?",
-  "ollama.delMsg": "Le modèle est retiré de l'hôte Ollama. Retéléchargez-le à tout moment.",
+  "ollama.delMsg":
+    "Le modèle est retiré de l'hôte Ollama. Retéléchargez-le à tout moment.",
   "ollama.contacting": "Contact d'Ollama…",
   "ollama.pullingSt": "Téléchargement…",
   "ollama.doneSt": "Terminé",
@@ -788,10 +860,12 @@ const fr: Dict = {
   "center.locked": "Admins uniquement",
   "center.lockedSub": "Connectez-vous en admin pour ouvrir le Centre admin.",
   "center.regTitle": "Inscription publique",
-  "center.regDesc": "Affiche le bouton S'inscrire au login. Off = comptes admin uniquement.",
+  "center.regDesc":
+    "Affiche le bouton S'inscrire au login. Off = comptes admin uniquement.",
   "center.accTitle": "Demandes d'accès (liste)",
   "center.accDescOn": "Indispo avec l'inscription publique — elle la remplace.",
-  "center.accDescOff": "Affiche Demander l'accès au login. Réservez un pseudo, plaidez votre cas ; tri dans l'onglet Accès.",
+  "center.accDescOff":
+    "Affiche Demander l'accès au login. Réservez un pseudo, plaidez votre cas ; tri dans l'onglet Accès.",
   "center.ocrTitle": "Outil OCR",
   "center.ocrDesc": "Transcription d'images côté serveur. Requiert tesseract.",
   "center.mailTitle": "Emails de récupération",
@@ -799,7 +873,8 @@ const fr: Dict = {
   "center.mailFrom": "Activé — envoyés depuis {from}",
   "center.mailDefault": "Activé — envoyés depuis l'expéditeur configuré",
   "center.mailOff": "Désactivé — définissez SMTP_HOST sur le serveur",
-  "center.mailNote": "Les identifiants SMTP vivent sur le serveur (voir docs/OPERATIONS.md), jamais ici. L'email se règle dans le profil ou à la création.",
+  "center.mailNote":
+    "Les identifiants SMTP vivent sur le serveur (voir docs/OPERATIONS.md), jamais ici. L'email se règle dans le profil ou à la création.",
   "center.on": "Oui",
   "center.off": "Non",
 
@@ -813,13 +888,16 @@ const fr: Dict = {
 
   "reset.checking": "Vérification du lien…",
   "reset.invalid": "Lien invalide",
-  "reset.invalidSub": "Ce lien est inconnu, déjà utilisé ou expiré. Redemandez-en un au login.",
+  "reset.invalidSub":
+    "Ce lien est inconnu, déjà utilisé ou expiré. Redemandez-en un au login.",
   "reset.readyTitle": "Nouvelle clé pour @{user} ?",
-  "reset.readySub": "Émet aussitôt une clé neuve. L'ancienne cesse de fonctionner.",
+  "reset.readySub":
+    "Émet aussitôt une clé neuve. L'ancienne cesse de fonctionner.",
   "reset.issue": "Émettre une clé",
   "reset.issuing": "Émission…",
   "reset.doneTitle": "Nouvelle clé prête",
-  "reset.doneSub": "Copiez-la vite — plus affichée ensuite. Connectez-vous avec.",
+  "reset.doneSub":
+    "Copiez-la vite — plus affichée ensuite. Connectez-vous avec.",
   "reset.goLogin": "Aller au login",
   "reset.failed": "Récupération échouée",
 
@@ -865,7 +943,8 @@ const ru: Dict = {
   "login.forgot": "Забыли ключ доступа?",
   "login.perk1": "Приватность по умолчанию — без cookies и трекинга",
   "login.perk2": "Ваши модели, в реальном времени",
-  "login.adminNote": "Ключ админа живёт в .env сервера; ключи пользователей выдаёт админ.",
+  "login.adminNote":
+    "Ключ админа живёт в .env сервера; ключи пользователей выдаёт админ.",
 
   "sidebar.newChat": "Новый чат",
   "sidebar.collapse": "Скрыть панель",
@@ -907,7 +986,8 @@ const ru: Dict = {
   "chat.ocrHint": "JPG, PNG, WEBP — OCR на сервере, текст вы проверите",
   "chat.textOpt": "Прикрепить текстовый файл",
   "chat.textHint": "TXT или Markdown, до 500 КБ",
-  "chat.attachNote": "Загрузка только через инструменты платформы. Изображения уходят модели проверенным текстом — не картинками.",
+  "chat.attachNote":
+    "Загрузка только через инструменты платформы. Изображения уходят модели проверенным текстом — не картинками.",
   "chat.wiki": "Вики и доки",
 
   "attach.tooBigImg": "Изображение слишком большое (макс. 5 МБ).",
@@ -924,15 +1004,19 @@ const ru: Dict = {
   "dlg.topicHint": "Короткий тег, напр. кухня, rust, поездки.",
   "dlg.noTopic": "Без темы",
   "dlg.recoverTitle": "Восстановить ключ",
-  "dlg.recoverIntro": "Введите имя пользователя. Вы получите ссылку на новый ключ (старый перестанет работать).",
+  "dlg.recoverIntro":
+    "Введите имя пользователя. Вы получите ссылку на новый ключ (старый перестанет работать).",
   "dlg.sendLink": "Отправить ссылку",
   "dlg.reqFailed": "Запрос не удался",
-  "dlg.recoverSent": "Если @{user} существует и у него есть email, ссылка уже летит{fromPart} (действует 60 минут, одноразовая).",
+  "dlg.recoverSent":
+    "Если @{user} существует и у него есть email, ссылка уже летит{fromPart} (действует 60 минут, одноразовая).",
   "dlg.recoverSentFrom": " от {from}",
   "dlg.spamNote": "Проверьте входящие — и спам, письмо могло попасть туда.",
-  "dlg.noMailNote": "Ничего нет? Значит, email не указан и сброс невозможен — обратитесь к администратору сайта.",
+  "dlg.noMailNote":
+    "Ничего нет? Значит, email не указан и сброс невозможен — обратитесь к администратору сайта.",
   "dlg.registerTitle": "Создать аккаунт",
-  "dlg.regWelcome": "Добро пожаловать, @{user}! Ваш ключ — скопируйте сейчас, больше не покажем.",
+  "dlg.regWelcome":
+    "Добро пожаловать, @{user}! Ваш ключ — скопируйте сейчас, больше не покажем.",
   "dlg.regContinue": "Скопировать и ко входу",
   "dlg.regFailed": "Ошибка регистрации",
   "dlg.emailOpt": "Email (необязательно, для восстановления)",
@@ -944,8 +1028,10 @@ const ru: Dict = {
   "dlg.reviewText": "Проверить вложение",
   "dlg.transcribing": "Распознаём изображение на сервере (OCR)…",
   "dlg.uploadingTools": "Загружаем через инструменты платформы…",
-  "dlg.ocrExpl": "Изображение распознано в текст на сервере — модель получит текст, не картинку. Исправьте ошибки ниже и прикрепите.",
-  "dlg.textExpl": "Файл загружен через инструменты платформы. Его текст прикрепится к сообщению. Правьте и прикрепляйте.",
+  "dlg.ocrExpl":
+    "Изображение распознано в текст на сервере — модель получит текст, не картинку. Исправьте ошибки ниже и прикрепите.",
+  "dlg.textExpl":
+    "Файл загружен через инструменты платформы. Его текст прикрепится к сообщению. Правьте и прикрепляйте.",
   "dlg.truncWarn": "Распознавание обрезано лимитом сервера — конца нет.",
   "dlg.attachBtn": "Прикрепить к сообщению",
   "dlg.chars": "{n} символов",
@@ -970,7 +1056,8 @@ const ru: Dict = {
   "settings.customColor": "Свой цвет",
   "settings.customAria": "Свой акцентный цвет",
   "settings.accentAria": "Акцент: {label}",
-  "settings.featHint": "Включайте возможности редактора. Сразу, на этом устройстве.",
+  "settings.featHint":
+    "Включайте возможности редактора. Сразу, на этом устройстве.",
 
   "accent.preset.emerald": "Изумруд",
   "accent.preset.rose": "Роза",
@@ -990,7 +1077,8 @@ const ru: Dict = {
   "feat.soon": "(скоро)",
 
   "admin.title": "Аккаунты",
-  "admin.intro": "Аккаунты без KYC: создаёте имя, ключ отдаёте один раз. Хранится хэш — смена ротирует.",
+  "admin.intro":
+    "Аккаунты без KYC: создаёте имя, ключ отдаёте один раз. Хранится хэш — смена ротирует.",
   "admin.keyOnce": "Ключ @{user} — показан раз, копируйте:",
   "admin.newAccount": "Новый аккаунт",
   "admin.email": "Email (восстановление)",
@@ -1021,7 +1109,8 @@ const ru: Dict = {
   "admin.nextPage": "Вперёд",
 
   "ollama.models": "Модели Ollama",
-  "ollama.desc": "Качайте модели на Ollama-хост или удаляйте локальные. Только админ.",
+  "ollama.desc":
+    "Качайте модели на Ollama-хост или удаляйте локальные. Только админ.",
   "ollama.pulling": "Качаем {name}",
   "ollama.customTag": "Свой тег",
   "ollama.customHint": "напр. llama3.2:3b или имя из библиотеки",
@@ -1059,7 +1148,8 @@ const ru: Dict = {
   "center.regDesc": "Кнопка регистрации на входе. Выкл = только админ создаёт.",
   "center.accTitle": "Заявки (лист ожидания)",
   "center.accDescOn": "Недоступно при открытой регистрации — она заменяет.",
-  "center.accDescOff": "Кнопка доступа на входе. Гости просят имя; разбор во вкладке.",
+  "center.accDescOff":
+    "Кнопка доступа на входе. Гости просят имя; разбор во вкладке.",
   "center.ocrTitle": "Инструмент OCR",
   "center.ocrDesc": "Распознавание картинок на сервере. Нужен tesseract.",
   "center.mailTitle": "Письма восстановления",
@@ -1067,7 +1157,8 @@ const ru: Dict = {
   "center.mailFrom": "Включено — шлём от {from}",
   "center.mailDefault": "Включено — шлём с настроенного адреса",
   "center.mailOff": "Выключено — задайте SMTP_HOST",
-  "center.mailNote": "SMTP-доступ живёт в окружении сервера (см. docs/OPERATIONS.md), не здесь. Email задаётся в профиле или при создании.",
+  "center.mailNote":
+    "SMTP-доступ живёт в окружении сервера (см. docs/OPERATIONS.md), не здесь. Email задаётся в профиле или при создании.",
   "center.on": "Вкл",
   "center.off": "Выкл",
 
@@ -1081,7 +1172,8 @@ const ru: Dict = {
 
   "reset.checking": "Проверяем ссылку…",
   "reset.invalid": "Ссылка неверна",
-  "reset.invalidSub": "Ссылка неизвестна, использована или истекла. Запросите новую на входе.",
+  "reset.invalidSub":
+    "Ссылка неизвестна, использована или истекла. Запросите новую на входе.",
   "reset.readyTitle": "Новый ключ для @{user}?",
   "reset.readySub": "Сразу выдадим свежий ключ. Старый перестанет работать.",
   "reset.issue": "Выдать ключ",
@@ -1133,7 +1225,8 @@ const it: Dict = {
   "login.forgot": "Chiave dimenticata?",
   "login.perk1": "Privato per progettazione — niente cookie né traccianti",
   "login.perk2": "I tuoi modelli, in tempo reale",
-  "login.adminNote": "La chiave admin vive nel .env del server; le chiavi utente le emette l'admin.",
+  "login.adminNote":
+    "La chiave admin vive nel .env del server; le chiavi utente le emette l'admin.",
 
   "sidebar.newChat": "Nuova chat",
   "sidebar.collapse": "Nascondi barra laterale",
@@ -1175,7 +1268,8 @@ const it: Dict = {
   "chat.ocrHint": "JPG, PNG, WEBP — OCR sul server, rivedi il testo prima",
   "chat.textOpt": "Allega file di testo",
   "chat.textHint": "TXT o Markdown, max 500KB",
-  "chat.attachNote": "Upload solo con gli strumenti della piattaforma. Le immagini arrivano al modello come testo rivisto — mai grezze.",
+  "chat.attachNote":
+    "Upload solo con gli strumenti della piattaforma. Le immagini arrivano al modello come testo rivisto — mai grezze.",
   "chat.wiki": "Wiki e docs",
 
   "attach.tooBigImg": "Immagine troppo grande (max 5MB).",
@@ -1192,28 +1286,35 @@ const it: Dict = {
   "dlg.topicHint": "Breve etichetta, es. cucina, rust, viaggi.",
   "dlg.noTopic": "Nessun argomento",
   "dlg.recoverTitle": "Recupera chiave di accesso",
-  "dlg.recoverIntro": "Inserisci il tuo nome utente. Riceverai un link che emette una chiave nuova (la vecchia smette di funzionare).",
+  "dlg.recoverIntro":
+    "Inserisci il tuo nome utente. Riceverai un link che emette una chiave nuova (la vecchia smette di funzionare).",
   "dlg.sendLink": "Invia link",
   "dlg.reqFailed": "Richiesta fallita",
-  "dlg.recoverSent": "Se @{user} esiste con email di recupero, un link è in viaggio{fromPart} (valido 60 minuti, monouso).",
+  "dlg.recoverSent":
+    "Se @{user} esiste con email di recupero, un link è in viaggio{fromPart} (valido 60 minuti, monouso).",
   "dlg.recoverSentFrom": " da {from}",
   "dlg.spamNote": "Controlla la posta — e lo spam, potrebbe essere finito lì.",
-  "dlg.noMailNote": "Nulla in arrivo? Allora nessuna email è impostata e non si può — contatta l'amministratore del sito.",
+  "dlg.noMailNote":
+    "Nulla in arrivo? Allora nessuna email è impostata e non si può — contatta l'amministratore del sito.",
   "dlg.registerTitle": "Crea un account",
-  "dlg.regWelcome": "Benvenuto, @{user}! La tua chiave — copiala ora, non sarà più mostrata.",
+  "dlg.regWelcome":
+    "Benvenuto, @{user}! La tua chiave — copiala ora, non sarà più mostrata.",
   "dlg.regContinue": "Copia e vai al login",
   "dlg.regFailed": "Registrazione fallita",
   "dlg.emailOpt": "Email (opzionale, per recupero chiave)",
   "dlg.shareTitle": "Condividi pubblicamente",
   "dlg.shareCreating": "Creazione link pubblico…",
-  "dlg.shareIntro": "Chiunque abbia questo link può leggere {title}. Senza login.",
+  "dlg.shareIntro":
+    "Chiunque abbia questo link può leggere {title}. Senza login.",
   "dlg.unshare": "Rimuovi condivisione",
   "dlg.reviewOcr": "Rivedi trascrizione",
   "dlg.reviewText": "Rivedi allegato",
   "dlg.transcribing": "Trascrizione immagine sul server (OCR)…",
   "dlg.uploadingTools": "Upload con gli strumenti…",
-  "dlg.ocrExpl": "L'immagine è stata trascritta in testo sul server — il modello riceve questo testo, mai l'immagine. Correggi sotto e allega.",
-  "dlg.textExpl": "Il file è stato caricato con gli strumenti. Il suo testo sarà allegato al messaggio. Modifica e allega.",
+  "dlg.ocrExpl":
+    "L'immagine è stata trascritta in testo sul server — il modello riceve questo testo, mai l'immagine. Correggi sotto e allega.",
+  "dlg.textExpl":
+    "Il file è stato caricato con gli strumenti. Il suo testo sarà allegato al messaggio. Modifica e allega.",
   "dlg.truncWarn": "Trascrizione troncata al limite server — manca la fine.",
   "dlg.attachBtn": "Allega al messaggio",
   "dlg.chars": "{n} caratteri",
@@ -1238,7 +1339,8 @@ const it: Dict = {
   "settings.customColor": "Colore custom",
   "settings.customAria": "Colore accento personalizzato",
   "settings.accentAria": "Accento: {label}",
-  "settings.featHint": "Attiva funzioni del composer. Subito, su questo dispositivo.",
+  "settings.featHint":
+    "Attiva funzioni del composer. Subito, su questo dispositivo.",
 
   "accent.preset.emerald": "Smeraldo",
   "accent.preset.rose": "Rosa",
@@ -1252,13 +1354,15 @@ const it: Dict = {
   "feat.thinking.label": "Ragionamento",
   "feat.thinking.hint": "Chiedi al modello di ragionare passo passo.",
   "feat.attachments.label": "Allegati",
-  "feat.attachments.hint": "Allega immagini (trascrizione OCR) e file di testo.",
+  "feat.attachments.hint":
+    "Allega immagini (trascrizione OCR) e file di testo.",
   "feat.deepSearch.label": "Ricerca profonda",
   "feat.deepSearch.hint": "Cerca fonti fresche sul web. Prossimamente.",
   "feat.soon": "(presto)",
 
   "admin.title": "Account",
-  "admin.intro": "Account senza KYC: crei un nome, consegni la chiave una volta. Hash salvati — rigenera per ruotare.",
+  "admin.intro":
+    "Account senza KYC: crei un nome, consegni la chiave una volta. Hash salvati — rigenera per ruotare.",
   "admin.keyOnce": "Chiave per @{user} — mostrata una volta, copiala ora:",
   "admin.newAccount": "Nuovo account",
   "admin.email": "Email (recupero)",
@@ -1284,12 +1388,14 @@ const it: Dict = {
   "admin.regenKey": "Rigenera chiave (revoca sessioni)",
   "admin.deleteAccount": "Elimina account",
   "admin.deleteTitle": "Eliminare @{user}?",
-  "admin.deleteMsg": "Rimuove per sempre account, conversazioni e condivisioni.",
+  "admin.deleteMsg":
+    "Rimuove per sempre account, conversazioni e condivisioni.",
   "admin.prevPage": "Pagina precedente",
   "admin.nextPage": "Pagina successiva",
 
   "ollama.models": "Modelli Ollama",
-  "ollama.desc": "Scarica modelli sull'host Ollama o rimuovi i locali. Solo admin.",
+  "ollama.desc":
+    "Scarica modelli sull'host Ollama o rimuovi i locali. Solo admin.",
   "ollama.pulling": "Scarico {name}",
   "ollama.customTag": "Tag personalizzato",
   "ollama.customHint": "es. llama3.2:3b, o un nome di libreria",
@@ -1326,8 +1432,10 @@ const it: Dict = {
   "center.regTitle": "Registrazione pubblica",
   "center.regDesc": "Mostra Registrati al login. Off = solo account admin.",
   "center.accTitle": "Richieste di accesso (lista)",
-  "center.accDescOn": "Non disponibile con registrazione pubblica — la sostituisce.",
-  "center.accDescOff": "Mostra Richiedi accesso al login. Valuta nella scheda Accesso.",
+  "center.accDescOn":
+    "Non disponibile con registrazione pubblica — la sostituisce.",
+  "center.accDescOff":
+    "Mostra Richiedi accesso al login. Valuta nella scheda Accesso.",
   "center.ocrTitle": "Strumento OCR",
   "center.ocrDesc": "Trascrizione immagini sul server. Serve tesseract.",
   "center.mailTitle": "Email di recupero",
@@ -1335,7 +1443,8 @@ const it: Dict = {
   "center.mailFrom": "Attivo — inviate da {from}",
   "center.mailDefault": "Attivo — inviate dal mittente configurato",
   "center.mailOff": "Disattivo — imposta SMTP_HOST sul server",
-  "center.mailNote": "Le credenziali SMTP vivono sul server (vedi docs/OPERATIONS.md), mai qui. L'email si imposta nel profilo o alla creazione.",
+  "center.mailNote":
+    "Le credenziali SMTP vivono sul server (vedi docs/OPERATIONS.md), mai qui. L'email si imposta nel profilo o alla creazione.",
   "center.on": "Sì",
   "center.off": "No",
 
@@ -1349,9 +1458,11 @@ const it: Dict = {
 
   "reset.checking": "Verifica link…",
   "reset.invalid": "Link non valido",
-  "reset.invalidSub": "Link sconosciuto, usato o scaduto. Richiedine uno al login.",
+  "reset.invalidSub":
+    "Link sconosciuto, usato o scaduto. Richiedine uno al login.",
   "reset.readyTitle": "Nuova chiave per @{user}?",
-  "reset.readySub": "Emette subito una chiave nuova. La vecchia smette di funzionare.",
+  "reset.readySub":
+    "Emette subito una chiave nuova. La vecchia smette di funzionare.",
   "reset.issue": "Emetti nuova chiave",
   "reset.issuing": "Emissione…",
   "reset.doneTitle": "Nuova chiave pronta",
@@ -1401,7 +1512,8 @@ const pt: Dict = {
   "login.forgot": "Esqueceste a chave?",
   "login.perk1": "Privado por design — sem cookies nem rastreio",
   "login.perk2": "Os teus modelos, em tempo real",
-  "login.adminNote": "A chave admin vive no .env do servidor; as chaves são emitidas pelo admin.",
+  "login.adminNote":
+    "A chave admin vive no .env do servidor; as chaves são emitidas pelo admin.",
 
   "sidebar.newChat": "Novo chat",
   "sidebar.collapse": "Ocultar barra lateral",
@@ -1443,7 +1555,8 @@ const pt: Dict = {
   "chat.ocrHint": "JPG, PNG, WEBP — OCR no servidor, revês o texto antes",
   "chat.textOpt": "Anexar ficheiro de texto",
   "chat.textHint": "TXT ou Markdown, máx. 500KB",
-  "chat.attachNote": "Uploads só via ferramentas da plataforma. Imagens chegam ao modelo como texto revisto — nunca brutas.",
+  "chat.attachNote":
+    "Uploads só via ferramentas da plataforma. Imagens chegam ao modelo como texto revisto — nunca brutas.",
   "chat.wiki": "Wiki e docs",
 
   "attach.tooBigImg": "Imagem muito grande (máx. 5MB).",
@@ -1460,15 +1573,19 @@ const pt: Dict = {
   "dlg.topicHint": "Etiqueta curta, ex. cozinha, rust, viagens.",
   "dlg.noTopic": "Sem tópico",
   "dlg.recoverTitle": "Recuperar chave",
-  "dlg.recoverIntro": "Escreve o teu username. Receberás um link que emite uma chave nova (a antiga deixa de funcionar).",
+  "dlg.recoverIntro":
+    "Escreve o teu username. Receberás um link que emite uma chave nova (a antiga deixa de funcionar).",
   "dlg.sendLink": "Enviar link",
   "dlg.reqFailed": "Pedido falhou",
-  "dlg.recoverSent": "Se @{user} existe com email de recuperação, um link vai a caminho{fromPart} (válido 60 minutos, uso único).",
+  "dlg.recoverSent":
+    "Se @{user} existe com email de recuperação, um link vai a caminho{fromPart} (válido 60 minutos, uso único).",
   "dlg.recoverSentFrom": " de {from}",
   "dlg.spamNote": "Vê o inbox — e o spam, pode ter caído lá.",
-  "dlg.noMailNote": "Nada chega? Então não há email definido e não é possível — contacta o admin do site.",
+  "dlg.noMailNote":
+    "Nada chega? Então não há email definido e não é possível — contacta o admin do site.",
   "dlg.registerTitle": "Criar uma conta",
-  "dlg.regWelcome": "Bem-vindo, @{user}! A tua chave — copia agora, não será mostrada de novo.",
+  "dlg.regWelcome":
+    "Bem-vindo, @{user}! A tua chave — copia agora, não será mostrada de novo.",
   "dlg.regContinue": "Copiar e ir ao login",
   "dlg.regFailed": "Registo falhou",
   "dlg.emailOpt": "Email (opcional, para recuperar a chave)",
@@ -1480,8 +1597,10 @@ const pt: Dict = {
   "dlg.reviewText": "Rever anexo",
   "dlg.transcribing": "A transcrever imagem no servidor (OCR)…",
   "dlg.uploadingTools": "Upload via ferramentas…",
-  "dlg.ocrExpl": "A imagem foi transcrita em texto no servidor — o modelo recebe este texto, nunca a imagem. Corrige abaixo e anexa.",
-  "dlg.textExpl": "O ficheiro foi enviado via ferramentas. O texto será anexado à mensagem. Edita e anexa.",
+  "dlg.ocrExpl":
+    "A imagem foi transcrita em texto no servidor — o modelo recebe este texto, nunca a imagem. Corrige abaixo e anexa.",
+  "dlg.textExpl":
+    "O ficheiro foi enviado via ferramentas. O texto será anexado à mensagem. Edita e anexa.",
   "dlg.truncWarn": "Transcrição cortada no limite — falta o fim.",
   "dlg.attachBtn": "Anexar à mensagem",
   "dlg.chars": "{n} caracteres",
@@ -1526,7 +1645,8 @@ const pt: Dict = {
   "feat.soon": "(breve)",
 
   "admin.title": "Contas",
-  "admin.intro": "Contas sem KYC: crias um nome, entregas a chave uma vez. Hash guardado — regenera para rodar.",
+  "admin.intro":
+    "Contas sem KYC: crias um nome, entregas a chave uma vez. Hash guardado — regenera para rodar.",
   "admin.keyOnce": "Chave para @{user} — mostrada uma vez, copia agora:",
   "admin.newAccount": "Nova conta",
   "admin.email": "Email (recuperação)",
@@ -1603,7 +1723,8 @@ const pt: Dict = {
   "center.mailFrom": "Ativo — enviados de {from}",
   "center.mailDefault": "Ativo — enviados do remetente",
   "center.mailOff": "Desligado — define SMTP_HOST",
-  "center.mailNote": "Credenciais SMTP vivem no servidor (ver docs/OPERATIONS.md), nunca aqui. Email define-se no perfil ou criação.",
+  "center.mailNote":
+    "Credenciais SMTP vivem no servidor (ver docs/OPERATIONS.md), nunca aqui. Email define-se no perfil ou criação.",
   "center.on": "Sim",
   "center.off": "Não",
 
@@ -1617,7 +1738,8 @@ const pt: Dict = {
 
   "reset.checking": "A verificar link…",
   "reset.invalid": "Link inválido",
-  "reset.invalidSub": "Link desconhecido, usado ou expirado. Pede outro no login.",
+  "reset.invalidSub":
+    "Link desconhecido, usado ou expirado. Pede outro no login.",
   "reset.readyTitle": "Nova chave para @{user}?",
   "reset.readySub": "Emite já uma chave nova. A antiga morre.",
   "reset.issue": "Emitir nova chave",
@@ -1638,14 +1760,28 @@ const STORE_KEY = "kisassistant_lang";
 function detectLang(): LangId {
   try {
     const saved = localStorage.getItem(STORE_KEY);
-    if (saved === "en" || saved === "es" || saved === "fr" || saved === "ru" || saved === "it" || saved === "pt") {
+    if (
+      saved === "en" ||
+      saved === "es" ||
+      saved === "fr" ||
+      saved === "ru" ||
+      saved === "it" ||
+      saved === "pt"
+    ) {
       return saved;
     }
   } catch {
     // storage unavailable — fall through to browser detection
   }
   const nav = (navigator.language || "en").toLowerCase().split("-")[0];
-  if (nav === "es" || nav === "fr" || nav === "ru" || nav === "it" || nav === "pt") return nav;
+  if (
+    nav === "es" ||
+    nav === "fr" ||
+    nav === "ru" ||
+    nav === "it" ||
+    nav === "pt"
+  )
+    return nav;
   return "en";
 }
 
@@ -1672,10 +1808,14 @@ export function setLang(lang: LangId): void {
 }
 
 /** Global translate function: t("login.welcome"), t("chat.greet", { name }). */
-export function t(key: StringKey, vars?: Record<string, string | number>): string {
+export function t(
+  key: StringKey,
+  vars?: Record<string, string | number>,
+): string {
   let s: string = dicts[current][key] ?? dicts.en[key] ?? key;
   if (vars) {
-    for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
+    for (const [k, v] of Object.entries(vars))
+      s = s.replaceAll(`{${k}}`, String(v));
   }
   return s;
 }
@@ -1693,4 +1833,3 @@ export function useT(): { t: typeof t; lang: LangId } {
   );
   return { t, lang: current };
 }
-

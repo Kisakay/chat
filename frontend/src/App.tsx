@@ -344,6 +344,8 @@ export function App() {
           setUser(u);
           applyTheme(u.theme);
         }}
+        // Key rotated or account deleted: sessions are dead server-side.
+        onKeyRotated={() => { setSettingsOpen(false); logout(); }}
       />
     </div>
   );

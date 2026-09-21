@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Unplug, User as UserIcon, UserPlus, X } from "lucide-react";
+import { Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, UserPlus, X } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
@@ -761,6 +761,36 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
   }
 
   async function disableTotp() {
+    if (code.replace(/\D/g, "").length !== 6) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.totpDisable(code.replace(/\D/g, ""));
+      setTotpOn(false);
+      setCode("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeAccount() {
+    if (!armingDelete) {
+      setArmingDelete(true);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await api.deleteMe();
+      onKeyRotated?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -843,6 +873,16 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
           <span className="block text-sm font-medium">Passkeys <span className="ml-1 text-xs opacity-60">(soon)</span></span>
           <span className="block text-xs opacity-60">WebAuthn / platform authenticators — needs a server RP setup.</span>
         </span>
+      </div>
+
+      <div className="rounded-2xl border border-red-500/30 p-3">
+        <p className="mb-1 flex items-center gap-1.5 text-sm font-medium text-red-600 dark:text-red-400">
+          <Trash2 size={14} /> Danger zone
+        </p>
+        <p className="mb-2 text-xs opacity-60">Permanently delete your account with all chats, shares and sessions. Cannot be undone.</p>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={removeAccount} className="!text-red-600 dark:!text-red-400">
+          {armingDelete ? "Click again to permanently delete" : "Delete my account"}
+        </Button>
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

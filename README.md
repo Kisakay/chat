@@ -66,6 +66,9 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | POST | `/api/access/request` | public | reserve username+email with a motivation → ticket (`/review/:id`) |
 | GET/POST | `/api/access/ticket/:id` (+`/message`) | ticket bearer | follow + reply on an access request |
 | GET/PATCH/POST | `/api/admin/access…` | admin | wishlist triage: list, accept/refuse/review, reply |
+| POST / DELETE | `/api/me/key/rotate`, `/api/me` | Bearer | rotate own key (sessions revoked) / delete own account |
+| GET/POST/DELETE | `/api/me/totp`, `/api/me/totp/setup`, `/api/me/totp/verify` | Bearer | TOTP two-factor status/setup/verify/disable |
+| POST | `/api/auth/totp` | challenge | second login step `{totpToken, code}` → session |
 | GET/PATCH/DELETE | `/api/conversations/:id` | owner | incl. messages on GET |
 | POST/GET/DELETE | `/api/conversations/:id/share` | owner | public link `/share/:publicId` |
 | GET | `/api/share/:publicId` | **public** | read-only shared chat JSON |

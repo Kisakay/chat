@@ -268,6 +268,7 @@ export function Modal({
       dragStart.current = null;
     }
   }, [open ]);
+  const { t } = useT();
 
   if (!open) return null;
   const Icon = icon;
@@ -308,7 +309,7 @@ export function Modal({
             </span>
           )}
           <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} aria-label="Close" className="ml-auto rounded-full p-1.5 hover:bg-stone-200/60 dark:hover:bg-zinc-800">
+          <button onClick={onClose} aria-label={t("common.close")} className="ml-auto rounded-full p-1.5 hover:bg-stone-200/60 dark:hover:bg-zinc-800">
             <X size={18} />
           </button>
         </div>
@@ -325,7 +326,7 @@ export function ConfirmDialog({
   onConfirm,
   title,
   message,
-  confirmLabel = "Delete",
+  confirmLabel,
 }: {
   open: boolean;
   onClose: () => void;
@@ -334,12 +335,13 @@ export function ConfirmDialog({
   message: string;
   confirmLabel?: string;
 }) {
+  const { t } = useT();
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <p className="text-sm opacity-80">{message}</p>
       <div className="mt-5 flex justify-end gap-2">
-        <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-        <Button variant="danger" size="sm" onClick={() => { onConfirm(); onClose(); }}>{confirmLabel}</Button>
+        <Button variant="secondary" size="sm" onClick={onClose}>{t("common.cancel")}</Button>
+        <Button variant="danger" size="sm" onClick={() => { onConfirm(); onClose(); }}>{confirmLabel ?? t("common.delete")}</Button>
       </div>
     </Modal>
   );
@@ -559,7 +561,8 @@ export function Toggle({
   );
 }
 
-export function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+export function CopyButton({ text, label }: { text: string; label?: string }) {
+  const { t } = useT();
   const [done, setDone] = useState(false);
   return (
     <button
@@ -572,7 +575,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
       className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium transition hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
       {done ? <Check size={13} className="text-accent-500" /> : <Copy size={13} />}
-      {done ? "Copied" : label}
+      {done ? t("common.copied") : (label ?? t("common.copy"))}
     </button>
   );
 }
@@ -581,12 +584,13 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
 
 /** Animated blooming flower shown while the app boots (themed, mobile-safe). */
 export function LoadingScreen() {
+  const { t } = useT();
   return (
     <div className="loading-enter grid min-h-full place-items-center" role="status" aria-label="Loading KisAssistant">
       <div className="flex flex-col items-center gap-4 px-6 text-center">
         <FlowerMark className="h-16 w-16 sm:h-20 sm:w-20" />
         <p className="font-serif text-2xl font-bold tracking-tight">KisAssistant</p>
-        <p className="loading-dots text-sm opacity-60">Preparing your chats</p>
+        <p className="loading-dots text-sm opacity-60">{t("loading.tagline")}</p>
       </div>
     </div>
   );
