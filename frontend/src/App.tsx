@@ -587,6 +587,10 @@ export function App() {
           setAttachments((prev) => prev.filter((a) => a.id !== id))
         }
         onPickFile={handlePickFile}
+        failedIndex={failed?.index ?? null}
+        retryCount={retryCount}
+        maxRetries={MAX_RETRIES}
+        onRetry={readOnly ? undefined : retryFailed}
       />
       <FilePreviewModal
         preview={filePreview}

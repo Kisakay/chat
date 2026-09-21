@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, BookOpen, Bot, Check, Copy, Cpu, FileText, Flag, Menu, PanelLeftOpen, Paperclip, ScanText, Search, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
+import { Archive, ArchiveRestore, BookOpen, Bot, Check, Copy, Cpu, FileText, Flag, Menu, PanelLeftOpen, Paperclip, RotateCcw, ScanText, Search, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
 import type { Attachment, ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
 import { api, ApiError, type ReportReason } from "../lib/api.ts";
 import { AssistantAvatar, Avatar, Button, Field, FlowerMark, IconButton, Modal, Picker, type PickerGroup, Spinner } from "./ui.tsx";
@@ -11,7 +11,7 @@ import { useT, type StringKey } from "../lib/i18n.ts";
 
 const REPORT_REASONS: ReportReason[] = ["copyright", "gore", "falseinfo", "bug"];
 
-function MessageBubble({ msg, index, authorAvatar, authorName, onReport }: { msg: ChatMessage; index: number; authorAvatar?: string; authorName: string; onReport?: (index: number) => void }) {
+function MessageBubble({ msg, index, authorAvatar, authorName, onReport, isFailed, retryCount, maxRetries, retryDisabled, onRetry }: { msg: ChatMessage; index: number; authorAvatar?: string; authorName: string; onReport?: (index: number) => void; isFailed?: boolean; retryCount?: number; maxRetries?: number; retryDisabled?: boolean; onRetry?: () => void }) {
   const { t } = useT();
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
@@ -43,17 +43,30 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport }: { msg
             <Markdown text={msg.content} />
           </div>
         )}
-        {!isUser && onReport && (
+        {!isUser && (onReport || (isFailed && onRetry)) && (
           <div className="mt-1.5 flex items-center gap-0.5 opacity-70 transition hover:opacity-100">
-            <IconButton title={copied ? t("common.copied") : t("msg.copy")} onClick={copy}>
-              {copied ? <Check size={14} className="text-accent-500" /> : <Copy size={14} />}
-            </IconButton>
-            <IconButton title={t("msg.search")} onClick={searchWeb}>
-              <Search size={14} />
-            </IconButton>
-            <IconButton title={t("msg.report")} onClick={() => onReport(index)}>
-              <Flag size={14} />
-            </IconButton>
+            {onReport && (
+              <>
+                <IconButton title={copied ? t("common.copied") : t("msg.copy")} onClick={copy}>
+                  {copied ? <Check size={14} className="text-accent-500" /> : <Copy size={14} />}
+                </IconButton>
+                <IconButton title={t("msg.search")} onClick={searchWeb}>
+                  <Search size={14} />
+                </IconButton>
+                <IconButton title={t("msg.report")} onClick={() => onReport(index)}>
+                  <Flag size={14} />
+                </IconButton>
+              </>
+            )}
+            {isFailed && onRetry && (
+              <IconButton
+                title={`${t("msg.retry")} (${Math.min(retryCount ?? 0, maxRetries ?? 0)}/${maxRetries ?? 0})`}
+                onClick={onRetry}
+                disabled={retryDisabled}
+              >
+                <RotateCcw size={14} />
+              </IconButton>
+            )}
           </div>
         )}
       </div>
@@ -183,6 +196,10 @@ export function Chat({
   ocrAvailable,
   onRemoveAttachment,
   onPickFile,
+  failedIndex,
+  retryCount,
+  maxRetries,
+  onRetry,
 }: {
   user: User;
   conv: Conversation | null;
@@ -205,6 +222,11 @@ export function Chat({
   ocrAvailable: boolean;
   onRemoveAttachment: (id: string) => void;
   onPickFile: (kind: "ocr" | "text", file: File) => void;
+  /** Trailing model-error bubble index (retry arrow), if any. */
+  failedIndex: number | null;
+  retryCount: number;
+  maxRetries: number;
+  onRetry?: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
@@ -298,7 +320,7 @@ export function Chat({
             </div>
           )}
           {messages.filter((m) => m.role !== "system").map((m, i) => (
-            <MessageBubble key={i} msg={m} index={i} authorAvatar={user.avatarUrl} authorName={user.displayName} onReport={readOnly ? undefined : setReportIndex} />
+            <MessageBubble key={i} msg={m} index={i} authorAvatar={user.avatarUrl} authorName={user.displayName} onReport={readOnly ? undefined : setReportIndex} isFailed={failedIndex === i} retryCount={retryCount} maxRetries={maxRetries} retryDisabled={sending} onRetry={failedIndex === i && retryCount < maxRetries ? onRetry : undefined} />
           ))}
           {streaming !== "" && (
             <div className="flex gap-3">
