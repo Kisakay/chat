@@ -49,3 +49,7 @@ sur la page share, l' avatar de l'utilisateur  ne s'affiche pas -> fix sa
 --- improvements:
 éviter de ask h24 ollama pour ces modèles quand un utilisateur ce connece. c'est le backend qui sert les demande d el'utilisateurs. iL relay pas sur le ollama. Le backend vas cacher avec un TLL les modèles présent en mémire dans un objet qui est dans le backend. refresh avec un TT: toutes les minutes.
 L'administrateur lui, qand il demande les modèles dams le ollama, lui, force un refresh .
+
+--- ADMIN CENTER: SMTP CONNECTIVITY.
+
+Make a SMTP tester in the admin center, and also a viewer of the smtp credentials (default bluring the smtp pasword OBVIOUSLY) And also a SMTP tester , sending a mail to a provided one , to tets the SMTP connectivity

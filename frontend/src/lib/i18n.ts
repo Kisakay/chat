@@ -1201,6 +1201,114 @@ const ru: Dict = {
 
   "app.deleteConvTitle": "Удалить разговор?",
   "app.deleteConvMsg": "«{title}» и сообщения удалятся.",
+
+  "settings.language": "Язык",
+  "settings.languageHint": "Язык интерфейса. Сразу, на этом устройстве.",
+  "settings.security": "Безопасность",
+
+  "sec.accessKey": "Ключ доступа",
+  "sec.accessKeyHint":
+    "Смените ключ. Старые сессии отзовутся сразу — войдёте с новым.",
+  "sec.rotate": "Сменить мой ключ",
+  "sec.rotateConfirm": "Нажмите ещё раз для подтверждения",
+  "sec.rotationFailed": "Не сменилось",
+  "sec.totp": "Двухфакторка (TOTP)",
+  "sec.totpChecking": "Проверяем…",
+  "sec.totpAddHint":
+    "Добавьте 6-значный код из приложения поверх ключа.",
+  "sec.totpEnable": "Включить двухфакторку",
+  "sec.totpSecretHint":
+    "Добавьте секрет в приложение (или откройте otpauth-ссылку) и введите код:",
+  "sec.totpConfirm": "Подтвердить",
+  "sec.totpDisableLabel": "Отключить текущим кодом",
+  "sec.totpDisable": "Выключить 2FA",
+  "sec.setupFailed": "Не настроилось",
+  "sec.passkeys": "Пасскеи",
+  "sec.passkeysHint":
+    "WebAuthn / системные ключи — нужен RP на сервере.",
+  "sec.danger": "Опасная зона",
+  "sec.dangerHint":
+    "Навсегда удалит аккаунт с чатами, ссылками и сессиями. Без возврата.",
+  "sec.deleteMe": "Удалить мой аккаунт",
+  "sec.deleteFailed": "Не удалилось",
+  "sec.newKeyTitle": "Новый ключ доступа",
+  "sec.newKeyHint":
+    "Скопируйте сейчас — больше не покажем. Старые сессии отозваны.",
+  "sec.newKeyDone": "Готово — выйти",
+  "sec.deleteTitle": "Удалить ваш аккаунт?",
+  "sec.deleteMsg":
+    "Навсегда удалит аккаунт с разговорами, ссылками и сессиями. Без возврата.",
+  "sec.deleteForever": "Удалить навсегда",
+  "sec.avatarTooBig": "Файл слишком большой (макс. 5 МБ).",
+  "sec.avatarType": "Только картинки jpg, png или webp.",
+
+  "center.tabAccess": "Доступ",
+
+  "access.status.pending": "Ожидает",
+  "access.status.reviewing": "На проверке",
+  "access.status.accepted": "Принята",
+  "access.status.refused": "Отклонена",
+  "access.filter.all": "все",
+  "access.filter.pending": "ожидают",
+  "access.filter.reviewing": "на проверке",
+  "access.filter.accepted": "приняты",
+  "access.filter.refused": "отклонены",
+  "access.refresh": "Обновить",
+  "access.refreshAria": "Обновить заявки",
+  "access.empty": "Заявок нет. Лист ожидания пуст.",
+  "access.emptyFiltered": "С таким статусом ничего нет.",
+  "access.msgOne": "1 сообщение",
+  "access.msgMany": "{n} сообщений",
+  "access.accountCreated": "Аккаунт создан — ключ показан раз, копируйте:",
+  "access.replyPh": "Ответить (уйдёт по email)…",
+  "access.replyAria": "Ответить заявителю",
+  "access.reasonLabel": "Причина (уйдёт с решением)",
+  "access.reasonPh": "Необязательная причина…",
+  "access.btnReviewing": "На проверку",
+  "access.btnAccept": "Принять",
+  "access.btnRefuse": "Отклонить",
+  "access.closedNote": "Тикет закрыт ({status}).",
+  "access.reasonWord": "Причина",
+  "access.youAdmin": "Вы (админ)",
+  "access.sendFailed": "Не отправилось",
+  "access.updateFailed": "Не обновилось",
+
+  "review.title": "Заявка на доступ",
+  "review.loadingTicket": "Загружаем тикет…",
+  "review.notFound": "Тикет не найден",
+  "review.notFoundSub":
+    "Ссылка неизвестна. Проверьте URL из письма или подайте заявку со входа.",
+  "review.adminNote": "Заметка админа:",
+  "review.acceptedHint":
+    "Аккаунт создан — проверьте письмо с ключом и входите.",
+  "review.closedHint":
+    "Тикет закрыт. Письма не читаются — при нужде подайте новую заявку.",
+  "review.replyPh": "Изложите свой случай…",
+  "review.replyAria": "Ответить в тикет",
+  "review.mailHint":
+    "Письма — в одну сторону: отвечайте здесь, не по email.",
+  "review.status.pending": "Ждёт проверки",
+  "review.status.reviewing": "На проверке",
+  "review.status.accepted": "Принята",
+  "review.status.refused": "Отклонена",
+  "review.admin": "Админ",
+  "review.you": "Вы",
+  "review.requestTitle": "Запросить доступ",
+  "review.requestIntro":
+    "Займите имя и расскажите, зачем вам сюда. Админ разберёт каждую заявку — следите за тикетом и почтой.",
+  "review.emailHint": "Обязательно — статусы и ответы придут сюда.",
+  "review.whyLabel": "Почему вам дать доступ?",
+  "review.whyHint": "10+ символов. Это откроет тикет.",
+  "review.whyPh": "Я хочу…",
+  "review.sendRequest": "Отправить заявку",
+  "review.received": "Заявка получена",
+  "review.reserved":
+    "@{user} занято вами, пока админ проверяет. Письмо с тикетом уже летит.",
+  "review.copyLink": "Копировать ссылку",
+  "review.openTicket": "Открыть мой тикет",
+
+  "admin.editUserTitle": "Править @{user}",
+  "admin.avatarUrl": "URL аватара",
 };
 
 const it: Dict = {
@@ -1492,6 +1600,115 @@ const it: Dict = {
 
   "app.deleteConvTitle": "Eliminare conversazione?",
   "app.deleteConvMsg": "«{title}» e i suoi messaggi saranno eliminati.",
+
+  "settings.language": "Lingua",
+  "settings.languageHint":
+    "Lingua dell'interfaccia. Subito, su questo dispositivo.",
+  "settings.security": "Sicurezza",
+
+  "sec.accessKey": "Chiave di accesso",
+  "sec.accessKeyHint":
+    "Ruota la tua chiave. Le vecchie sessioni sono revocate subito — rientri con la nuova.",
+  "sec.rotate": "Ruota la mia chiave",
+  "sec.rotateConfirm": "Clicca di nuovo per confermare",
+  "sec.rotationFailed": "Rotazione fallita",
+  "sec.totp": "Doppio fattore (TOTP)",
+  "sec.totpChecking": "Verifica…",
+  "sec.totpAddHint":
+    "Aggiungi un codice a 6 cifre dall'app oltre alla chiave.",
+  "sec.totpEnable": "Attiva doppio fattore",
+  "sec.totpSecretHint":
+    "Aggiungi questo segreto all'app (o apri il link otpauth) e inserisci un codice:",
+  "sec.totpConfirm": "Conferma",
+  "sec.totpDisableLabel": "Disattiva con un codice attuale",
+  "sec.totpDisable": "Disattiva 2FA",
+  "sec.setupFailed": "Configurazione fallita",
+  "sec.passkeys": "Passkey",
+  "sec.passkeysHint":
+    "WebAuthn / autenticatori di sistema — serve RP sul server.",
+  "sec.danger": "Zona pericolosa",
+  "sec.dangerHint":
+    "Elimina account con chat, condivisioni e sessioni. Irreversibile.",
+  "sec.deleteMe": "Elimina il mio account",
+  "sec.deleteFailed": "Eliminazione fallita",
+  "sec.newKeyTitle": "Nuova chiave di accesso",
+  "sec.newKeyHint":
+    "Copiala ora — non sarà più mostrata. Le vecchie sessioni sono revocate.",
+  "sec.newKeyDone": "Fatto — esci",
+  "sec.deleteTitle": "Eliminare il tuo account?",
+  "sec.deleteMsg":
+    "Rimuove per sempre account con conversazioni, condivisioni e sessioni. Irreversibile.",
+  "sec.deleteForever": "Elimina per sempre",
+  "sec.avatarTooBig": "File troppo grande (max 5MB).",
+  "sec.avatarType": "Solo immagini jpg, png o webp.",
+
+  "center.tabAccess": "Accesso",
+
+  "access.status.pending": "In attesa",
+  "access.status.reviewing": "In revisione",
+  "access.status.accepted": "Accettata",
+  "access.status.refused": "Rifiutata",
+  "access.filter.all": "tutti",
+  "access.filter.pending": "in attesa",
+  "access.filter.reviewing": "in revisione",
+  "access.filter.accepted": "accettati",
+  "access.filter.refused": "rifiutati",
+  "access.refresh": "Aggiorna",
+  "access.refreshAria": "Aggiorna richieste",
+  "access.empty": "Nessuna richiesta. La lista è vuota.",
+  "access.emptyFiltered": "Nulla con questo stato.",
+  "access.msgOne": "1 messaggio",
+  "access.msgMany": "{n} messaggi",
+  "access.accountCreated": "Account creato — chiave unica, copiala ora:",
+  "access.replyPh": "Rispondi (arriva via email)…",
+  "access.replyAria": "Rispondi al richiedente",
+  "access.reasonLabel": "Motivo (inviato con la decisione)",
+  "access.reasonPh": "Motivo opzionale…",
+  "access.btnReviewing": "In revisione",
+  "access.btnAccept": "Accetta",
+  "access.btnRefuse": "Rifiuta",
+  "access.closedNote": "Ticket chiuso ({status}).",
+  "access.reasonWord": "Motivo",
+  "access.youAdmin": "Tu (admin)",
+  "access.sendFailed": "Invio fallito",
+  "access.updateFailed": "Aggiornamento fallito",
+
+  "review.title": "Richiesta di accesso",
+  "review.loadingTicket": "Carico ticket…",
+  "review.notFound": "Ticket non trovato",
+  "review.notFoundSub":
+    "Link sconosciuto. Controlla l'URL della tua email o richiedi accesso dal login.",
+  "review.adminNote": "Nota admin:",
+  "review.acceptedHint":
+    "Account creato — controlla l'email con la chiave e accedi.",
+  "review.closedHint":
+    "Ticket chiuso. Le email non si leggono — se serve, richiedi di nuovo.",
+  "review.replyPh": "Perora la tua causa…",
+  "review.replyAria": "Rispondi al tuo ticket",
+  "review.mailHint":
+    "Le email sono a senso unico — rispondi qui, non via email.",
+  "review.status.pending": "In attesa di revisione",
+  "review.status.reviewing": "In revisione",
+  "review.status.accepted": "Accettata",
+  "review.status.refused": "Rifiutata",
+  "review.admin": "Admin",
+  "review.you": "Tu",
+  "review.requestTitle": "Richiedi accesso",
+  "review.requestIntro":
+    "Riserva un nome e spiega perché vuoi entrare. Un admin valuta ogni richiesta — segui il filo sul tuo ticket e via email.",
+  "review.emailHint": "Obbligatoria — avvisi e risposte arrivano qui.",
+  "review.whyLabel": "Perché darti accesso?",
+  "review.whyHint": "10+ caratteri. Questo apre il tuo ticket.",
+  "review.whyPh": "Voglio…",
+  "review.sendRequest": "Invia richiesta",
+  "review.received": "Richiesta ricevuta",
+  "review.reserved":
+    "@{user} è riservato mentre un admin valuta. Un'email col tuo ticket è in viaggio.",
+  "review.copyLink": "Copia link",
+  "review.openTicket": "Apri il mio ticket",
+
+  "admin.editUserTitle": "Modifica @{user}",
+  "admin.avatarUrl": "URL avatar",
 };
 
 const pt: Dict = {
@@ -1775,6 +1992,114 @@ const pt: Dict = {
 
   "app.deleteConvTitle": "Eliminar conversa?",
   "app.deleteConvMsg": "«{title}» e mensagens serão eliminados.",
+
+  "settings.language": "Idioma",
+  "settings.languageHint": "Idioma da interface. Na hora, neste dispositivo.",
+  "settings.security": "Segurança",
+
+  "sec.accessKey": "Chave de acesso",
+  "sec.accessKeyHint":
+    "Roda a tua chave. Sessões antigas morrem na hora — entras com a nova.",
+  "sec.rotate": "Rodar a minha chave",
+  "sec.rotateConfirm": "Clica de novo para confirmar",
+  "sec.rotationFailed": "Falha ao rodar",
+  "sec.totp": "Dois fatores (TOTP)",
+  "sec.totpChecking": "A verificar…",
+  "sec.totpAddHint":
+    "Adiciona um código de 6 dígitos da app além da chave.",
+  "sec.totpEnable": "Ativar dois fatores",
+  "sec.totpSecretHint":
+    "Adiciona este segredo à app (ou abre o link otpauth) e escreve um código:",
+  "sec.totpConfirm": "Confirmar",
+  "sec.totpDisableLabel": "Desligar com um código atual",
+  "sec.totpDisable": "Desligar 2FA",
+  "sec.setupFailed": "Falha ao configurar",
+  "sec.passkeys": "Passkeys",
+  "sec.passkeysHint":
+    "WebAuthn / autenticadores do sistema — precisa RP no servidor.",
+  "sec.danger": "Zona perigosa",
+  "sec.dangerHint":
+    "Elimina a conta com chats, partilhas e sessões. Sem volta.",
+  "sec.deleteMe": "Eliminar a minha conta",
+  "sec.deleteFailed": "Falha ao eliminar",
+  "sec.newKeyTitle": "Nova chave de acesso",
+  "sec.newKeyHint":
+    "Copia agora — não será mostrada de novo. Sessões antigas morrem.",
+  "sec.newKeyDone": "Pronto — sair",
+  "sec.deleteTitle": "Eliminar a tua conta?",
+  "sec.deleteMsg":
+    "Remove para sempre a conta com conversas, partilhas e sessões. Sem volta.",
+  "sec.deleteForever": "Eliminar para sempre",
+  "sec.avatarTooBig": "Ficheiro muito grande (máx. 5MB).",
+  "sec.avatarType": "Só imagens jpg, png ou webp.",
+
+  "center.tabAccess": "Acesso",
+
+  "access.status.pending": "Pendente",
+  "access.status.reviewing": "Em revisão",
+  "access.status.accepted": "Aceite",
+  "access.status.refused": "Recusado",
+  "access.filter.all": "todos",
+  "access.filter.pending": "pendentes",
+  "access.filter.reviewing": "em revisão",
+  "access.filter.accepted": "aceites",
+  "access.filter.refused": "recusados",
+  "access.refresh": "Atualizar",
+  "access.refreshAria": "Atualizar pedidos",
+  "access.empty": "Sem pedidos. A lista está vazia.",
+  "access.emptyFiltered": "Nada com este estado.",
+  "access.msgOne": "1 mensagem",
+  "access.msgMany": "{n} mensagens",
+  "access.accountCreated": "Conta criada — chave única, copia agora:",
+  "access.replyPh": "Responder (chega por email)…",
+  "access.replyAria": "Responder ao requerente",
+  "access.reasonLabel": "Motivo (enviado com a decisão)",
+  "access.reasonPh": "Motivo opcional…",
+  "access.btnReviewing": "Em revisão",
+  "access.btnAccept": "Aceitar",
+  "access.btnRefuse": "Recusar",
+  "access.closedNote": "Ticket fechado ({status}).",
+  "access.reasonWord": "Motivo",
+  "access.youAdmin": "Tu (admin)",
+  "access.sendFailed": "Falha ao enviar",
+  "access.updateFailed": "Falha ao atualizar",
+
+  "review.title": "Pedido de acesso",
+  "review.loadingTicket": "A carregar ticket…",
+  "review.notFound": "Ticket não encontrado",
+  "review.notFoundSub":
+    "Link desconhecido. Vê o URL do teu email ou pede acesso no login.",
+  "review.adminNote": "Nota do admin:",
+  "review.acceptedHint":
+    "Conta criada — vê o email com a chave e entra.",
+  "review.closedHint":
+    "Ticket fechado. Emails não são lidos — se preciso, pede de novo.",
+  "review.replyPh": "Defende o teu caso…",
+  "review.replyAria": "Responder ao teu ticket",
+  "review.mailHint":
+    "Emails são de sentido único — responde aqui, não por email.",
+  "review.status.pending": "Pendente de revisão",
+  "review.status.reviewing": "Em revisão",
+  "review.status.accepted": "Aceite",
+  "review.status.refused": "Recusado",
+  "review.admin": "Admin",
+  "review.you": "Tu",
+  "review.requestTitle": "Pedir acesso",
+  "review.requestIntro":
+    "Reserva um nome e diz porque queres entrar. Um admin revê cada pedido — segues o fio no teu ticket e por email.",
+  "review.emailHint": "Obrigatório — avisos e respostas chegam aqui.",
+  "review.whyLabel": "Porque dar-te acesso?",
+  "review.whyHint": "10+ caracteres. Isto abre o teu ticket.",
+  "review.whyPh": "Quero…",
+  "review.sendRequest": "Enviar pedido",
+  "review.received": "Pedido recebido",
+  "review.reserved":
+    "@{user} fica reservado enquanto um admin revê. Um email com o teu ticket vai a caminho.",
+  "review.copyLink": "Copiar link",
+  "review.openTicket": "Abrir o meu ticket",
+
+  "admin.editUserTitle": "Editar @{user}",
+  "admin.avatarUrl": "URL do avatar",
 };
 
 const dicts: Record<LangId, Dict> = { en, es, fr, ru, it, pt };

@@ -5,7 +5,8 @@ import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
 import type { Conversation, FilePreview, User } from "../lib/types.ts";
-import { Avatar, bumpCdnVersion, Button, ConfirmDialog, CopyButton, Field, Input, Modal, Picker, Spinner, Toggle } from "./ui.tsx";
+import { useT, type StringKey } from "../lib/i18n.ts";
+import { Avatar, bumpCdnVersion, Button, ConfirmDialog, CopyButton, Field, Input, LangPicker, Modal, Picker, Spinner, Toggle } from "./ui.tsx";
 
 /* ---------- Rename + topic ---------- */
 
@@ -18,6 +19,7 @@ export function ConvEditDialog({
   onClose: () => void;
   onSaved: (c: Conversation) => void;
 }) {
+  const { t } = useT();
   const [title, setTitle] = useState("");
   const [topic, setTopic] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,28 +43,28 @@ export function ConvEditDialog({
       onSaved(res.conversation);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("common.saveFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Modal open={conv !== null} onClose={onClose} title="Edit conversation" icon={Pencil}>
+    <Modal open={conv !== null} onClose={onClose} title={t("dlg.editConv")} icon={Pencil}>
       <form onSubmit={save} className="space-y-4">
-        <Field label="Title">
+        <Field label={t("dlg.fTitle")}>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required />
         </Field>
-        <Field label="Topic" hint="A short theme tag, e.g. cooking, rust, travel.">
+        <Field label={t("dlg.fTopic")} hint={t("dlg.topicHint")}>
           <div className="relative">
             <Tag size={15} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 opacity-40" />
-            <Input className="pl-10" value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={120} placeholder="No topic" />
+            <Input className="pl-10" value={topic} onChange={(e) => setTopic(e.target.value)} maxLength={120} placeholder={t("dlg.noTopic")} />
           </div>
         </Field>
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" type="button" onClick={onClose}>Cancel</Button>
-          <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : "Save"}</Button>
+          <Button variant="secondary" size="sm" type="button" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : t("common.save")}</Button>
         </div>
       </form>
     </Modal>
@@ -72,6 +74,7 @@ export function ConvEditDialog({
 /* ---------- Key recovery ---------- */
 
 export function RecoverDialog({ open, onClose, from }: { open: boolean; onClose: () => void; from?: string }) {
+  const { t } = useT();
   const [username, setUsername] = useState("");
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -94,44 +97,44 @@ export function RecoverDialog({ open, onClose, from }: { open: boolean; onClose:
       await api.recover(username.trim().toLowerCase());
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
+      setError(err instanceof Error ? err.message : t("dlg.reqFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Recover access key" icon={Mail} wide>
+    <Modal open={open} onClose={onClose} title={t("dlg.recoverTitle")} icon={Mail} wide>
       {sent ? (
         <div className="space-y-4">
           <p className="text-sm opacity-80">
-            If <strong>@{username.trim().toLowerCase() || "…"}</strong> exists and has a recovery
-            email, a reset link is on its way{from ? <> from <strong>{from}</strong></> : ""} (valid 60 minutes, single use).
+            {t("dlg.recoverSent", {
+              user: "@" + (username.trim().toLowerCase() || "…"),
+              fromPart: from ? t("dlg.recoverSentFrom", { from }) : "",
+            })}
           </p>
           <p className="rounded-2xl bg-amber-500/10 px-4 py-2.5 text-sm opacity-90 dark:bg-amber-500/10">
-            Check your inbox — and your spam folder, the message may have landed there.
+            {t("dlg.spamNote")}
           </p>
           <p className="text-sm opacity-70">
-            Nothing arrives? Then no recovery email is set on your account and the
-            reset is not possible — please contact the site administrator.
+            {t("dlg.noMailNote")}
           </p>
           <div className="flex justify-end">
-            <Button size="sm" onClick={onClose}>Done</Button>
+            <Button size="sm" onClick={onClose}>{t("common.done")}</Button>
           </div>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
           <p className="text-sm opacity-70">
-            Enter your username. You'll receive a link that issues a fresh key
-            (the old one stops working).
+            {t("dlg.recoverIntro")}
           </p>
-          <Field label="Username">
+          <Field label={t("common.username")}>
             <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="alice" required />
           </Field>
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="sm" type="button" onClick={onClose}>Cancel</Button>
-            <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : "Send reset link"}</Button>
+            <Button variant="secondary" size="sm" type="button" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : t("dlg.sendLink")}</Button>
           </div>
         </form>
       )}
@@ -152,6 +155,7 @@ export function FilePreviewModal({
   onClose: () => void;
   onAttach: (text: string) => void;
 }) {
+  const { t } = useT();
   const [text, setText] = useState("");
 
   useEffect(() => {
@@ -164,24 +168,22 @@ export function FilePreviewModal({
     <Modal
       open={preview !== null}
       onClose={onClose}
-      title={isOcr ? "Review transcription" : "Review text attachment"}
+      title={isOcr ? t("dlg.reviewOcr") : t("dlg.reviewText")}
       icon={isOcr ? ScanText : FileText}
       wide
     >
       {busy ? (
         <p className="flex items-center gap-2 py-8 text-sm opacity-70">
           <Spinner size={16} />
-          {isOcr ? "Transcribing the image on the server (OCR)…" : "Uploading through platform tools…"}
+          {isOcr ? t("dlg.transcribing") : t("dlg.uploadingTools")}
         </p>
       ) : (
         <div className="space-y-3">
           <p className="rounded-2xl bg-accent-600/10 px-4 py-2.5 text-sm opacity-90">
-            {isOcr
-              ? <>The image was transcribed to text on the server — <strong>the model receives this text, never the image</strong>. Fix any reading mistakes below, then attach.</>
-              : <>The file was uploaded through platform tools. <strong>Its text content is attached to your message.</strong> Edit below if needed, then attach.</>}
+            {isOcr ? t("dlg.ocrExpl") : t("dlg.textExpl")}
           </p>
           {preview?.truncated && (
-            <p className="rounded-2xl bg-amber-500/10 px-4 py-2.5 text-sm">Transcription truncated to the server limit — the end is missing.</p>
+            <p className="rounded-2xl bg-amber-500/10 px-4 py-2.5 text-sm">{t("dlg.truncWarn")}</p>
           )}
           <textarea
             rows={10}
@@ -190,10 +192,10 @@ export function FilePreviewModal({
             className="w-full resize-y rounded-2xl border border-stone-200 bg-stone-50 p-4 font-mono text-[13px] leading-relaxed outline-none focus:border-accent-500 dark:border-zinc-700 dark:bg-zinc-800"
           />
           <div className="flex items-center justify-between">
-            <span className="text-xs opacity-60">{preview?.name} · {text.length.toLocaleString()} chars</span>
+            <span className="text-xs opacity-60">{preview?.name} · {t("dlg.chars", { n: text.length.toLocaleString() })}</span>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-              <Button size="sm" onClick={() => onAttach(text)} disabled={!text.trim()}>Attach to message</Button>
+              <Button variant="secondary" size="sm" onClick={onClose}>{t("common.cancel")}</Button>
+              <Button size="sm" onClick={() => onAttach(text)} disabled={!text.trim()}>{t("dlg.attachBtn")}</Button>
             </div>
           </div>
         </div>
@@ -213,6 +215,7 @@ export function RegisterDialog({
   onClose: () => void;
   onDone: (username: string, key: string) => void;
 }) {
+  const { t } = useT();
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -243,7 +246,7 @@ export function RegisterDialog({
       });
       setKey(res.key);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(err instanceof Error ? err.message : t("dlg.regFailed"));
     } finally {
       setBusy(false);
     }

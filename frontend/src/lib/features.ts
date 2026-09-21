@@ -7,25 +7,10 @@ import { useSyncExternalStore } from "react";
  */
 export type FeatureKey = "thinking" | "attachments" | "deepSearch";
 
-export const FEATURES: { key: FeatureKey; label: string; hint: string; ready: boolean }[] = [
-  {
-    key: "thinking",
-    label: "Thinking",
-    hint: "Ask the model to reason step-by-step before answering.",
-    ready: true,
-  },
-  {
-    key: "attachments",
-    label: "Attachments",
-    hint: "Attach images (OCR transcription) and text files to messages.",
-    ready: true,
-  },
-  {
-    key: "deepSearch",
-    label: "Deep search",
-    hint: "Let the assistant search the web for fresh sources. Coming soon.",
-    ready: false,
-  },
+export const FEATURES: { key: FeatureKey; ready: boolean }[] = [
+  { key: "thinking", ready: true },
+  { key: "attachments", ready: true },
+  { key: "deepSearch", ready: false },
 ];
 
 const STORAGE_KEY = "ka:features";
