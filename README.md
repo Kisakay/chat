@@ -81,6 +81,7 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | POST | `/api/conversations/:id/archive`, `/api/conversations/:id/unarchive` | owner | archive (read-only) / restore to the list |
 | GET | `/api/share/:publicId` | **public** | read-only shared chat JSON |
 | GET | `/api/models` | Bearer | `[{id: "driver:model", …}]` across enabled drivers |
+| GET/PATCH | `/api/admin/model-policy` | admin | per-model kill-switch + hourly/daily limits (users filtered, enforced in chat) |
 | POST | `/api/chat` | Bearer | `{model, messages, conversationId?, stream?}` → JSON or SSE |
 
 `POST /api/chat` with `conversationId` persists the user message + assistant

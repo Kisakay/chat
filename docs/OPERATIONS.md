@@ -74,6 +74,21 @@ connectivity tester: `GET /api/admin/mail`, `POST /api/admin/mail/verify`,
 - Flags live in the `settings` SQLite table, edited via
   `GET/PATCH /api/admin/settings` (admin Bearer only).
 
+## Model access policy (kill-switch + rate limits)
+
+The Admin Center **Models** tab lists every model across enabled drivers
+(grouped, Ollama library moved there too). Per model id (`"driver:model"`):
+an **Enabled** switch and **hourly / daily** per-user request caps
+(0 = unlimited, admins always bypass). Policy lives in the `settings` table
+(`model_policy` JSON blob, default entries pruned); usage counters in
+`model_usage` (fixed UTC hour/day windows, old buckets pruned on write).
+
+- Disabled models vanish from `GET /api/models` for users (admins still see
+  everything) and `POST /api/chat` rejects them (403) — attempts count
+  toward limits even when generation later fails; over-limit answers 429.
+- Routes: `GET /api/admin/model-policy[?refresh=1]`,
+  `PATCH /api/admin/model-policy` (`{model, enabled?, hourly?, daily?}`).
+
 ## Access-request wishlist (registration approval queue)
 
 When public registration is off, visitors can still reserve a username via
