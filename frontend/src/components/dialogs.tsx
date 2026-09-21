@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, UserPlus, X } from "lucide-react";
+import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, X } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
@@ -199,91 +199,6 @@ export function FilePreviewModal({
             </div>
           </div>
         </div>
-      )}
-    </Modal>
-  );
-}
-
-/* ---------- Self-registration ---------- */
-
-export function RegisterDialog({
-  open,
-  onClose,
-  onDone,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onDone: (username: string, key: string) => void;
-}) {
-  const { t } = useT();
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [key, setKey] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setUsername("");
-      setDisplayName("");
-      setEmail("");
-      setKey(null);
-      setError("");
-    }
-  }, [open ]);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      const res = await api.register({
-        username: username.trim().toLowerCase(),
-        displayName: displayName.trim() || undefined,
-        email: email.trim() || undefined,
-      });
-      setKey(res.key);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("dlg.regFailed"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open={open} onClose={onClose} title={t("dlg.registerTitle")} icon={UserPlus}>
-      {key ? (
-        <div className="space-y-4">
-          <p className="text-sm opacity-80">
-            {t("dlg.regWelcome", { user: username.trim().toLowerCase() })}
-          </p>
-          <div className="flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-2xl bg-stone-100 px-3 py-2.5 text-sm dark:bg-zinc-800">{key}</code>
-            <CopyButton text={key} />
-          </div>
-          <div className="flex justify-end">
-            <Button size="sm" onClick={() => { onDone(username.trim().toLowerCase(), key); onClose(); }}>{t("dlg.regContinue")}</Button>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={submit} className="space-y-4">
-          <Field label={t("common.username")}>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="alice" maxLength={32} required />
-          </Field>
-          <Field label={t("common.displayName")}>
-            <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Alice" maxLength={60} />
-          </Field>
-          <Field label={t("dlg.emailOpt")}>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" />
-          </Field>
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="sm" type="button" onClick={onClose}>{t("common.cancel")}</Button>
-            <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : t("login.register")}</Button>
-          </div>
-        </form>
       )}
     </Modal>
   );

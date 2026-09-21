@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { api, clearToken, getToken } from "./lib/api.ts";
 import { featureEnabled, THINKING_SYSTEM_PROMPT } from "./lib/features.ts";
 import type { Attachment, ChatMessage, Conversation, DriverModel, FilePreview, User } from "./lib/types.ts";
+import { navigate, normalizePath, useRoute } from "./lib/route.ts";
 import { Login } from "./components/Login.tsx";
+import { RegisterPage } from "./components/RegisterPage.tsx";
 import { Sidebar } from "./components/Sidebar.tsx";
 import { Chat } from "./components/Chat.tsx";
 import { ConvEditDialog, FilePreviewModal, SettingsModal, ShareModal } from "./components/dialogs.tsx";
@@ -48,7 +50,18 @@ function applyTheme(theme: string) {
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(!SHARE_ID && !RESET_TOKEN && !REVIEW_ID && !IS_ADMIN_PAGE);
+  // Boot splash ONLY on the platform routes (/ and /chat, with a token).
+  // /login and /register never show it — they render instantly.
+  const [checking, setChecking] = useState(() => {
+    if (SHARE_ID || RESET_TOKEN || REVIEW_ID || IS_ADMIN_PAGE) return false;
+    const p = normalizePath(window.location.pathname);
+    if (p === "/login" || p === "/register") return false;
+    return !!getToken();
+  });
+  // True once we know whether there is a session (no token = instant).
+  const [authReady, setAuthReady] = useState(() => !getToken());
+  const rawRoute = useRoute();
+  const path = normalizePath(rawRoute);
   const [models, setModels] = useState<DriverModel[]>([]);
   const [model, setModel] = useState("");
   const [convs, setConvs] = useState<Conversation[]>([]);
@@ -98,7 +111,7 @@ export function App() {
     }
   }, []);
 
-  // Session restore (boot splash stays at least MIN_SPLASH_MS)
+  // Session restore (boot splash stays at least MIN_SPLASH_MS on / and /chat)
   useEffect(() => {
     const t0 = Date.now();
     const done = () => {
@@ -106,7 +119,8 @@ export function App() {
       window.setTimeout(() => setChecking(false), wait);
     };
     if (!getToken()) {
-      done();
+      setAuthReady(true);
+      setChecking(false);
       return;
     }
     api.verify()
@@ -125,8 +139,34 @@ export function App() {
         if (c.conversations.length > 0) setActiveId(c.conversations[0]!.id);
       })
       .catch(() => {})
-      .finally(done);
+      .finally(() => {
+        setAuthReady(true);
+        done();
+      });
   }, []);
+
+  // Route guard: / redirects by session, /chat needs auth, /login and
+  // /register bounce logged-in users to /chat. Public routes return above.
+  useEffect(() => {
+    if (SHARE_ID || RESET_TOKEN || REVIEW_ID || IS_ADMIN_PAGE) return;
+    const noToken = !getToken();
+    if (path === "/") {
+      if (noToken) navigate("/login", true);
+      else if (authReady) navigate(user ? "/chat" : "/login", true);
+      return;
+    }
+    if (path === "/login" || path === "/register") {
+      if (user) navigate("/chat", true);
+      return;
+    }
+    if (path === "/chat") {
+      if (noToken || (authReady && !user)) navigate("/login", true);
+      return;
+    }
+    // Unknown path: land on the platform or the login page.
+    if (noToken) navigate("/login", true);
+    else if (authReady) navigate(user ? "/chat" : "/login", true);
+  }, [path, user, authReady]);
 
   // Load messages for active conversation
   useEffect(() => {
@@ -148,7 +188,10 @@ export function App() {
 
   function handleLogin(u: User) {
     setUser(u);
+    setAuthReady(true);
+    setChecking(false);
     applyTheme(u.theme);
+    navigate("/chat", true);
     api.models().then((m) => {
       setModels(m.models);
       if (m.models.length > 0) setModel(m.models[0]!.id);
@@ -161,12 +204,15 @@ export function App() {
     api.logout().finally(() => {});
     clearToken();
     setUser(null);
+    setAuthReady(true);
+    setChecking(false);
     setConvs([]);
     setMessages([]);
     setActiveId(null);
     setArchivedConv(null);
     setAttachments([]);
     setFilePreview(null);
+    navigate("/login", true);
   }
 
   async function newChat() {
@@ -334,12 +380,27 @@ export function App() {
     await refreshConvs();
   }
 
+  // Auth pages render instantly (no splash); the platform boots behind one.
+  if (path === "/login") {
+    if (user) return null; // bounce to /chat imminent
+    return <Login onLogin={handleLogin} />;
+  }
+  if (path === "/register") {
+    if (user) return null; // bounce to /chat imminent
+    return <RegisterPage />;
+  }
+
   if (checking) {
     return <LoadingScreen />;
   }
 
+  // / (or unknown paths) while the guard above redirects.
+  if (path !== "/chat") {
+    return null;
+  }
+
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return null; // bounce to /login imminent (no splash flash)
   }
 
   const active = convs.find((c) => c.id === activeId) ?? archivedConv;

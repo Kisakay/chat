@@ -99,7 +99,7 @@ only ever sees reviewed text blocks, never raw files.
 
 ## Drivers`src/drivers/`: `LLMDriver` interface (`listModels`, `chat`, `chatStream`),
 `DriverRegistry` with global priority
-`ollama → mistral → glm → puppeteer-openai (stub) → deepseek → anthropic → openai`.
+`ollama → mistral → glm → puppeteer-openai (POC) → deepseek → anthropic → openai`.
 Models are addressed as `"driver:model"` (split on the first `:`).
 
 - `OllamaDriver`: model discovery via `GET {OLLAMA_HOST}/api/tags`, chat via
@@ -113,5 +113,16 @@ Models are addressed as `"driver:model"` (split on the first `:`).
   (SSE) implementation; concrete drivers only set base URL, key, and fallback
   model list. A driver is enabled only when its `*_ENABLED` flag is set **and**
   its key is non-empty; failing drivers are skipped (not fatal) in listings.
-- `PuppeteerOpenAIDriver`: intentional stub, always disabled (headless scraping
-  of chatgpt.com is fragile and against ToS).
+- `PuppeteerOpenAIDriver` (+ `browser.ts` `ChatGPTBrowserEngine`): ChatGPT via
+  the web UI — puppeteer-core driving Firefox (WebDriver BiDi) with a
+  **throwaway profile** (mkdtemp under /tmp, deleted on close). Anonymous
+  session works without login; if the composer is missing the engine waits up
+  to `PUPPETEER_LOGIN_TIMEOUT_S` for a manual login in the window. Flow:
+  accept the cookie banner, focus the composer (`#mobile-composer-prompt`,
+  multi-line via Shift+Enter), submit with `[data-composer-submit]`, stream
+  by polling `[data-assistant-stream-block]` text, and treat a newly
+  **visible** `[data-copy-message]` button as end-of-response (toolbars exist
+  hidden in the DOM during streaming — visibility is the real signal).
+  Navigation uses domcontentloaded + retries (chatgpt.com stalls sometimes).
+  POC — ToS-risky, off unless `PUPPETEER_ENABLED=true`. Smoke test:
+  `bun scripts/poc-chatgpt.ts` (headed, `--probe` for a state report).

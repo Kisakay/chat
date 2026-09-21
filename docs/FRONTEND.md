@@ -7,9 +7,18 @@ directory is a build artifact, never hand-edit, not committed).
 
 ## Routing
 
-No router library — `App.tsx` matches `window.location.pathname` once (module
-level, constant for the page lifetime): `/share/:publicId` renders the public
-read-only `SharePage` (no auth), everything else renders the authenticated app.
+No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
+`useRoute()`, trailing-slash normalization) drives pathname routing:
+
+- `/login` — sign-in card (username + access key + TOTP step). Renders
+  instantly, **never shows the boot splash**.
+- `/register` — full-page self-registration (`RegisterPage.tsx`; key shown
+  once, then hands username+key to `/login` via `sessionStorage`). No splash.
+- `/chat` — the platform itself (auth required; boots behind the splash).
+- `/` — redirects to `/chat` when logged in, `/login` otherwise (placeholder
+  for a future landing page).
+- Public routes (unchanged): `/share/:publicId`, `/reset/:token`,
+  `/review/:id`, `/admin`.
 
 ## State & data flow
 
@@ -20,7 +29,8 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
   `{ error }` parsing, `ApiError` with status, auto logout+reload on 401
   (except on `/share/*`). `chatStream()` parses SSE `token`/`done`/`error`.
 - Boot shows `LoadingScreen` for at least 1.5 s (`MIN_SPLASH_MS` in `App.tsx`)
-  so the bloom animation always plays, even when the session restores instantly.
+  so the bloom animation always plays, even when the session restores
+  instantly — **only on `/` and `/chat`**. `/login` and `/register` skip it.
 - Sending: ensure a server conversation exists (created lazily on first send),
   optimistic user message, stream tokens into `streaming`, then append the full
   assistant message and refresh the list (server auto-titles new chats).
@@ -33,7 +43,11 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
   **`Picker`** — the framework-styled dropdown (pill button + popover, optional
   option groups, lucide `ChevronDown`/`Check`, Escape/outside-click to close).
   **Never use a native `<select>`**; use `Picker` for model and theme choices.
-- `Login.tsx` — username + access-key card.
+- `Login.tsx` — username + access-key card (`/login`); the Register button
+  navigates to `/register`, and a fresh registration prefills the form.
+- `RegisterPage.tsx` — full-page registration (`/register`) reusing the login
+  card style; shows the new key once with a copy button, then continues to
+  `/login`.
 - `Sidebar.tsx` — collapsible conversation list with per-item context menu
   (right-click or `···`: Rename / Set topic / Share publicly / Archive /
   Delete), user chip (opens settings), Accounts button (admin), logout.

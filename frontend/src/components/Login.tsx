@@ -3,8 +3,9 @@ import { ArrowRight, KeyRound, MessageSquareText, ShieldCheck, User, UserPlus, Z
 import { api, setToken } from "../lib/api.ts";
 import { useT } from "../lib/i18n.ts";
 import type { User as UserType } from "../lib/types.ts";
+import { navigate } from "../lib/route.ts";
 import { Button, FlowerMark, Input, LangPicker, Spinner } from "./ui.tsx";
-import { RecoverDialog, RegisterDialog } from "./dialogs.tsx";
+import { RecoverDialog } from "./dialogs.tsx";
 import { AccessRequestModal } from "./ReviewPage.tsx";
 
 export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
@@ -16,7 +17,6 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [recoverOpen, setRecoverOpen] = useState(false);
   const [recoveryOn, setRecoveryOn] = useState(false);
   const [recoveryFrom, setRecoveryFrom] = useState<string | undefined>(undefined);
-  const [registerOpen, setRegisterOpen] = useState(false);
   const [registrationOn, setRegistrationOn] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestOn, setRequestOn] = useState(false);
@@ -37,6 +37,19 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
       setRegistrationOn(m.registration);
       setRequestOn(m.accessRequest);
     }).catch(() => {});
+    // Fresh registration hands the new key over via sessionStorage so the
+    // login form comes prefilled (cleared immediately after reading).
+    try {
+      const raw = sessionStorage.getItem("ka_login_prefill");
+      if (raw) {
+        const p = JSON.parse(raw) as { username?: string; key?: string };
+        if (p.username) setUsername(p.username);
+        if (p.key) setKey(p.key);
+        sessionStorage.removeItem("ka_login_prefill");
+      }
+    } catch {
+      // ignore (private mode, malformed payload)
+    }
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -171,16 +184,11 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             className="mt-3 w-full"
             disabled={!registrationOn}
             title={registrationOn ? t("login.regTipOn") : t("login.regTipOff")}
-            onClick={() => setRegisterOpen(true)}
+            onClick={() => navigate("/register")}
           >
             <UserPlus size={16} />
             {t("login.register")}
           </Button>
-          <RegisterDialog
-            open={registerOpen}
-            onClose={() => setRegisterOpen(false)}
-            onDone={(u, k) => { setUsername(u); setKey(k); }}
-          />
           {/* Wishlist path: only when open registration is off AND the admin
               enabled access requests. They are mutually exclusive server-side. */}
           {!registrationOn && requestOn && (
