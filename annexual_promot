@@ -1,6 +1,21 @@
---- HIGH PRIORITY
+--- VERY HIGH PRIORITY:
+
+Update pfp composer when new upload.actually i have to refresh the page after the save button for seeing it
+when upload did we have to refresh the pfp preview composer to the new uploaded pictures.
+
+
+--- MEDIUM PRIORITY
 Being abble to :
 Disable features / Enable it:
 ie : thinking, deep search, etc...
 
 Downloading models throught a catalog : ollama only
+
+
+--- LOW PRIORITY
+
+Search into the old prompts with a search bar.
+integrate the platform name in the top of the conversations slide list. with a well beautiful font and a flower in lucide svg icon for the brand icon
+
+Make a beautiful SEO integrate into the html file for disovering.
+make a robots.txt file for let all llm/crawler/scrapper visiting the site.

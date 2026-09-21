@@ -32,7 +32,7 @@
           '';
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-0AhK5sK0FmqxTb1kedUDPH9aOiYKN7z1jWQVFsnb1hs=";
+          outputHash = "sha256-ToEgXq9TpyliuZn+0bu+95SUER+tuXLJ0LHY+c6LUXE=";
         };
 
         # Phase 2 (offline): vite build against the pre-fetched node_modules.
@@ -40,15 +40,17 @@
           pname = "kisassistant-frontend";
           inherit version;
           src = ./frontend;
-          nativeBuildInputs = [ pkgs.bun ];
+          nativeBuildInputs = [ pkgs.bun pkgs.nodejs ];
           buildPhase = ''
             export HOME=$TMPDIR
-            ln -s ${bunDeps} node_modules
+            cp -a ${bunDeps} node_modules
+            chmod -R u+w node_modules
+            patchShebangs node_modules
             bun run build
           '';
           installPhase = ''
             mkdir -p $out
-            cp -r dist/* $out/
+            cp -r ../public/. $out/
           '';
         };
       in pkgs.stdenv.mkDerivation {

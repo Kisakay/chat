@@ -1,13 +1,23 @@
 { config, lib, pkgs, ... }:
 let
   cfg = config.services.kisassistant;
+
+  # Backward-compatible tri-state: null (default) keeps the legacy behaviour
+  # (setting `domain` activates nginx), true forces it on, false forces it off.
+  nginxEnabled =
+    if cfg.enableNginx != null then cfg.enableNginx
+    else cfg.domain != null;
 in {
   options.services.kisassistant = {
     enable = lib.mkEnableOption "KisAssistant private chat assistant";
     package = lib.mkOption {
-      type = lib.types.package;
-      default = pkgs.bun;
-      description = "KisAssistant package built from this flake (set via nixpkgs overlay or flake packages output).";
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = ''
+        KisAssistant package built from this flake, e.g.
+        `kisassistant.packages.''${pkgs.system}.default`.
+        Required when the service is enabled.
+      '';
     };
     port = lib.mkOption { type = lib.types.port; default = 3000; };
     host = lib.mkOption { type = lib.types.str; default = "127.0.0.1"; };
@@ -22,7 +32,17 @@ in {
     domain = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
-      description = "e.g. chat.kisakay.com — enables bundled nginx reverse proxy.";
+      description = "nginx virtualHost name (e.g. chat.kisakay.com). Required when enableNginx is true.";
+    };
+    enableNginx = lib.mkOption {
+      type = lib.types.nullOr lib.types.bool;
+      default = null;
+      description = ''
+        Reverse-proxy the service through nginx with TLS + ACME.
+        - `true`: nginx is configured (requires `domain`).
+        - `false`: nginx is never configured, even if `domain` is set.
+        - `null` (default): legacy behaviour — nginx is configured iff `domain` is set.
+      '';
     };
     extraEnv = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
@@ -32,6 +52,17 @@ in {
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.package != null;
+        message = "services.kisassistant.package must be set, e.g. kisassistant.packages.\${pkgs.system}.default";
+      }
+      {
+        assertion = !(nginxEnabled && cfg.domain == null);
+        message = "services.kisassistant.enableNginx requires services.kisassistant.domain to be set";
+      }
+    ];
+
     users.users.${cfg.user} = {
       isSystemUser = true;
       group = cfg.user;
@@ -47,8 +78,10 @@ in {
       environment = {
         PORT = toString cfg.port;
         HOST = cfg.host;
+        NODE_ENV = "production";
         DATA_DIR = "${cfg.dataDir}/data";
         CDN_DIR = "${cfg.dataDir}/cdn";
+        DRIVER_DEBUG = "false";
         OLLAMA_HOST = cfg.ollamaHost;
       } // cfg.extraEnv;
       serviceConfig = {
@@ -68,7 +101,7 @@ in {
       '';
     };
 
-    services.nginx = lib.mkIf (cfg.domain != null) {
+    services.nginx = lib.mkIf nginxEnabled {
       enable = true;
       recommendedProxySettings = true;
       virtualHosts.${cfg.domain} = {

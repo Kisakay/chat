@@ -58,11 +58,25 @@ export function Sidebar({
 }) {
   const [menu, setMenu] = useState<MenuState | null>(null);
   const touchX = useRef<number | null>(null);
+  // Long-press (mobile right-click): open the context menu, suppress the tap.
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressPos = useRef<{ x: number; y: number } | null>(null);
+  const suppressClick = useRef(false);
+
+  function openMenuAt(x: number, y: number, conv: Conversation) {
+    setMenu({ x, y, conv });
+  }
 
   function openMenu(e: React.MouseEvent, conv: Conversation) {
     e.preventDefault();
     e.stopPropagation();
-    setMenu({ x: e.clientX, y: e.clientY, conv });
+    openMenuAt(e.clientX, e.clientY, conv);
+  }
+
+  function cancelPress() {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+    pressPos.current = null;
   }
 
   if (collapsed && !mobileOpen) return null;
@@ -110,9 +124,29 @@ export function Sidebar({
             key={c.id}
             role="button"
             tabIndex={0}
-            onClick={() => onSelect(c.id)}
+            onClick={() => {
+              if (suppressClick.current) {
+                suppressClick.current = false;
+                return;
+              }
+              onSelect(c.id);
+            }}
             onKeyDown={(e) => e.key === "Enter" && onSelect(c.id)}
             onContextMenu={(e) => openMenu(e, c)}
+            onTouchStart={(e) => {
+              const t = e.touches[0]!;
+              pressPos.current = { x: t.clientX, y: t.clientY };
+              pressTimer.current = setTimeout(() => {
+                suppressClick.current = true;
+                openMenuAt(t.clientX, t.clientY, c);
+              }, 550);
+            }}
+            onTouchMove={(e) => {
+              const p = pressPos.current;
+              const t = e.touches[0]!;
+              if (p && Math.hypot(t.clientX - p.x, t.clientY - p.y) > 10) cancelPress();
+            }}
+            onTouchEnd={cancelPress}
             className={cn(
               "group flex cursor-pointer items-center gap-2 rounded-2xl px-3 py-2.5 text-sm transition",
               c.id === activeId
