@@ -112,11 +112,17 @@ creates a row in the `reports` table with a content snapshot (survives later
 edits/deletion of the chat), the model, and the reporter.
 
 - Reporter: capped at 20 open (`open` + `reviewing`) reports (429 beyond).
-- Admin: **Reports** tab in the Admin Center (badge counts open reports) —
-  filter by status, expand for the full snapshot + reporter details, and set
-  `open → reviewing → resolved / dismissed` with an internal note.
+  Reporting the same message twice returns the existing report (409
+  `already reported`).
+- Admin: **Reports** tab in the Admin Center (badge counts open reports,
+  excluding shadow-banned reporters) — filter by status, expand for the full
+  snapshot + reporter details, and set `open → reviewing → resolved /
+  dismissed` with an internal note. An admin can also **shadow-ban** a
+  noisy reporter (toggle on the report detail, with confirm): their reports
+  are still accepted but flagged unreliable and hidden from the badge.
 - Routes: `POST /api/reports` (Bearer), `GET /api/admin/reports`,
-  `PATCH /api/admin/reports/:id` (admin).
+  `PATCH /api/admin/reports/:id`,
+  `POST /api/admin/users/:id/shadowban` (admin).
 
 ## Key recovery via email (optional)
 
