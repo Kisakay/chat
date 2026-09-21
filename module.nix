@@ -93,6 +93,8 @@ in {
       } // lib.optionalAttrs (cfg.passwordFile != null) {
         LoadCredential = "app-password:${cfg.passwordFile}";
       };
+      # tesseract binary for the OCR platform tool (see TESSERACT_BIN).
+      path = [ pkgs.tesseract ];
       script = ''
         ${lib.optionalString (cfg.passwordFile != null) ''
           export APP_PASSWORD="$(cat "$CREDENTIALS_DIRECTORY/app-password")"

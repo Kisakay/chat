@@ -22,8 +22,11 @@
     "typecheck": "tsc --noEmit",
     "typecheck:frontend": "bun --cwd frontend tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "nodemailer": "^10.0.10"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/nodemailer": "^8.0.2"
   }
 }

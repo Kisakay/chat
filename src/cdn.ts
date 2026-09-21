@@ -14,27 +14,34 @@ import { config } from "./config.ts";
 // the client. Everything else is systematically blacklisted.
 
 export type ImageExt = "jpg" | "png" | "webp";
+export type TextExt = "txt";
+export type CdnExt = ImageExt | TextExt;
 
 export interface CdnNamespace {
   maxBytes: number;
   windowMs: number;
   maxUploads: number;
+  /** Allowed content kinds for this namespace. */
+  kinds: ("image" | "text")[];
 }
 
 export const CDN_NAMESPACES: Record<string, CdnNamespace> = {
   // Avatar rules (spec): 5 MB max, 5 changes max per 2 h per account.
-  avatar: { maxBytes: 5 * 1024 * 1024, windowMs: 2 * 3600_000, maxUploads: 5 },
+  avatar: { maxBytes: 5 * 1024 * 1024, windowMs: 2 * 3600_000, maxUploads: 5, kinds: ["image"] },
+  // Chat text attachments (spec): 500 KB max plain-text files.
+  text: { maxBytes: 500 * 1024, windowMs: 3600_000, maxUploads: 30, kinds: ["text"] },
 };
 
-export const CDN_EXTS: ImageExt[] = ["jpg", "png", "webp"];
+export const CDN_EXTS: CdnExt[] = ["jpg", "png", "webp", "txt"];
 
-const CDN_MIME: Record<ImageExt, string> = {
+const CDN_MIME: Record<CdnExt, string> = {
   jpg: "image/jpeg",
   png: "image/png",
   webp: "image/webp",
+  txt: "text/plain; charset=utf-8",
 };
 
-export function cdnMime(ext: ImageExt): string {
+export function cdnMime(ext: CdnExt): string {
   return CDN_MIME[ext];
 }
 
@@ -46,7 +53,7 @@ export function validKey(key: string): boolean {
   return /^[A-Za-z0-9_-]{1,64}$/.test(key);
 }
 
-export function validExt(ext: string): ext is ImageExt {
+export function validExt(ext: string): ext is CdnExt {
   return (CDN_EXTS as string[]).includes(ext);
 }
 
@@ -54,11 +61,11 @@ function cdnDir(): string {
   return config.cdnDir;
 }
 
-export function cdnPath(ns: string, key: string, ext: ImageExt): string {
+export function cdnPath(ns: string, key: string, ext: CdnExt): string {
   return join(cdnDir(), ns, `${key}.${ext}`);
 }
 
-export async function cdnFile(ns: string, key: string, ext: ImageExt): Promise<{ path: string; exists: boolean }> {
+export async function cdnFile(ns: string, key: string, ext: CdnExt): Promise<{ path: string; exists: boolean }> {
   const path = cdnPath(ns, key, ext);
   return { path, exists: await Bun.file(path).exists() };
 }
@@ -89,7 +96,45 @@ export function detectImageType(buf: Uint8Array): ImageExt | null {
   return null;
 }
 
-/** Remove every stored variant for a key (used before replacing an avatar). */
+/**
+ * Detect plain-text content: strict UTF-8 decode of a sample plus no NUL
+ * bytes anywhere (binary files are rejected, not just mislabeled ones).
+ */
+export function isTextContent(buf: Uint8Array): boolean {
+  if (buf.length === 0) return false;
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] === 0) return false;
+  }
+  try {
+    new TextDecoder("utf-8", { fatal: true }).decode(buf.subarray(0, Math.min(buf.length, 65536)));
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Detect the stored extension for a namespace from content (never the client).
+ * Returns null when the content is not allowed in this namespace.
+ */
+export function detectCdnType(ns: string, buf: Uint8Array): CdnExt | null {
+  const kinds = CDN_NAMESPACES[ns]?.kinds ?? [];
+  if (kinds.includes("image")) {
+    const img = detectImageType(buf);
+    if (img) return img;
+  }
+  if (kinds.includes("text") && isTextContent(buf)) return "txt";
+  return null;
+}
+
+/** Human description of what a namespace accepts (for 415 errors). */
+export function namespaceAccepts(ns: string): string {
+  const kinds = CDN_NAMESPACES[ns]?.kinds ?? [];
+  const parts: string[] = [];
+  if (kinds.includes("image")) parts.push("jpg/png/webp images");
+  if (kinds.includes("text")) parts.push("plain-text files");
+  return parts.join(" and ") || "nothing";
+}
 export async function removeCdnVariants(ns: string, key: string): Promise<void> {
   const { unlink } = await import("node:fs/promises");
   for (const ext of CDN_EXTS) {
@@ -101,7 +146,7 @@ export async function removeCdnVariants(ns: string, key: string): Promise<void> 
   }
 }
 
-export async function writeCdnFile(ns: string, key: string, ext: ImageExt, data: Uint8Array): Promise<string> {
+export async function writeCdnFile(ns: string, key: string, ext: CdnExt, data: Uint8Array): Promise<string> {
   await mkdir(join(cdnDir(), ns), { recursive: true });
   await removeCdnVariants(ns, key);
   await Bun.write(cdnPath(ns, key, ext), data);

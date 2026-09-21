@@ -15,7 +15,9 @@ import {
 } from "./auth.ts";
 import {
   addMessage,
+  consumeReset,
   createConversation,
+  createReset,
   createUser,
   deleteConversation,
   deleteShare,
@@ -30,6 +32,7 @@ import {
   getUserByUsername,
   listConversations,
   listUsers,
+  peekReset,
   toPublicUser,
   touchConversation,
   updateConversation,
@@ -37,11 +40,15 @@ import {
 } from "./db.ts";
 import type { ChatMessage } from "./drivers/types.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
+import { createHash, randomBytes } from "node:crypto";
+import { mailEnabled, sendRecoveryEmail } from "./mail.ts";
 import {
   CDN_NAMESPACES,
   cdnFile,
   cdnMime,
+  detectCdnType,
   detectImageType,
+  namespaceAccepts,
   recordUpload,
   uploadAllowed,
   validExt,
@@ -49,9 +56,12 @@ import {
   validNamespace,
   writeCdnFile,
 } from "./cdn.ts";
+import { OCR_MAX_BYTES, ocrAllowed, recordOcrJob } from "./tools/ocr.ts";
+import { tools } from "./tools/registry.ts";
 
 assertConfig();
 const registry = new DriverRegistry();
+await tools.init();
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -114,6 +124,16 @@ function validUsername(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim().toLowerCase();
   if (!/^[a-z0-9._-]{2,32}$/.test(t) || t === "admin") return null;
+  return t;
+}
+
+/** Empty string (unset) or a plausible email address. */
+function validEmail(v: unknown): string | null {
+  if (v === "" || v === undefined || v === null) return "";
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (t.length > 320) return null;
+  if (!/^[^\s@]{1,64}@[^\s@]{1,253}\.[^\s@]{2,}$/.test(t)) return null;
   return t;
 }
 
@@ -185,9 +205,11 @@ const server = Bun.serve({
       const [, ns, key] = cdnPut as [string, string, string];
       if (!validNamespace(ns) || !validKey(key)) return json({ error: "unknown namespace or key" }, 404);
       const rules = CDN_NAMESPACES[ns]!;
-      // Avatar ownership: your own account id, unless admin.
-      if (ns === "avatar" && key !== user.id && !user.isAdmin) {
-        return json({ error: "forbidden" }, 403);
+      // Ownership: avatar keys are exactly your account id; text keys must
+      // live under your account id prefix. Admin may write for anyone.
+      if (!user.isAdmin) {
+        if (ns === "avatar" && key !== user.id) return json({ error: "forbidden" }, 403);
+        if (ns === "text" && !key.startsWith(user.id)) return json({ error: "forbidden" }, 403);
       }
       const declared = Number(req.headers.get("content-length") || "0");
       const maxMb = (rules.maxBytes / (1024 * 1024)).toFixed(0);
@@ -200,9 +222,9 @@ const server = Bun.serve({
       }
       if (buf.length < 16) return json({ error: "empty file" }, 400);
       if (buf.length > rules.maxBytes) return json({ error: `file too large (max ${maxMb}MB)` }, 413);
-      const ext = detectImageType(buf);
+      const ext = detectCdnType(ns, buf);
       if (!ext) {
-        return json({ error: "unsupported file type: only jpg/png/webp images are accepted (verified by content, not extension)" }, 415);
+        return json({ error: `unsupported file type: this namespace only accepts ${namespaceAccepts(ns)} (verified by content, not extension)` }, 415);
       }
       const rl = uploadAllowed(user.id, ns);
       if (!rl.ok) {
@@ -247,6 +269,53 @@ const server = Bun.serve({
       return json({ ok: true });
     }
 
+    // --- key recovery via email (optional — needs SMTP configured) ---
+    if (path === "/api/auth/methods" && req.method === "GET") {
+      return json({ recovery: mailEnabled(), from: mailEnabled() ? config.smtpFrom : undefined });
+    }
+
+    if (path === "/api/auth/recover" && req.method === "POST") {
+      const ip = clientIp(req, server);
+      if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
+      const { ok, body } = await readJson(req);
+      // Never enumerate accounts: always answer ok.
+      if (ok && typeof body.username === "string") {
+        const name = body.username.trim().toLowerCase();
+        const target = name === "admin" ? null : getUserByUsername(name);
+        if (target && target.email && mailEnabled()) {
+          const token = "rt_" + randomBytes(24).toString("base64url");
+          createReset(createHash("sha256").update(token).digest("hex"), target.id, Date.now() + config.resetTtlMs);
+          sendRecoveryEmail(target.email, target.username, `${config.appUrl}/reset/${token}`).catch(() => {});
+          clearAttempts(ip);
+          return json({ ok: true });
+        }
+      }
+      recordAttempt(ip);
+      await Bun.sleep(400);
+      return json({ ok: true });
+    }
+
+    const resetMatch = path.match(/^\/api\/auth\/reset\/([A-Za-z0-9_-]{6,80})$/);
+    if (resetMatch) {
+      const tokenHash = createHash("sha256").update(resetMatch[1]!).digest("hex");
+      if (req.method === "GET") {
+        const r = peekReset(tokenHash);
+        const u = r ? getUserById(r.user_id) : null;
+        if (!r || !u) return json({ error: "invalid or expired link" }, 404);
+        return json({ ok: true, username: u.username });
+      }
+      if (req.method === "POST") {
+        const r = consumeReset(tokenHash);
+        const u = r ? getUserById(r.user_id) : null;
+        if (!r || !u || u.username === "admin") return json({ error: "invalid or expired link" }, 404);
+        // Recovery = instant key rotation; the new key is shown exactly once.
+        const key = newAccessKey();
+        updateUser(u.id, { keyHash: hashSecret(key) });
+        deleteUserSessions(u.id);
+        return json({ key });
+      }
+    }
+
     // --- everything below requires auth ---
     if (path.startsWith("/api/")) {
       const user = requireAuth(req);
@@ -259,7 +328,7 @@ const server = Bun.serve({
       if (path === "/api/me" && req.method === "PATCH") {
         const { ok, body } = await readJson(req);
         if (!ok) return json({ error: "invalid JSON" }, 400);
-        const patch: { displayName?: string; avatarUrl?: string; theme?: string } = {};
+        const patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
         if (body.displayName !== undefined) {
           const d = cleanStr(body.displayName, 60);
           if (d === null) return json({ error: "displayName: 1-60 chars" }, 400);
@@ -273,6 +342,11 @@ const server = Bun.serve({
         if (body.theme !== undefined) {
           if (!validTheme(body.theme)) return json({ error: "theme must be auto|light|dark" }, 400);
           patch.theme = body.theme;
+        }
+        if (body.email !== undefined) {
+          const e = validEmail(body.email);
+          if (e === null) return json({ error: "invalid email address" }, 400);
+          patch.email = e;
         }
         const updated = updateUser(user.id, patch);
         if (!updated) return json({ error: "user not found" }, 404);
@@ -298,8 +372,10 @@ const server = Bun.serve({
         if (avatarUrl === null) return json({ error: "avatarUrl must be an http(s) URL or empty" }, 400);
         const theme = body.theme === undefined ? "auto" : body.theme;
         if (!validTheme(theme)) return json({ error: "theme must be auto|light|dark" }, 400);
+        const email = body.email === undefined ? "" : validEmail(body.email);
+        if (email === null) return json({ error: "invalid email address" }, 400);
         const key = newAccessKey();
-        const created = createUser({ username, displayName, avatarUrl, theme, keyHash: hashSecret(key) });
+        const created = createUser({ username, displayName, avatarUrl, theme, email, keyHash: hashSecret(key) });
         // Show the raw key exactly once.
         return json({ user: toPublicUser(created), key }, 201);
       }
@@ -322,7 +398,7 @@ const server = Bun.serve({
         if (req.method === "PATCH" && !adminUserMatch[2]) {
           const { ok, body } = await readJson(req);
           if (!ok) return json({ error: "invalid JSON" }, 400);
-          const patch: { displayName?: string; avatarUrl?: string; theme?: string } = {};
+          const patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
           if (body.displayName !== undefined) {
             const d = cleanStr(body.displayName, 60);
             if (d === null) return json({ error: "displayName: 1-60 chars" }, 400);
@@ -336,6 +412,11 @@ const server = Bun.serve({
           if (body.theme !== undefined) {
             if (!validTheme(body.theme)) return json({ error: "theme must be auto|light|dark" }, 400);
             patch.theme = body.theme;
+          }
+          if (body.email !== undefined) {
+            const e = validEmail(body.email);
+            if (e === null) return json({ error: "invalid email address" }, 400);
+            patch.email = e;
           }
           const updated = updateUser(target.id, patch);
           return json({ user: toPublicUser(updated!) });
@@ -412,6 +493,42 @@ const server = Bun.serve({
       if (path === "/api/models" && req.method === "GET") {
         const models = await registry.listAllModels();
         return json({ models });
+      }
+
+      // --- platform tools (uploads always go through tools) ---
+      if (path === "/api/tools" && req.method === "GET") {
+        return json({ tools: tools.list() });
+      }
+
+      if (path === "/api/tools/ocr" && req.method === "POST") {
+        const ocr = tools.ocr;
+        if (!ocr.isAvailable()) return json({ error: ocr.unavailableReason() ?? "ocr unavailable" }, 501);
+        const declared = Number(req.headers.get("content-length") || "0");
+        if (declared > OCR_MAX_BYTES) return json({ error: "image too large (max 5MB)" }, 413);
+        let buf: Uint8Array;
+        try {
+          buf = new Uint8Array(await req.arrayBuffer());
+        } catch {
+          return json({ error: "unreadable body" }, 400);
+        }
+        if (buf.length < 16) return json({ error: "empty file" }, 400);
+        if (buf.length > OCR_MAX_BYTES) return json({ error: "image too large (max 5MB)" }, 413);
+        if (!detectImageType(buf)) {
+          return json({ error: "only jpg/png/webp images are accepted (verified by content, not extension)" }, 415);
+        }
+        const rl = ocrAllowed(user.id);
+        if (!rl.ok) {
+          return json({ error: "ocr rate limited: 20 jobs per hour", retryAfterSec: rl.retryAfterSec }, 429);
+        }
+        recordOcrJob(user.id);
+        try {
+          const { text, truncated } = await ocr.transcribe(buf);
+          return json({ text, truncated, chars: text.length });
+        } catch (e) {
+          const msg = (e as Error).message;
+          if (/not available|failed to start/i.test(msg)) return json({ error: msg }, 501);
+          return json({ error: msg }, 502);
+        }
       }
 
       if (path === "/api/chat" && req.method === "POST") {

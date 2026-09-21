@@ -46,16 +46,22 @@ export const api = {
   verify: () => req<{ ok: boolean; user: User }>("/api/auth/verify"),
   logout: () => req<{ ok: boolean }>("/api/auth/logout", { method: "POST" }).catch(() => ({ ok: true as const })),
 
+  methods: () => req<{ recovery: boolean; from?: string }>("/api/auth/methods", {}, false),
+  recover: (username: string) =>
+    req<{ ok: boolean }>("/api/auth/recover", { method: "POST", body: JSON.stringify({ username }) }, false),
+  resetCheck: (token: string) => req<{ ok: boolean; username: string }>(`/api/auth/reset/${token}`, {}, false),
+  resetConsume: (token: string) => req<{ key: string }>(`/api/auth/reset/${token}`, { method: "POST" }, false),
+
   me: () => req<{ user: User }>("/api/me"),
-  updateMe: (patch: { displayName?: string; avatarUrl?: string; theme?: string }) =>
+  updateMe: (patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>("/api/me", { method: "PATCH", body: JSON.stringify(patch) }),
 
   adminList: () => req<{ users: User[] }>("/api/admin/users"),
-  adminCreate: (u: { username: string; displayName?: string; avatarUrl?: string; theme?: string }) =>
+  adminCreate: (u: { username: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User; key: string }>("/api/admin/users", { method: "POST", body: JSON.stringify(u) }),
   adminDelete: (id: string) => req<{ ok: boolean }>(`/api/admin/users/${id}`, { method: "DELETE" }),
   adminRegenerate: (id: string) => req<{ key: string }>(`/api/admin/users/${id}/regenerate`, { method: "POST" }),
-  adminPatch: (id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string }) =>
+  adminPatch: (id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
 
   convs: () => req<{ conversations: Conversation[] }>("/api/conversations"),
@@ -72,6 +78,25 @@ export const api = {
   publicShare: (publicId: string) => req<SharedChat>(`/api/share/${publicId}`, {}, false),
 
   models: () => req<{ models: DriverModel[] }>("/api/models"),
+
+  tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[] }>("/api/tools"),
+
+  /** Send an image to the platform OCR tool. Returns editable text (never the raw image). */
+  ocrImage: async (file: File): Promise<{ text: string; truncated: boolean; chars: number }> => {
+    const res = await fetch("/api/tools/ocr", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+    if (res.status === 401) {
+      clearToken();
+      window.location.reload();
+      throw new ApiError(401, "Session expired.");
+    }
+    const data = (await res.json().catch(() => ({}))) as { error?: string; text?: string; truncated?: boolean; chars?: number };
+    if (!res.ok) throw new ApiError(res.status, data.error || `OCR failed (${res.status})`);
+    return { text: data.text ?? "", truncated: !!data.truncated, chars: data.chars ?? 0 };
+  },
 
   /** Avatar upload to the local CDN. Returns the public /cdn/… URL. */
   uploadAvatar: async (userId: string, file: File): Promise<{ url: string }> => {

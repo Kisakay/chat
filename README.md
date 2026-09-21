@@ -15,7 +15,8 @@ Driver priority:
 
 Docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (backend, drivers, DB) ·
 [`docs/FRONTEND.md`](docs/FRONTEND.md) (components, theming) ·
-[`docs/OPERATIONS.md`](docs/OPERATIONS.md) (env, dev, accounts, NixOS).
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md) (env, dev, accounts, NixOS) ·
+[`docs/NIXOS-HOSTING.md`](docs/NIXOS-HOSTING.md) (server hosting tutorial).
 Agent instructions: [`AGENTS.md`](AGENTS.md).
 
 ## Quick start
@@ -90,10 +91,12 @@ Enable an API driver later: `MISTRAL_ENABLED=true` + `MISTRAL_API_KEY=…`, rest
 
 ## NixOS hosting (chat.kisakay.com)
 
+Full tutorial: **[`docs/NIXOS-HOSTING.md`](docs/NIXOS-HOSTING.md)**.
+
 Flake exposes `packages.<system>.default` (backend + prebuilt frontend) and
-`nixosModules.default`. The frontend is built offline via `buildNpmPackage`
-(`frontend/package-lock.json`); on first build, replace the placeholder
-`npmDepsHash` with the hash Nix suggests.
+`nixosModules.default`. The frontend is built offline inside Nix with Bun from
+`frontend/bun.lock`; on a deps hash mismatch, paste the `got: sha256-…` value
+Nix reports into `bunDepsHash` in `flake.nix`.
 
 ```nix
 kisassistant.url = "http://git.kisakay.com/k/chat";  # adjust to real repo path
@@ -101,15 +104,18 @@ kisassistant.url = "http://git.kisakay.com/k/chat";  # adjust to real repo path
 imports = [ kisassistant.nixosModules.default ];
 services.kisassistant = {
   enable = true;
-  package = kisassistant.packages.${pkgs.system}.default;
-  domain = "chat.kisakay.com";                        # nginx reverse proxy + ACME
+  package = kisassistant.packages.${pkgs.system}.default;  # required
+  enableNginx = true;                       # nginx reverse proxy + ACME
+  domain = "chat.kisakay.com";              # vhost name (required with enableNginx)
   passwordFile = "/run/secrets/kisassistant-password"; # agenix/sops-nix
   ollamaHost = "http://10.66.66.4:11434";
 };
+security.acme.acceptTerms = true;           # required for the TLS certificate
 ```
 
-Nginx terminates TLS; the app listens on `127.0.0.1:3000`. SQLite lives in
-`/var/lib/kisassistant/data`.
+Nginx terminates TLS; the app listens on `127.0.0.1:3000` with
+`NODE_ENV=production`. SQLite lives in `/var/lib/kisassistant/data`, avatars
+(file CDN) in `/var/lib/kisassistant/cdn`.
 
 ## Frontend
 

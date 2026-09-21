@@ -43,8 +43,9 @@ Created idempotently at boot in `getDb()` (no migration framework; keep it so).
 
 | Table | Purpose |
 |---|---|
-| `users` | `id, username UNIQUE, display_name, avatar_url, theme, key_hash, created_at`. The `admin` row is bootstrapped (its `key_hash` is unused — admin auth goes through `APP_PASSWORD`). |
+| `users` | `id, username UNIQUE, display_name, avatar_url, theme, email, key_hash, created_at`. The `admin` row is bootstrapped (its `key_hash` is unused — admin auth goes through `APP_PASSWORD`). |
 | `sessions` | `token_hash PK, user_id, created_at, expires_at`. Bearer tokens, 256-bit, hashed with sha256. Expired rows are purged lazily on access. |
+| `resets` | `token_hash PK, user_id, created_at, expires_at`. One-time key-recovery tokens (single use, consumed on POST). |
 | `conversations` | `id, user_id, title, topic, model, created_at, updated_at`. |
 | `messages` | `id AUTOINCREMENT, conv_id → conversations ON DELETE CASCADE, role, content, created_at`. |
 | `shares` | `conv_id PK → conversations ON DELETE CASCADE, public_id UNIQUE, created_at`. |
@@ -79,6 +80,16 @@ exists: key = account id (`/cdn/avatar/<id>.png`), ownership enforced.
   stored variants for the key.
 - Served with detected `Content-Type`, `X-Content-Type-Options: nosniff`,
   `Cache-Control: public, max-age=3600`.
+
+## Platform tools
+
+`src/tools/`: `PlatformTool` interface + registry (today: `ocr` via the
+tesseract binary, availability probed at boot). `POST /api/tools/ocr` takes
+raw image bytes (5 MB, magic-verified, 20 jobs/hour/account) and returns
+`{ text, truncated, chars }` — transcription happens server-side with
+per-driver-style stdout logging; a missing binary yields a clean 501. Text
+attachments use the `text` CDN namespace (500 KB, UTF-8 validated). The model
+only ever sees reviewed text blocks, never raw files.
 
 ## Drivers`src/drivers/`: `LLMDriver` interface (`listModels`, `chat`, `chatStream`),
 `DriverRegistry` with global priority

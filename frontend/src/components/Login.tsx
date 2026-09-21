@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, KeyRound, ShieldCheck, User, Zap } from "lucide-react";
 import { api, setToken } from "../lib/api.ts";
 import type { User as UserType } from "../lib/types.ts";
 import { Button, Input, Logo, Spinner } from "./ui.tsx";
+import { RecoverDialog } from "./dialogs.tsx";
 
 const PERKS = [
   { icon: ShieldCheck, text: "Private by design — no cookies, no tracking" },
@@ -14,6 +15,16 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [key, setKey] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [recoverOpen, setRecoverOpen] = useState(false);
+  const [recoveryOn, setRecoveryOn] = useState(false);
+  const [recoveryFrom, setRecoveryFrom] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    api.methods().then((m) => {
+      setRecoveryOn(m.recovery);
+      setRecoveryFrom(m.from);
+    }).catch(() => {});
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,6 +89,12 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
               {busy ? <Spinner /> : (<>Unlock <ArrowRight size={17} /></>)}
             </Button>
           </form>
+          {recoveryOn && (
+            <button onClick={() => setRecoverOpen(true)} className="mt-3 w-full text-center text-sm opacity-60 transition hover:opacity-100 hover:underline">
+              Forgot your access key?
+            </button>
+          )}
+          <RecoverDialog open={recoverOpen} onClose={() => setRecoverOpen(false)} from={recoveryFrom} />
 
           <ul className="mt-6 space-y-2 border-t border-stone-200/70 pt-5 dark:border-zinc-800">
             {PERKS.map((p) => (

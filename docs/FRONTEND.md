@@ -37,7 +37,8 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
   chip (opens settings), Accounts button (admin), logout.
 - `Chat.tsx` — header (title, topic badge, driver-grouped model `Picker`,
   share button), message list (`Markdown` for assistant, emerald bubble for
-  user), rounded composer (Enter to send, Shift+Enter for newline).
+  user), rounded composer with paperclip attach menu, attachment chips
+  (Enter to send, Shift+Enter for newline).
 - `dialogs.tsx` — `ConvEditDialog` (title + topic), `ShareModal` (public link,
   copy, unshare), `SettingsModal` (display name, avatar upload box with
   drag & drop, avatar URL, theme).

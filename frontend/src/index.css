@@ -5,9 +5,19 @@
 html, body, #root {
   height: 100%;
 }
+/* Mobile browser chrome (URL bar) shrinks the visible area — dynamic
+   viewport units keep the app glued to the real screen height. */
+@supports (height: 100dvh) {
+  html, body, #root {
+    height: 100dvh;
+  }
+}
 
 body {
   @apply bg-stone-100 text-stone-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+  /* Kill the 300ms tap delay, keep gestures app-like. */
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
 }
 
 /* slim scrollbars */

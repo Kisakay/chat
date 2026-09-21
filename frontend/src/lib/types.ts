@@ -4,6 +4,7 @@ export interface User {
   displayName: string;
   avatarUrl: string;
   theme: string;
+  email: string;
   createdAt: number;
   isAdmin: boolean;
 }
@@ -28,6 +29,20 @@ export interface DriverModel {
   name: string;
   driver: string;
   label: string;
+}
+
+export interface Attachment {
+  id: string;
+  name: string;
+  kind: "ocr" | "text";
+  text: string;
+}
+
+export interface FilePreview {
+  name: string;
+  kind: "ocr" | "text";
+  text: string;
+  truncated: boolean;
 }
 
 export interface SharedChat {

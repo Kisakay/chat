@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, clearToken, getToken } from "./lib/api.ts";
-import type { ChatMessage, Conversation, DriverModel, User } from "./lib/types.ts";
+import type { Attachment, ChatMessage, Conversation, DriverModel, FilePreview, User } from "./lib/types.ts";
 import { Login } from "./components/Login.tsx";
 import { Sidebar } from "./components/Sidebar.tsx";
 import { Chat } from "./components/Chat.tsx";
-import { ConvEditDialog, SettingsModal, ShareModal } from "./components/dialogs.tsx";
+import { ConvEditDialog, FilePreviewModal, SettingsModal, ShareModal } from "./components/dialogs.tsx";
 import { AdminPanel } from "./components/AdminPanel.tsx";
 import { SharePage } from "./components/SharePage.tsx";
+import { ResetPage } from "./components/ResetPage.tsx";
 import { ConfirmDialog } from "./components/ui.tsx";
 
 function shareIdFromPath(): string | null {
@@ -16,6 +17,12 @@ function shareIdFromPath(): string | null {
 
 // Module-level: the path never changes without a full reload, so hook order stays stable.
 const SHARE_ID = typeof window !== "undefined" ? shareIdFromPath() : null;
+const RESET_TOKEN = typeof window !== "undefined" ? resetTokenFromPath() : null;
+
+function resetTokenFromPath(): string | null {
+  const m = window.location.pathname.match(/^\/reset\/([A-Za-z0-9_-]{6,80})\/?$/);
+  return m ? m[1]! : null;
+}
 
 function applyTheme(theme: string) {
   const root = document.documentElement;
@@ -27,7 +34,7 @@ function applyTheme(theme: string) {
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(!SHARE_ID && !!getToken());
+  const [checking, setChecking] = useState(!SHARE_ID && !RESET_TOKEN && !!getToken());
   const [models, setModels] = useState<DriverModel[]>([]);
   const [model, setModel] = useState("");
   const [convs, setConvs] = useState<Conversation[]>([]);
@@ -42,8 +49,16 @@ export function App() {
   const [deleteConv, setDeleteConv] = useState<Conversation | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachError, setAttachError] = useState<string | null>(null);
+  const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [ocrAvailable, setOcrAvailable] = useState(false);
 
-  // Public share route: no auth needed. SHARE_ID is constant for the page lifetime.
+  // Public routes: no auth needed. IDs are constant for the page lifetime.
+  if (RESET_TOKEN) {
+    return <ResetPage token={RESET_TOKEN} />;
+  }
   if (SHARE_ID) {
     return <SharePage publicId={SHARE_ID} />;
   }
@@ -71,7 +86,12 @@ export function App() {
       .then(async (res) => {
         setUser(res.user);
         applyTheme(res.user.theme);
-        const [m, c] = await Promise.all([api.models().catch(() => ({ models: [] })), api.convs().catch(() => ({ conversations: [] }))]);
+        const [m, c, t] = await Promise.all([
+          api.models().catch(() => ({ models: [] })),
+          api.convs().catch(() => ({ conversations: [] })),
+          api.tools().catch(() => ({ tools: [] as { name: string; available: boolean }[] })),
+        ]);
+        setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available));
         setModels(m.models);
         if (m.models.length > 0) setModel(m.models[0]!.id);
         setConvs(c.conversations);
@@ -106,6 +126,7 @@ export function App() {
       setModels(m.models);
       if (m.models.length > 0) setModel(m.models[0]!.id);
     }).catch(() => {});
+    api.tools().then((t) => setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available))).catch(() => {});
     refreshConvs();
   }
 
@@ -116,6 +137,8 @@ export function App() {
     setConvs([]);
     setMessages([]);
     setActiveId(null);
+    setAttachments([]);
+    setFilePreview(null);
   }
 
   async function newChat() {
@@ -140,8 +163,14 @@ export function App() {
       }
     }
     const userMsg: ChatMessage = { role: "user", content: text };
+    // Attachments travel as reviewed text blocks appended to the message.
+    const blocks = attachments.map((a) =>
+      `[attached ${a.kind === "ocr" ? "image transcription" : "text file"}: ${a.name}]\n\`\`\`text\n${a.text}\n\`\`\``,
+    );
+    if (blocks.length > 0) userMsg.content = [text, ...blocks].filter(Boolean).join("\n\n");
     const history = [...messages, userMsg];
     setMessages(history);
+    setAttachments([]);
     setSending(true);
     setStreaming("");
     let full = "";
@@ -161,8 +190,51 @@ export function App() {
     }
   }
 
-  async function removeConv(c: Conversation) {
+  /** Platform-tools upload flow: image -> OCR, text -> CDN, both previewed before attach. */
+  async function handlePickFile(kind: "ocr" | "text", file: File) {
+    if (!user) return;
+    setAttachError(null);
+    if (kind === "ocr" && file.size > 5 * 1024 * 1024) {
+      setAttachError("Image too large (max 5MB).");
+      return;
+    }
+    if (kind === "text" && file.size > 500 * 1024) {
+      setAttachError("Text file too large (max 500KB).");
+      return;
+    }
+    setFilePreview({ name: file.name, kind, text: "", truncated: false });
+    setPreviewBusy(true);
     try {
+      if (kind === "ocr") {
+        const r = await api.ocrImage(file);
+        setFilePreview({ name: file.name, kind, text: r.text, truncated: r.truncated });
+      } else {
+        const key = `${user.id}-${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+        const put = await fetch(`/cdn/text/${key}`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "text/plain" },
+          body: file,
+        });
+        const pdata = (await put.json().catch(() => ({}))) as { error?: string; url?: string };
+        if (!put.ok || !pdata.url) throw new Error(pdata.error || `Upload failed (${put.status})`);
+        const text = await (await fetch(pdata.url)).text();
+        setFilePreview({ name: file.name, kind, text, truncated: false });
+      }
+    } catch (e) {
+      setFilePreview(null);
+      setAttachError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setPreviewBusy(false);
+    }
+  }
+
+  function attachPreviewText(text: string) {
+    if (!filePreview || !text.trim()) return;
+    setAttachments((prev) => [...prev, { id: crypto.randomUUID(), name: filePreview.name, kind: filePreview.kind, text }]);
+    setFilePreview(null);
+  }
+
+  async function removeConv(c: Conversation) {    try {
       await api.deleteConv(c.id);
       if (activeId === c.id) {
         setActiveId(null);
@@ -218,6 +290,17 @@ export function App() {
         sidebarCollapsed={sidebarCollapsed}
         onExpandSidebar={() => setSidebarCollapsed(false)}
         onOpenNav={() => setMobileNav(true)}
+        attachments={attachments}
+        attachError={attachError}
+        ocrAvailable={ocrAvailable}
+        onRemoveAttachment={(id) => setAttachments((prev) => prev.filter((a) => a.id !== id))}
+        onPickFile={handlePickFile}
+      />
+      <FilePreviewModal
+        preview={filePreview}
+        busy={previewBusy}
+        onClose={() => { if (!previewBusy) setFilePreview(null); }}
+        onAttach={attachPreviewText}
       />
 
       <ConvEditDialog

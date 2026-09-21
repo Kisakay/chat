@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Bot, Cpu, Menu, PanelLeftOpen, SendHorizontal, Share2, User as UserIcon } from "lucide-react";
-import type { ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
+import { BookOpen, Bot, Cpu, FileText, Menu, PanelLeftOpen, Paperclip, ScanText, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
+import type { Attachment, ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
 import { Avatar, IconButton, LOGO_URL, Logo, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
 import { cn } from "../lib/cn.ts";
@@ -43,6 +43,11 @@ export function Chat({
   sidebarCollapsed,
   onExpandSidebar,
   onOpenNav,
+  attachments,
+  attachError,
+  ocrAvailable,
+  onRemoveAttachment,
+  onPickFile,
 }: {
   user: User;
   conv: Conversation | null;
@@ -57,10 +62,18 @@ export function Chat({
   sidebarCollapsed: boolean;
   onExpandSidebar: () => void;
   onOpenNav: () => void;
+  attachments: Attachment[];
+  attachError: string | null;
+  ocrAvailable: boolean;
+  onRemoveAttachment: (id: string) => void;
+  onPickFile: (kind: "ocr" | "text", file: File) => void;
 }) {
   const [draft, setDraft] = useState("");
+  const [attachOpen, setAttachOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const imgRef = useRef<HTMLInputElement>(null);
+  const txtRef = useRef<HTMLInputElement>(null);
 
   const modelGroups: PickerGroup[] = (() => {
     const byDriver = new Map<string, { value: string; label: string; hint: string }[]>();
@@ -162,7 +175,73 @@ export function Chat({
       </div>
 
       <div className="px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-8">
-        <form onSubmit={submit} className="mx-auto flex w-full max-w-3xl items-end gap-2 rounded-[1.75rem] border border-stone-200 bg-white p-2 pl-5 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="mx-auto w-full max-w-3xl">
+          {attachError && (
+            <p className="mb-2 rounded-2xl bg-red-500/10 px-4 py-2 text-sm text-red-600 dark:text-red-400" role="alert">{attachError}</p>
+          )}
+          {attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {attachments.map((a) => (
+                <span key={a.id} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-emerald-600/30 bg-emerald-600/10 py-1 pl-3 pr-1.5 text-xs font-medium dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                  {a.kind === "ocr" ? <ScanText size={13} /> : <FileText size={13} />}
+                  <span className="max-w-40 truncate">{a.name}</span>
+                  <button onClick={() => onRemoveAttachment(a.id)} aria-label={`Remove ${a.name}`} className="rounded-full p-1 transition hover:bg-black/10 dark:hover:bg-white/10">
+                    <X size={13} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="relative mx-auto w-full max-w-3xl">
+          {attachOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setAttachOpen(false)} />
+              <div className="absolute bottom-full left-0 z-50 mb-2 w-80 max-w-[calc(100vw-2rem)] rounded-3xl border border-stone-200 bg-white p-2 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+                <button
+                  onClick={() => { setAttachOpen(false); imgRef.current?.click(); }}
+                  disabled={!ocrAvailable}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-stone-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+                    <ScanText size={16} />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-medium">Transcribe image {ocrAvailable ? "" : "(unavailable)"}</span>
+                    <span className="block text-xs opacity-60">JPG, PNG, WEBP — OCR on the server, you review the text first</span>
+                  </span>
+                </button>
+                <button
+                  onClick={() => { setAttachOpen(false); txtRef.current?.click(); }}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-stone-100 dark:hover:bg-zinc-800"
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+                    <FileText size={16} />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-medium">Attach text file</span>
+                    <span className="block text-xs opacity-60">TXT or Markdown, max 500KB</span>
+                  </span>
+                </button>
+                <p className="px-3 pb-1.5 pt-2 text-xs opacity-60">
+                  Uploads go through platform tools only. Images are sent to the model as reviewed text — never as raw images.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+        <form onSubmit={submit} className="mx-auto flex w-full max-w-3xl items-end gap-2 rounded-[1.75rem] border border-stone-200 bg-white p-2 pl-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+          <button
+            type="button"
+            onClick={() => setAttachOpen((o) => !o)}
+            aria-label="Attach a file"
+            title="Attach a file"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-stone-100 active:scale-95 dark:hover:bg-zinc-800"
+          >
+            <Paperclip size={17} className="opacity-70" />
+          </button>
+          <input ref={imgRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile("ocr", f); e.target.value = ""; }} />
+          <input ref={txtRef} type="file" accept=".txt,.md,text/plain,text/markdown" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile("text", f); e.target.value = ""; }} />
           <textarea
             ref={taRef}
             rows={1}
@@ -180,7 +259,7 @@ export function Chat({
           />
           <button
             type="submit"
-            disabled={!draft.trim() || sending}
+            disabled={(!draft.trim() && attachments.length === 0) || sending}
             aria-label="Send"
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-600 text-white shadow transition hover:bg-emerald-500 active:scale-95 disabled:opacity-40 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
           >

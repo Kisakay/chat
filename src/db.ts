@@ -12,6 +12,7 @@ export interface UserRow {
   display_name: string;
   avatar_url: string;
   theme: string;
+  email: string;
   key_hash: string;
   created_at: number;
 }
@@ -47,6 +48,7 @@ export interface PublicUser {
   displayName: string;
   avatarUrl: string;
   theme: string;
+  email: string;
   createdAt: number;
   isAdmin: boolean;
 }
@@ -100,7 +102,18 @@ export function getDb(): Database {
       public_id TEXT UNIQUE NOT NULL,
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS resets(
+      token_hash TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL
+    );
   `);
+  // Email column added after the initial schema — keep idempotent.
+  const cols = db.query("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!cols.some((c) => c.name === "email")) {
+    db.exec("ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''");
+  }
   // Admin pseudo-account row (auth still goes through APP_PASSWORD from .env).
   const admin = db.query("SELECT id FROM users WHERE username = 'admin'").get() as { id: string } | null;
   if (!admin) {
@@ -118,6 +131,7 @@ export function toPublicUser(u: UserRow): PublicUser {
     displayName: u.display_name,
     avatarUrl: u.avatar_url,
     theme: u.theme,
+    email: u.email ?? "",
     createdAt: u.created_at,
     isAdmin: u.username === "admin",
   };
@@ -137,7 +151,7 @@ export function listUsers(): UserRow[] {
   return getDb().query("SELECT * FROM users ORDER BY created_at ASC").all() as UserRow[];
 }
 
-export function createUser(opts: { username: string; displayName: string; avatarUrl: string; theme: string; keyHash: string }): UserRow {
+export function createUser(opts: { username: string; displayName: string; avatarUrl: string; theme: string; email: string; keyHash: string }): UserRow {
   const d = getDb();
   const row: UserRow = {
     id: randomUUID(),
@@ -145,22 +159,24 @@ export function createUser(opts: { username: string; displayName: string; avatar
     display_name: opts.displayName,
     avatar_url: opts.avatarUrl,
     theme: opts.theme,
+    email: opts.email,
     key_hash: opts.keyHash,
     created_at: Date.now(),
   };
-  d.query("INSERT INTO users (id, username, display_name, avatar_url, theme, key_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
-    row.id, row.username, row.display_name, row.avatar_url, row.theme, row.key_hash, row.created_at,
+  d.query("INSERT INTO users (id, username, display_name, avatar_url, theme, email, key_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
+    row.id, row.username, row.display_name, row.avatar_url, row.theme, row.email, row.key_hash, row.created_at,
   );
   return row;
 }
 
-export function updateUser(id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; keyHash?: string }): UserRow | null {
+export function updateUser(id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string; keyHash?: string }): UserRow | null {
   const d = getDb();
   const sets: string[] = [];
   const vals: (string | number)[] = [];
   if (patch.displayName !== undefined) { sets.push("display_name = ?"); vals.push(patch.displayName); }
   if (patch.avatarUrl !== undefined) { sets.push("avatar_url = ?"); vals.push(patch.avatarUrl); }
   if (patch.theme !== undefined) { sets.push("theme = ?"); vals.push(patch.theme); }
+  if (patch.email !== undefined) { sets.push("email = ?"); vals.push(patch.email); }
   if (patch.keyHash !== undefined) { sets.push("key_hash = ?"); vals.push(patch.keyHash); }
   if (sets.length > 0) {
     d.query(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`).run(...vals, id);
@@ -181,6 +197,7 @@ export function deleteUser(id: string): void {
   });
   for (const c of convs) txn(c.id);
   d.query("DELETE FROM sessions WHERE user_id = ?").run(id);
+  d.query("DELETE FROM resets WHERE user_id = ?").run(id);
   d.query("DELETE FROM users WHERE id = ?").run(id);
 }
 
@@ -272,6 +289,47 @@ export function addMessage(convId: string, role: string, content: string): void 
 
 export function getMessages(convId: string): MessageRow[] {
   return getDb().query("SELECT * FROM messages WHERE conv_id = ? ORDER BY id ASC LIMIT 500").all(convId) as MessageRow[];
+}
+
+// --- password-recovery resets (one-time, hashed, expiring) ---
+
+export interface ResetRow {
+  token_hash: string;
+  user_id: string;
+  created_at: number;
+  expires_at: number;
+}
+
+export function createReset(tokenHash: string, userId: string, expiresAt: number): void {
+  const d = getDb();
+  // One active reset per account: replace any previous one.
+  d.query("DELETE FROM resets WHERE user_id = ?").run(userId);
+  d.query("INSERT INTO resets (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").run(
+    tokenHash, userId, Date.now(), expiresAt,
+  );
+}
+
+export function peekReset(tokenHash: string): ResetRow | null {
+  const d = getDb();
+  const r = d.query("SELECT * FROM resets WHERE token_hash = ?").get(tokenHash) as ResetRow | null;
+  if (!r) return null;
+  if (r.expires_at <= Date.now()) {
+    d.query("DELETE FROM resets WHERE token_hash = ?").run(tokenHash);
+    return null;
+  }
+  return r;
+}
+
+/** Consume a reset token (single use). Returns the row, or null if invalid/expired. */
+export function consumeReset(tokenHash: string): ResetRow | null {
+  const r = peekReset(tokenHash);
+  if (!r) return null;
+  getDb().query("DELETE FROM resets WHERE token_hash = ?").run(tokenHash);
+  return r;
+}
+
+export function deleteUserResets(userId: string): void {
+  getDb().query("DELETE FROM resets WHERE user_id = ?").run(userId);
 }
 
 // --- public shares ---

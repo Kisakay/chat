@@ -16,6 +16,7 @@ export function AdminPanel({ open, onClose }: { open: boolean; onClose: () => vo
   // create form
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
 
   async function refresh() {
     setBusy(true);
@@ -43,10 +44,11 @@ export function AdminPanel({ open, onClose }: { open: boolean; onClose: () => vo
     e.preventDefault();
     setError("");
     try {
-      const res = await api.adminCreate({ username: username.trim().toLowerCase(), displayName: displayName.trim() || undefined });
+      const res = await api.adminCreate({ username: username.trim().toLowerCase(), displayName: displayName.trim() || undefined, email: email.trim() || undefined });
       setFreshKey({ username: res.user.username, key: res.key });
       setUsername("");
       setDisplayName("");
+      setEmail("");
       setShowCreate(false);
       await refresh();
     } catch (err) {
@@ -103,6 +105,9 @@ export function AdminPanel({ open, onClose }: { open: boolean; onClose: () => vo
             <div className="min-w-40 flex-1">
               <Field label="Display name"><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Alice" /></Field>
             </div>
+            <div className="min-w-40 flex-1">
+              <Field label="Email (recovery)"><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" /></Field>
+            </div>
             <Button size="sm" type="submit">Create</Button>
             <Button size="sm" variant="ghost" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
           </form>
@@ -148,6 +153,7 @@ export function AdminPanel({ open, onClose }: { open: boolean; onClose: () => vo
 function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose: () => void; onSaved: () => void }) {
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [email, setEmail] = useState("");
   const [theme, setTheme] = useState("auto");
   const [error, setError] = useState("");
 
@@ -155,6 +161,7 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
     if (user) {
       setDisplayName(user.displayName);
       setAvatarUrl(user.avatarUrl);
+      setEmail(user.email);
       setTheme(user.theme);
       setError("");
     }
@@ -164,7 +171,7 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
     e.preventDefault();
     if (!user) return;
     try {
-      await api.adminPatch(user.id, { displayName: displayName.trim(), avatarUrl: avatarUrl.trim(), theme });
+      await api.adminPatch(user.id, { displayName: displayName.trim(), avatarUrl: avatarUrl.trim(), email: email.trim(), theme });
       onSaved();
       onClose();
     } catch (err) {
@@ -177,6 +184,7 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
       <form onSubmit={save} className="space-y-4">
         <Field label="Display name"><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required /></Field>
         <Field label="Avatar URL"><Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" /></Field>
+        <Field label="Email (recovery)"><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" /></Field>
         <Field label="Theme">
           <Picker
             ariaLabel="Theme"

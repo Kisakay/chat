@@ -54,6 +54,20 @@ export const config = {
   // Dev default is a folder next to the codebase; NixOS module points it
   // under the service state dir.
   cdnDir: env("CDN_DIR", "./cdn"),
+
+  // OCR tool (tesseract binary).
+  ocrLang: env("OCR_LANG", "eng"),
+  ocrMaxChars: envInt("OCR_MAX_CHARS", 100_000),
+
+  // Key recovery via email (optional — empty SMTP_HOST disables it).
+  smtpHost: env("SMTP_HOST", ""),
+  smtpPort: envInt("SMTP_PORT", 587),
+  smtpSecure: envBool("SMTP_SECURE", false), // true = implicit TLS (port 465)
+  smtpUser: env("SMTP_USER", ""),
+  smtpPass: env("SMTP_PASS", ""),
+  smtpFrom: env("SMTP_FROM", "KisAssistant <chatkisakai@ihorizon.org>"),
+  appUrl: env("APP_URL", "http://localhost:3000").replace(/\/$/, ""),
+  resetTtlMs: envInt("RESET_TTL_MIN", 60) * 60_000,
 };
 
 export function assertConfig(): void {
