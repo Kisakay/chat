@@ -53,3 +53,8 @@ L'administrateur lui, qand il demande les modèles dams le ollama, lui, force un
 --- ADMIN CENTER: SMTP CONNECTIVITY.
 
 Make a SMTP tester in the admin center, and also a viewer of the smtp credentials (default bluring the smtp pasword OBVIOUSLY) And also a SMTP tester , sending a mail to a provided one , to tets the SMTP connectivity
+
+
+--- ARCHIVED FEATURES:
+a way to archive conversaitons with the contetxual menue.
+When conversations are archived. it's impossible to write in . only read-only. also, when conversations are archived, they are not anymore visible in the conversations side list. They are still unarchivable and checkable, in a new sub-category options into the settigns modal : "Archiveds Chats"

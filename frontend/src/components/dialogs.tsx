@@ -517,8 +517,8 @@ export function SettingsModal({
                   {uploading ? <Spinner size={17} /> : <ImagePlus size={17} />}
                 </span>
                 <span className="min-w-0 flex-1 text-sm">
-                  <span className="block font-medium">{uploading ? "Uploading…" : dragOver ? "Drop it!" : "Drop an image or click to upload"}</span>
-                  <span className="block text-xs opacity-60">jpg · png · webp — max 5MB — 5 changes per 2h</span>
+                  <span className="block font-medium">{uploading ? t("settings.uploading") : dragOver ? t("settings.dropActive") : t("settings.dropIdle")}</span>
+                  <span className="block text-xs opacity-60">{t("settings.avatarHint")}</span>
                 </span>
               </div>
               <input
@@ -534,10 +534,10 @@ export function SettingsModal({
               />
               {uploadError && <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
             </div>
-            <Field label="Display name">
+            <Field label={t("common.displayName")}>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required />
             </Field>
-            <Field label="Recovery email" hint="Optional. Used only to send you a fresh access key if you lose it.">
+            <Field label={t("settings.email")} hint={t("settings.emailHint")}>
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" />
             </Field>
               </SettingsPane>
@@ -545,18 +545,21 @@ export function SettingsModal({
 
             {activeCat === "appearance" && (
               <SettingsPane>
-            <Field label="Theme">
+            <Field label={t("common.theme")}>
               <Picker
-                ariaLabel="Theme"
+                ariaLabel={t("common.theme")}
                 value={theme}
                 onChange={setTheme}
                 align="left"
                 options={[
-                  { value: "auto", label: "Auto (follows system)" },
-                  { value: "light", label: "Light" },
-                  { value: "dark", label: "Dark" },
+                  { value: "auto", label: t("common.themeAutoFull") },
+                  { value: "light", label: t("common.light") },
+                  { value: "dark", label: t("common.dark") },
                 ]}
               />
+            </Field>
+            <Field label={t("settings.language")} hint={t("settings.languageHint")}>
+              <LangPicker align="left" />
             </Field>
             <AccentSection />
               </SettingsPane>
@@ -564,7 +567,7 @@ export function SettingsModal({
 
             {activeCat === "features" && (
               <SettingsPane>
-            <p className="-mb-2 text-xs opacity-60">Turn composer capabilities on or off. Applied instantly, saved on this device.</p>
+            <p className="-mb-2 text-xs opacity-60">{t("settings.featHint")}</p>
             <FeaturesSection />
               </SettingsPane>
             )}
@@ -578,13 +581,13 @@ export function SettingsModal({
         </div>
 
         {search.trim() && visibleCats.length === 0 && (
-          <p className="px-2 py-4 text-center text-sm opacity-50">No settings match “{search.trim()}”.</p>
+          <p className="px-2 py-4 text-center text-sm opacity-50">{t("settings.noMatch", { q: search.trim() })}</p>
         )}
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" type="button" onClick={onClose}>Cancel</Button>
-          <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : "Save"}</Button>
+          <Button variant="secondary" size="sm" type="button" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : t("common.save")}</Button>
         </div>
       </form>
     </Modal>
@@ -606,6 +609,7 @@ function SettingsPane({ children }: { children: React.ReactNode }) {
 /* ---------- Accent color (settings) ---------- */
 
 function AccentSection() {
+  const { t } = useT();
   const [state, setState] = useState<AccentState>(() => currentAccent());
 
   function pick(presetId: string) {
@@ -622,13 +626,15 @@ function AccentSection() {
 
   return (
     <div>
+      <span className="mb-1.5 block text-sm font-medium opacity-80">{t("settings.accent")}</span>
+      <p className="mb-2 text-xs opacity-60">{t("settings.accentHint")}</p>
       <div className="flex flex-wrap items-center gap-2">
         {ACCENT_PRESETS.map((p) => (
           <button
             key={p.id}
             type="button"
-            title={p.label}
-            aria-label={`Accent: ${p.label}`}
+            title={t(`accent.preset.${p.id}` as StringKey)}
+            aria-label={t("settings.accentAria", { label: t(`accent.preset.${p.id}` as StringKey) })}
             onClick={() => pick(p.id)}
             className={cn(
               "h-8 w-8 rounded-full border-2 transition active:scale-90",
@@ -647,12 +653,12 @@ function AccentSection() {
               : "border-transparent hover:scale-110",
           )}
           style={{ background: state.presetId === "custom" ? state.customHex : undefined }}
-          title="Custom color"
+          title={t("settings.customColor")}
         >
           <Sparkles size={14} className={cn("text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]", state.presetId === "custom" && "opacity-0")} />
           <input
             type="color"
-            aria-label="Custom accent color"
+            aria-label={t("settings.customAria")}
             value={state.presetId === "custom" ? state.customHex : "#10b981"}
             onChange={(e) => pickCustom(e.target.value)}
             onBlur={() => applyAccent(state)} // persist the last previewed value
@@ -667,6 +673,7 @@ function AccentSection() {
 /* ---------- Features (settings) ---------- */
 
 function FeaturesSection() {
+  const { t } = useT();
   const flags = useFeatures();
   return (
     <div>
@@ -682,15 +689,15 @@ function FeaturesSection() {
             <Toggle
               checked={!!flags[f.key]}
               disabled={!f.ready}
-              label={f.label}
+              label={t(`feat.${f.key}.label` as StringKey)}
               onChange={(v) => setFeature(f.key, v)}
             />
             <span className="min-w-0">
               <span className="block text-sm font-medium">
-                {f.label}
-                {!f.ready && <span className="ml-1.5 text-xs opacity-60">(soon)</span>}
+                {t(`feat.${f.key}.label` as StringKey)}
+                {!f.ready && <span className="ml-1.5 text-xs opacity-60">{t("feat.soon")}</span>}
               </span>
-              <span className="block text-xs opacity-60">{f.hint}</span>
+              <span className="block text-xs opacity-60">{t(`feat.${f.key}.hint` as StringKey)}</span>
             </span>
           </label>
         ))}
@@ -702,6 +709,7 @@ function FeaturesSection() {
 /* ---------- Security (settings): key rotation, TOTP, passkeys ---------- */
 
 function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
+  const { t } = useT();
   const [totpOn, setTotpOn] = useState<boolean | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
   const [otpauthUrl, setOtpauthUrl] = useState("");
@@ -728,7 +736,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
       setRotatedKey(res.key);
       setArmingRotate(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Rotation failed");
+      setError(err instanceof Error ? err.message : t("sec.rotationFailed"));
     } finally {
       setBusy(false);
     }
@@ -743,7 +751,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
       setOtpauthUrl(res.otpauthUrl);
       setCode("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Setup failed");
+      setError(err instanceof Error ? err.message : t("sec.setupFailed"));
     } finally {
       setBusy(false);
     }
@@ -759,7 +767,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
       setSecret(null);
       setCode("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid code");
+      setError(err instanceof Error ? err.message : t("login.totpInvalid"));
     } finally {
       setBusy(false);
     }
@@ -774,7 +782,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
       setTotpOn(false);
       setCode("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid code");
+      setError(err instanceof Error ? err.message : t("login.totpInvalid"));
     } finally {
       setBusy(false);
     }
@@ -788,7 +796,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
       setConfirmDelete(false);
       onKeyRotated?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : t("sec.deleteFailed"));
     } finally {
       setBusy(false);
     }

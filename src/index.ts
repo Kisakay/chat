@@ -876,6 +876,42 @@ const server = Bun.serve({
         return json({ error: "not found" }, 404);
       }
 
+      // --- admin: SMTP connectivity (viewer + tester) ---
+      if (path === "/api/admin/mail" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        return json({ smtp: smtpStatus() });
+      }
+
+      if (path === "/api/admin/mail/verify" && req.method === "POST") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        try {
+          await verifySmtp();
+          return json({ ok: true });
+        } catch (e) {
+          return json({ error: (e as Error).message }, 502);
+        }
+      }
+
+      if (path === "/api/admin/mail/test" && req.method === "POST") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const ip = clientIp(req, server);
+        if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
+        const { ok, body } = await readJson(req);
+        const to = ok ? validEmail(body.to) : null;
+        if (!to) {
+          recordAttempt(ip);
+          return json({ error: "to: valid email address required" }, 400);
+        }
+        try {
+          const messageId = await sendSmtpTestMail(to);
+          clearAttempts(ip);
+          return json({ ok: true, messageId });
+        } catch (e) {
+          recordAttempt(ip);
+          return json({ error: (e as Error).message }, 502);
+        }
+      }
+
       // --- conversations (server-persisted, per account) ---
       if (path === "/api/conversations" && req.method === "GET") {
         return json({ conversations: listConversations(user.id) });

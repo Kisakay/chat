@@ -121,6 +121,13 @@ export const api = {
   adminPatchSettings: (patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean }) =>
     req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
 
+  /** Admin: SMTP credentials viewer (password included, blur it by default) + connectivity. */
+  adminMailStatus: () =>
+    req<{ smtp: { enabled: boolean; host: string; port: number; secure: boolean; user: string; pass: string; hasPass: boolean; from: string; appUrl: string } }>("/api/admin/mail"),
+  adminMailVerify: () => req<{ ok: boolean }>("/api/admin/mail/verify", { method: "POST", body: JSON.stringify({}) }),
+  adminMailTest: (to: string) =>
+    req<{ ok: boolean; messageId: string }>("/api/admin/mail/test", { method: "POST", body: JSON.stringify({ to }) }),
+
   convs: () => req<{ conversations: Conversation[] }>("/api/conversations"),
   /** Search your old chats (titles, topics and message content). */
   searchConvs: (q: string) =>
