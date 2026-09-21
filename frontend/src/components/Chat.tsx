@@ -127,15 +127,6 @@ function ReportDialog({ open, onClose, conversationId, messageIndex, content, pr
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <p className="flex items-center gap-2 rounded-2xl bg-emerald-600/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
-            <Check size={16} /> {t("report.sent")}
-          </p>
-          <div className="flex justify-end">
-            <Button variant="secondary" onClick={onClose}>{t("common.close")}</Button>
-          </div>
-        </div>
-      ) : (
         <form onSubmit={submit} className="space-y-4">
           <Field label={t("report.reason")}>
             <Picker

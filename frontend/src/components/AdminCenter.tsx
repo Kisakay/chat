@@ -67,7 +67,7 @@ export function AdminCenter() {
       try {
         const res = await api.adminReportList();
         setOpenReportCount(
-          res.reports.filter((r) => r.status === "open" || r.status === "reviewing").length,
+          res.reports.filter((r) => (r.status === "open" || r.status === "reviewing") && r.reporter_shadowbanned !== 1).length,
         );
       } catch {
         // Transient failure: keep last count.

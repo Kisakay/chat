@@ -136,8 +136,10 @@ function ReportDetail({ report, onChanged }: { report: Report; onChanged: () => 
   const [note, setNote] = useState(report.admin_note);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirmBan, setConfirmBan] = useState<boolean | null>(null);
   const { t } = useT();
   const closed = report.status === "resolved" || report.status === "dismissed";
+  const isBanned = report.reporter_shadowbanned === 1;
 
   useEffect(() => {
     setNote(report.admin_note);
@@ -156,8 +158,29 @@ function ReportDetail({ report, onChanged }: { report: Report; onChanged: () => 
     }
   }
 
+  async function toggleBan(shadowbanned: boolean) {
+    setBusy(true);
+    setError("");
+    try {
+      await api.adminShadowban(report.reporter_id, shadowbanned);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("reports.updateFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="mt-2 space-y-3 rounded-3xl border border-stone-200/70 bg-stone-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+      {report.prompt && (
+        <div>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wider opacity-50">{t("reports.prompt")}</p>
+          <div className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-2xl border border-stone-200/70 bg-white px-3.5 py-2.5 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+            {report.prompt}
+          </div>
+        </div>
+      )}
       <div>
         <p className="mb-1 text-xs font-medium uppercase tracking-wider opacity-50">{t("reports.response")}</p>
         <div className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-2xl border border-stone-200/70 bg-white px-3.5 py-2.5 text-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -175,6 +198,26 @@ function ReportDetail({ report, onChanged }: { report: Report; onChanged: () => 
           <span className="w-full">{t("reports.detailsGiven")}: <span className="opacity-100">{report.details}</span></span>
         )}
       </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => setConfirmBan(!isBanned)}>
+          {isBanned ? <Eye size={14} /> : <EyeOff size={14} />}
+          {isBanned ? t("reports.unshadowban") : t("reports.shadowban")}
+        </Button>
+        {isBanned && <span className="text-xs opacity-60">{t("reports.unreliable")}</span>}
+      </div>
+      <ConfirmDialog
+        open={confirmBan !== null}
+        onClose={() => setConfirmBan(null)}
+        onConfirm={() => {
+          const v = confirmBan;
+          setConfirmBan(null);
+          if (v !== null) void toggleBan(v);
+        }}
+        title={t(confirmBan === false ? "reports.unshadowbanTitle" : "reports.shadowbanTitle")}
+        message={t(confirmBan === false ? "reports.unshadowbanMsg" : "reports.shadowbanMsg", { user: report.reporter_name })}
+        confirmLabel={t(confirmBan === false ? "reports.unshadowban" : "reports.shadowban")}
+      />
 
       {!closed ? (
         <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-stone-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
