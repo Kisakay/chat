@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, clearToken, getToken } from "./lib/api.ts";
 import { featureEnabled, THINKING_SYSTEM_PROMPT } from "./lib/features.ts";
-import type { Attachment, ChatMessage, Conversation, DriverModel, FilePreview, User } from "./lib/types.ts";
+import type {
+  Attachment,
+  ChatMessage,
+  Conversation,
+  DriverModel,
+  FilePreview,
+  User,
+} from "./lib/types.ts";
 import { navigate, normalizePath, useRoute } from "./lib/route.ts";
 import { Login } from "./components/Login.tsx";
 import { RegisterPage } from "./components/RegisterPage.tsx";
 import { Sidebar } from "./components/Sidebar.tsx";
 import { Chat } from "./components/Chat.tsx";
-import { ConvEditDialog, FilePreviewModal, SettingsModal, ShareModal } from "./components/dialogs.tsx";
+import {
+  ConvEditDialog,
+  FilePreviewModal,
+  SettingsModal,
+  ShareModal,
+} from "./components/dialogs.tsx";
 import { AdminCenter } from "./components/AdminCenter.tsx";
 import { SharePage } from "./components/SharePage.tsx";
 import { ResetPage } from "./components/ResetPage.tsx";
@@ -16,7 +28,9 @@ import { ConfirmDialog, LoadingScreen } from "./components/ui.tsx";
 import { useT } from "./lib/i18n.ts";
 
 function shareIdFromPath(): string | null {
-  const m = window.location.pathname.match(/^\/share\/([A-Za-z0-9_-]{6,64})\/?$/);
+  const m = window.location.pathname.match(
+    /^\/share\/([A-Za-z0-9_-]{6,64})\/?$/,
+  );
   return m ? m[1]! : null;
 }
 
@@ -24,10 +38,14 @@ function shareIdFromPath(): string | null {
 const SHARE_ID = typeof window !== "undefined" ? shareIdFromPath() : null;
 const RESET_TOKEN = typeof window !== "undefined" ? resetTokenFromPath() : null;
 const REVIEW_ID = typeof window !== "undefined" ? reviewIdFromPath() : null;
-const IS_ADMIN_PAGE = typeof window !== "undefined" && /^\/admin\/?$/.test(window.location.pathname);
+const IS_ADMIN_PAGE =
+  typeof window !== "undefined" &&
+  /^\/admin\/?$/.test(window.location.pathname);
 
 function resetTokenFromPath(): string | null {
-  const m = window.location.pathname.match(/^\/reset\/([A-Za-z0-9_-]{6,80})\/?$/);
+  const m = window.location.pathname.match(
+    /^\/reset\/([A-Za-z0-9_-]{6,80})\/?$/,
+  );
   return m ? m[1]! : null;
 }
 
@@ -38,12 +56,14 @@ function reviewIdFromPath(): string | null {
 
 /** Minimum time the boot splash stays visible, so the bloom animation
  *  actually plays even when the session restores instantly. */
-const MIN_SPLASH_MS = 1500;
+const MIN_SPLASH_MS = 1100;
 
 function applyTheme(theme: string) {
   const root = document.documentElement;
   const dark =
-    theme === "dark" || (theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    theme === "dark" ||
+    (theme !== "light" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
   root.classList.toggle("dark", dark);
   root.style.colorScheme = dark ? "dark" : "light";
 }
@@ -104,7 +124,11 @@ export function App() {
       setConvs(res.conversations);
       if (select) setActiveId(select);
       else if (res.conversations.length > 0) {
-        setActiveId((cur) => (cur && res.conversations.some((c) => c.id === cur) ? cur : res.conversations[0]!.id));
+        setActiveId((cur) =>
+          cur && res.conversations.some((c) => c.id === cur)
+            ? cur
+            : res.conversations[0]!.id,
+        );
       }
     } catch {
       // ignore (session errors reload the page via api layer)
@@ -123,14 +147,19 @@ export function App() {
       setChecking(false);
       return;
     }
-    api.verify()
+    api
+      .verify()
       .then(async (res) => {
         setUser(res.user);
         applyTheme(res.user.theme);
         const [m, c, t] = await Promise.all([
           api.models().catch(() => ({ models: [] })),
           api.convs().catch(() => ({ conversations: [] })),
-          api.tools().catch(() => ({ tools: [] as { name: string; available: boolean }[] })),
+          api
+            .tools()
+            .catch(() => ({
+              tools: [] as { name: string; available: boolean }[],
+            })),
         ]);
         setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available));
         setModels(m.models);
@@ -174,7 +203,10 @@ export function App() {
       setMessages([]);
       return;
     }
-    api.getConv(activeId).then((res) => setMessages(res.messages)).catch(() => setMessages([]));
+    api
+      .getConv(activeId)
+      .then((res) => setMessages(res.messages))
+      .catch(() => setMessages([]));
   }, [activeId]);
 
   // Follow OS theme when account theme is auto
@@ -192,11 +224,19 @@ export function App() {
     setChecking(false);
     applyTheme(u.theme);
     navigate("/chat", true);
-    api.models().then((m) => {
-      setModels(m.models);
-      if (m.models.length > 0) setModel(m.models[0]!.id);
-    }).catch(() => {});
-    api.tools().then((t) => setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available))).catch(() => {});
+    api
+      .models()
+      .then((m) => {
+        setModels(m.models);
+        if (m.models.length > 0) setModel(m.models[0]!.id);
+      })
+      .catch(() => {});
+    api
+      .tools()
+      .then((t) =>
+        setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available)),
+      )
+      .catch(() => {});
     refreshConvs();
   }
 
@@ -239,11 +279,15 @@ export function App() {
     }
     const userMsg: ChatMessage = { role: "user", content: text };
     // Attachments travel as reviewed text blocks appended to the message.
-    const blocks = attachments.map((a) =>
-      t("attach.tpl", { kind: t(a.kind === "ocr" ? "attach.kindOcr" : "attach.kindText"), name: a.name }) +
-      `\n\`\`\`text\n${a.text}\n\`\`\``,
+    const blocks = attachments.map(
+      (a) =>
+        t("attach.tpl", {
+          kind: t(a.kind === "ocr" ? "attach.kindOcr" : "attach.kindText"),
+          name: a.name,
+        }) + `\n\`\`\`text\n${a.text}\n\`\`\``,
     );
-    if (blocks.length > 0) userMsg.content = [text, ...blocks].filter(Boolean).join("\n\n");
+    if (blocks.length > 0)
+      userMsg.content = [text, ...blocks].filter(Boolean).join("\n\n");
     const history = [...messages, userMsg];
     setMessages(history);
     setAttachments([]);
@@ -254,17 +298,26 @@ export function App() {
       // "Thinking" feature flag: decorate the outgoing payload only — the
       // system message is never shown nor persisted client-side.
       const outMessages = featureEnabled("thinking")
-        ? [{ role: "system", content: THINKING_SYSTEM_PROMPT } as ChatMessage, ...history]
+        ? [
+            { role: "system", content: THINKING_SYSTEM_PROMPT } as ChatMessage,
+            ...history,
+          ]
         : history;
-      await api.chatStream({ model, messages: outMessages, conversationId: convId! }, (t) => {
-        full += t;
-        setStreaming(full);
-      });
+      await api.chatStream(
+        { model, messages: outMessages, conversationId: convId! },
+        (t) => {
+          full += t;
+          setStreaming(full);
+        },
+      );
       setMessages([...history, { role: "assistant", content: full }]);
       setStreaming("");
       await refreshConvs();
     } catch {
-      setMessages([...history, { role: "assistant", content: t("attach.chatError") }]);
+      setMessages([
+        ...history,
+        { role: "assistant", content: t("attach.chatError") },
+      ]);
       setStreaming("");
     } finally {
       setSending(false);
@@ -288,16 +341,28 @@ export function App() {
     try {
       if (kind === "ocr") {
         const r = await api.ocrImage(file);
-        setFilePreview({ name: file.name, kind, text: r.text, truncated: r.truncated });
+        setFilePreview({
+          name: file.name,
+          kind,
+          text: r.text,
+          truncated: r.truncated,
+        });
       } else {
         const key = `${user.id}-${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
         const put = await fetch(`/cdn/text/${key}`, {
           method: "PUT",
-          headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "text/plain" },
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+            "Content-Type": "text/plain",
+          },
           body: file,
         });
-        const pdata = (await put.json().catch(() => ({}))) as { error?: string; url?: string };
-        if (!put.ok || !pdata.url) throw new Error(pdata.error || `Upload failed (${put.status})`);
+        const pdata = (await put.json().catch(() => ({}))) as {
+          error?: string;
+          url?: string;
+        };
+        if (!put.ok || !pdata.url)
+          throw new Error(pdata.error || `Upload failed (${put.status})`);
         const text = await (await fetch(pdata.url)).text();
         setFilePreview({ name: file.name, kind, text, truncated: false });
       }
@@ -311,11 +376,20 @@ export function App() {
 
   function attachPreviewText(text: string) {
     if (!filePreview || !text.trim()) return;
-    setAttachments((prev) => [...prev, { id: crypto.randomUUID(), name: filePreview.name, kind: filePreview.kind, text }]);
+    setAttachments((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        name: filePreview.name,
+        kind: filePreview.kind,
+        text,
+      },
+    ]);
     setFilePreview(null);
   }
 
-  async function removeConv(c: Conversation) {    try {
+  async function removeConv(c: Conversation) {
+    try {
       await api.deleteConv(c.id);
       if (activeId === c.id) {
         setActiveId(null);
@@ -352,7 +426,10 @@ export function App() {
     setArchivedConv(c);
     setActiveId(null);
     setMessages([]);
-    api.getConv(c.id).then((res) => setMessages(res.messages)).catch(() => setMessages([]));
+    api
+      .getConv(c.id)
+      .then((res) => setMessages(res.messages))
+      .catch(() => setMessages([]));
   }
 
   /** Unarchive the currently viewed archived chat and select it. */
@@ -414,15 +491,27 @@ export function App() {
         activeId={activeId}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(true)}
-        onNew={() => { newChat(); setMobileNav(false); }}
-        onSelect={(id) => { setArchivedConv(null); setActiveId(id); setMobileNav(false); }}
+        onNew={() => {
+          newChat();
+          setMobileNav(false);
+        }}
+        onSelect={(id) => {
+          setArchivedConv(null);
+          setActiveId(id);
+          setMobileNav(false);
+        }}
         onRename={setEditConv}
         onTopic={setEditConv}
         onShare={setShareConv}
         onArchive={archiveConv}
         onDelete={setDeleteConv}
-        onOpenSettings={() => { setSettingsOpen(true); setMobileNav(false); }}
-        onOpenAdmin={() => { window.location.href = "/admin"; }}
+        onOpenSettings={() => {
+          setSettingsOpen(true);
+          setMobileNav(false);
+        }}
+        onOpenAdmin={() => {
+          window.location.href = "/admin";
+        }}
         onLogout={logout}
         mobileOpen={mobileNav}
         onCloseMobile={() => setMobileNav(false)}
@@ -446,13 +535,17 @@ export function App() {
         attachments={attachments}
         attachError={attachError}
         ocrAvailable={ocrAvailable}
-        onRemoveAttachment={(id) => setAttachments((prev) => prev.filter((a) => a.id !== id))}
+        onRemoveAttachment={(id) =>
+          setAttachments((prev) => prev.filter((a) => a.id !== id))
+        }
         onPickFile={handlePickFile}
       />
       <FilePreviewModal
         preview={filePreview}
         busy={previewBusy}
-        onClose={() => { if (!previewBusy) setFilePreview(null); }}
+        onClose={() => {
+          if (!previewBusy) setFilePreview(null);
+        }}
         onAttach={attachPreviewText}
       />
 
@@ -479,7 +572,10 @@ export function App() {
           applyTheme(u.theme);
         }}
         // Key rotated or account deleted: sessions are dead server-side.
-        onKeyRotated={() => { setSettingsOpen(false); logout(); }}
+        onKeyRotated={() => {
+          setSettingsOpen(false);
+          logout();
+        }}
         onViewArchived={openArchived}
         onArchivedChanged={handleArchivedChanged}
       />
