@@ -114,6 +114,13 @@ export function getDb(): Database {
       value TEXT NOT NULL,
       updated_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS user_provider_keys(
+      user_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      api_key TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, provider)
+    );
   `);
   // Email column added after the initial schema — keep idempotent.
   const cols = db.query("PRAGMA table_info(users)").all() as { name: string }[];
@@ -209,6 +216,7 @@ export function deleteUser(id: string): void {
   for (const c of convs) txn(c.id);
   d.query("DELETE FROM sessions WHERE user_id = ?").run(id);
   d.query("DELETE FROM resets WHERE user_id = ?").run(id);
+  d.query("DELETE FROM user_provider_keys WHERE user_id = ?").run(id);
   d.query("DELETE FROM users WHERE id = ?").run(id);
 }
 

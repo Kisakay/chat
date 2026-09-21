@@ -183,6 +183,22 @@ const en = {
   "settings.accentAria": "Accent: {label}",
   "settings.featHint":
     "Turn composer capabilities on or off. Applied instantly, saved on this device.",
+  "settings.providers": "Providers",
+  "providers.intro":
+    "Connect your own API keys. Models from connected providers show up in the model menu at the top.",
+  "providers.hint":
+    "Keys stay on this server and are never shown again — only the last 4 characters. Usage is billed to your own provider account, and the admin model policy still applies.",
+  "providers.connected": "Connected",
+  "providers.notConnected": "Not connected",
+  "providers.keyPh": "Paste API key…",
+  "providers.saveKey": "Save key",
+  "providers.removeKey": "Remove",
+  "providers.replaceKey": "Replace",
+  "providers.getKey": "Get a key",
+  "providers.keySaved": "Key saved — its models are now in the menu.",
+  "providers.keyRemoved": "Key removed.",
+  "providers.invalidKey": "That key looks invalid (8–256 characters, no spaces).",
+  "providers.loadFailed": "Could not load providers.",
 
   "accent.preset.emerald": "Emerald",
   "accent.preset.rose": "Rose",
@@ -705,6 +721,22 @@ const es: Dict = {
   "settings.accentAria": "Acento: {label}",
   "settings.featHint":
     "Activa funciones del editor. Al instante, en este dispositivo.",
+  "settings.providers": "Proveedores",
+  "providers.intro":
+    "Conecta tus propias claves API. Los modelos de los proveedores conectados aparecen en el menú de modelos de arriba.",
+  "providers.hint":
+    "Las claves quedan en este servidor y no se muestran de nuevo — solo los últimos 4 caracteres. El uso se factura a tu propia cuenta y la política de modelos del admin sigue vigente.",
+  "providers.connected": "Conectado",
+  "providers.notConnected": "Sin conectar",
+  "providers.keyPh": "Pega la clave API…",
+  "providers.saveKey": "Guardar clave",
+  "providers.removeKey": "Quitar",
+  "providers.replaceKey": "Reemplazar",
+  "providers.getKey": "Obtener clave",
+  "providers.keySaved": "Clave guardada — sus modelos ya están en el menú.",
+  "providers.keyRemoved": "Clave eliminada.",
+  "providers.invalidKey": "Esa clave no parece válida (8–256 caracteres, sin espacios).",
+  "providers.loadFailed": "No se pudieron cargar los proveedores.",
 
   "accent.preset.emerald": "Esmeralda",
   "accent.preset.rose": "Rosa",
@@ -1220,6 +1252,22 @@ const fr: Dict = {
   "settings.accentAria": "Accent : {label}",
   "settings.featHint":
     "Activez les fonctions du composer. Aussitôt, sur cet appareil.",
+  "settings.providers": "Fournisseurs",
+  "providers.intro":
+    "Connectez vos propres clés API. Les modèles des fournisseurs connectés apparaissent dans le menu des modèles en haut.",
+  "providers.hint":
+    "Les clés restent sur ce serveur et ne sont plus jamais affichées — seuls les 4 derniers caractères. L'usage est facturé sur votre propre compte, et la politique de modèles de l'admin reste en vigueur.",
+  "providers.connected": "Connecté",
+  "providers.notConnected": "Non connecté",
+  "providers.keyPh": "Collez la clé API…",
+  "providers.saveKey": "Enregistrer",
+  "providers.removeKey": "Retirer",
+  "providers.replaceKey": "Remplacer",
+  "providers.getKey": "Obtenir une clé",
+  "providers.keySaved": "Clé enregistrée — ses modèles sont dans le menu.",
+  "providers.keyRemoved": "Clé retirée.",
+  "providers.invalidKey": "Cette clé semble invalide (8–256 caractères, sans espaces).",
+  "providers.loadFailed": "Impossible de charger les fournisseurs.",
 
   "accent.preset.emerald": "Émeraude",
   "accent.preset.rose": "Rose",
@@ -1730,6 +1778,22 @@ const ru: Dict = {
   "settings.accentAria": "Акцент: {label}",
   "settings.featHint":
     "Включайте возможности редактора. Сразу, на этом устройстве.",
+  "settings.providers": "Провайдеры",
+  "providers.intro":
+    "Подключите свои API-ключи. Модели подключённых провайдеров появятся в меню моделей сверху.",
+  "providers.hint":
+    "Ключи хранятся на этом сервере и больше не показываются — только последние 4 символа. Оплата идёт на ваш счёт у провайдера, политика моделей админа действует.",
+  "providers.connected": "Подключено",
+  "providers.notConnected": "Не подключено",
+  "providers.keyPh": "Вставьте API-ключ…",
+  "providers.saveKey": "Сохранить",
+  "providers.removeKey": "Удалить",
+  "providers.replaceKey": "Заменить",
+  "providers.getKey": "Получить ключ",
+  "providers.keySaved": "Ключ сохранён — модели уже в меню.",
+  "providers.keyRemoved": "Ключ удалён.",
+  "providers.invalidKey": "Похоже, ключ неверный (8–256 символов, без пробелов).",
+  "providers.loadFailed": "Не удалось загрузить провайдеров.",
 
   "accent.preset.emerald": "Изумруд",
   "accent.preset.rose": "Роза",
@@ -2232,6 +2296,22 @@ const it: Dict = {
   "settings.accentAria": "Accento: {label}",
   "settings.featHint":
     "Attiva funzioni del composer. Subito, su questo dispositivo.",
+  "settings.providers": "Provider",
+  "providers.intro":
+    "Collega le tue chiavi API. I modelli dei provider collegati appaiono nel menu dei modelli in alto.",
+  "providers.hint":
+    "Le chiavi restano su questo server e non vengono più mostrate — solo gli ultimi 4 caratteri. L'uso è addebitato al tuo account e resta valida la policy modelli dell'admin.",
+  "providers.connected": "Collegato",
+  "providers.notConnected": "Non collegato",
+  "providers.keyPh": "Incolla la chiave API…",
+  "providers.saveKey": "Salva",
+  "providers.removeKey": "Rimuovi",
+  "providers.replaceKey": "Sostituisci",
+  "providers.getKey": "Ottieni chiave",
+  "providers.keySaved": "Chiave salvata — i modelli sono nel menu.",
+  "providers.keyRemoved": "Chiave rimossa.",
+  "providers.invalidKey": "Chiave non valida (8–256 caratteri, senza spazi).",
+  "providers.loadFailed": "Impossibile caricare i provider.",
 
   "accent.preset.emerald": "Smeraldo",
   "accent.preset.rose": "Rosa",
@@ -2737,6 +2817,22 @@ const pt: Dict = {
   "settings.customAria": "Cor de destaque personalizada",
   "settings.accentAria": "Destaque: {label}",
   "settings.featHint": "Liga funções do editor. Na hora, neste dispositivo.",
+  "settings.providers": "Provedores",
+  "providers.intro":
+    "Ligue as suas chaves API. Os modelos dos provedores ligados aparecem no menu de modelos em cima.",
+  "providers.hint":
+    "As chaves ficam neste servidor e nunca mais são mostradas — só os últimos 4 caracteres. O uso é cobrado na sua conta e a política de modelos do admin continua válida.",
+  "providers.connected": "Ligado",
+  "providers.notConnected": "Desligado",
+  "providers.keyPh": "Cole a chave API…",
+  "providers.saveKey": "Guardar",
+  "providers.removeKey": "Remover",
+  "providers.replaceKey": "Substituir",
+  "providers.getKey": "Obter chave",
+  "providers.keySaved": "Chave guardada — os modelos já estão no menu.",
+  "providers.keyRemoved": "Chave removida.",
+  "providers.invalidKey": "Essa chave parece inválida (8–256 caracteres, sem espaços).",
+  "providers.loadFailed": "Não foi possível carregar os provedores.",
 
   "accent.preset.emerald": "Esmeralda",
   "accent.preset.rose": "Rosa",

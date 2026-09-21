@@ -48,6 +48,14 @@ export interface ModelPolicyEntry {
   daily: number;
 }
 
+export interface UserProvider {
+  provider: string;
+  label: string;
+  hasKey: boolean;
+  last4: string | null;
+  updatedAt: number;
+}
+
 export interface PolicyModel extends DriverModel {
   enabled: boolean;
   hourly: number;
@@ -290,6 +298,16 @@ export const api = {
 
   /** Admin: delete a local Ollama model (frees disk on the Ollama host). */
   ollamaDelete: (name: string) => req<{ ok: boolean }>(`/api/admin/ollama/models/${encodeURIComponent(name)}`, { method: "DELETE" }),
+
+  /** Personal LLM providers (BYOK): presence + last4 only, keys never leave the server. */
+  providers: () => req<{ providers: UserProvider[] }>("/api/me/providers"),
+  setProvider: (provider: string, apiKey: string) =>
+    req<{ providers: UserProvider[] }>(`/api/me/providers/${provider}`, {
+      method: "PUT",
+      body: JSON.stringify({ apiKey }),
+    }),
+  deleteProvider: (provider: string) =>
+    req<{ providers: UserProvider[] }>(`/api/me/providers/${provider}`, { method: "DELETE" }),
 
   tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[] }>("/api/tools"),
 

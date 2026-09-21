@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, X } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, Plug, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, X } from "lucide-react";
+import { api, type UserProvider } from "../lib/api.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
@@ -262,6 +262,7 @@ export function SettingsModal({
   onKeyRotated,
   onViewArchived,
   onArchivedChanged,
+  onProvidersChanged,
 }: {
   user: User | null;
   onClose: () => void;
@@ -269,6 +270,7 @@ export function SettingsModal({
   onKeyRotated?: () => void;
   onViewArchived: (c: Conversation) => void;
   onArchivedChanged: (deletedId?: string) => void;
+  onProvidersChanged?: () => void;
 }) {
   const { t } = useT();
   const [displayName, setDisplayName] = useState("");
@@ -301,6 +303,7 @@ export function SettingsModal({
     { id: "appearance", title: t("settings.appearance"), icon: Palette, keywords: ["appearance", "theme", "dark", "light", "color", "colour", "accent", "palette", "language", "langue", "idioma", "lingua", "язык"] },
     { id: "features", title: t("settings.features"), icon: Sparkles, keywords: ["features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable"] },
     { id: "security", title: t("settings.security"), icon: ShieldCheck, keywords: ["security", "key", "rotate", "password", "totp", "2fa", "two", "factor", "authenticator", "passkey", "webauthn"] },
+    { id: "providers", title: t("settings.providers"), icon: Plug, keywords: ["providers", "provider", "api", "keys", "openai", "anthropic", "deepseek", "gemini", "byok", "model", "fournisseur", "proveedor", "провайдер"] },
     { id: "archived", title: t("archived.title"), icon: Archive, keywords: ["archived", "archive", "old", "hidden", "read-only", "readonly", "archiv"] },
   ] as const;
   type CatId = (typeof CATS)[number]["id"];
@@ -543,6 +546,12 @@ export function SettingsModal({
             {activeCat === "security" && (
               <SettingsPane>
                 <SecuritySection onKeyRotated={onKeyRotated} />
+              </SettingsPane>
+            )}
+
+            {activeCat === "providers" && (
+              <SettingsPane>
+                <ProvidersSection onChanged={onProvidersChanged} />
               </SettingsPane>
             )}
 
@@ -993,6 +1002,172 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
         message={t("sec.deleteMsg")}
         confirmLabel={t("sec.deleteForever")}
       />
+    </div>
+  );
+}
+
+/* ---------- Providers (settings): personal API keys (BYOK) ---------- */
+
+const PROVIDER_META: { id: string; label: string; docs: string }[] = [
+  { id: "openai", label: "OpenAI", docs: "https://platform.openai.com/api-keys" },
+  { id: "anthropic", label: "Anthropic", docs: "https://console.anthropic.com/settings/keys" },
+  { id: "deepseek", label: "DeepSeek", docs: "https://platform.deepseek.com/api_keys" },
+  { id: "gemini", label: "Gemini", docs: "https://aistudio.google.com/apikey" },
+];
+
+function ProvidersSection({ onChanged }: { onChanged?: () => void }) {
+  const { t } = useT();
+  const [list, setList] = useState<UserProvider[] | null>(null);
+  const [keys, setKeys] = useState<Record<string, string>>({});
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  async function refresh() {
+    try {
+      const res = await api.providers();
+      setList(res.providers);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("providers.loadFailed"));
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function save(id: string) {
+    const v = (keys[id] ?? "").trim();
+    if (v.length < 8 || v.length > 256 || /\s/.test(v)) {
+      setError(t("providers.invalidKey"));
+      return;
+    }
+    setBusyId(id);
+    setError("");
+    setNotice("");
+    try {
+      const res = await api.setProvider(id, v);
+      setList(res.providers);
+      setKeys((k) => ({ ...k, [id]: "" }));
+      setNotice(t("providers.keySaved"));
+      onChanged?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.saveFailed"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function remove(id: string) {
+    setBusyId(id);
+    setError("");
+    setNotice("");
+    try {
+      const res = await api.deleteProvider(id);
+      setList(res.providers);
+      setNotice(t("providers.keyRemoved"));
+      onChanged?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.deleteFailed"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (list === null && !error) {
+    return <p className="flex items-center gap-2 py-4 text-sm opacity-60"><Spinner size={15} /> {t("common.loading")}</p>;
+  }
+
+  const byId = new Map((list ?? []).map((p) => [p.provider, p]));
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs leading-relaxed opacity-60">{t("providers.intro")}</p>
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {notice && <p className="rounded-2xl bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-700 dark:text-emerald-300">{notice}</p>}
+      <ul className="space-y-2">
+        {PROVIDER_META.map((m) => {
+          const st = byId.get(m.id);
+          const connected = !!st?.hasKey;
+          const busy = busyId === m.id;
+          return (
+            <li key={m.id} className="space-y-2.5 rounded-2xl border border-stone-200/70 p-3.5 dark:border-zinc-800">
+              <div className="flex items-center gap-2.5">
+                <span
+                  aria-hidden
+                  className={cn(
+                    "h-2.5 w-2.5 shrink-0 rounded-full",
+                    connected ? "bg-emerald-500" : "bg-stone-300 dark:bg-zinc-600",
+                  )}
+                />
+                <span className="text-sm font-medium">{m.label}</span>
+                <span className={cn(
+                  "rounded-full px-2 py-0.5 text-xs",
+                  connected
+                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "bg-stone-200/70 opacity-60 dark:bg-zinc-800",
+                )}>
+                  {connected ? t("providers.connected") : t("providers.notConnected")}
+                </span>
+                {connected && st?.last4 && (
+                  <code className="rounded-lg bg-stone-100 px-2 py-0.5 font-mono text-xs opacity-70 dark:bg-zinc-800">
+                    ••••{st.last4}
+                  </code>
+                )}
+                <a
+                  href={m.docs}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-auto shrink-0 text-xs text-accent-700 underline-offset-2 hover:underline dark:text-accent-400"
+                >
+                  {t("providers.getKey")}
+                </a>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={keys[m.id] ?? ""}
+                  onChange={(e) => setKeys((k) => ({ ...k, [m.id]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      save(m.id);
+                    }
+                  }}
+                  placeholder={connected ? `${t("providers.keyPh")} (${t("providers.connected").toLowerCase()})` : t("providers.keyPh")}
+                  aria-label={`${m.label} API key`}
+                  disabled={busy}
+                />
+                <Button
+                  size="sm"
+                  disabled={busy || !(keys[m.id] ?? "").trim()}
+                  onClick={() => save(m.id)}
+                  className="shrink-0"
+                >
+                  {busy ? <Spinner size={15} /> : t("providers.saveKey")}
+                </Button>
+              </div>
+              {connected && (
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => remove(m.id)}
+                    className="!text-red-600 dark:!text-red-400"
+                  >
+                    <Trash2 size={14} /> {t("providers.removeKey")}
+                  </Button>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-xs leading-relaxed opacity-60">{t("providers.hint")}</p>
     </div>
   );
 }

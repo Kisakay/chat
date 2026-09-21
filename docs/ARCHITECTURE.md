@@ -49,6 +49,7 @@ Created idempotently at boot in `getDb()` (no migration framework; keep it so).
 | `resets` | `token_hash PK, user_id, created_at, expires_at`. One-time key-recovery tokens (single use, consumed on POST). |
 | `settings` | `key PK, value, updated_at`. Admin-controlled feature flags (`registration_enabled` default off, `tools_ocr_enabled` default on). |
 | `conversations` | `id, user_id, title, topic, model, archived_at, created_at, updated_at`. `archived_at = 0` means live; otherwise a unix-ms archive timestamp (added idempotently via `ALTER TABLE`, like `users.email`). |
+| `user_provider_keys` | `user_id, provider PK, api_key, updated_at`. Personal LLM keys (BYOK) — stored reversibly (needed upstream), never returned to clients (GET exposes presence + last4 only). Wiped with the account in `deleteUser()`. |
 | `messages` | `id AUTOINCREMENT, conv_id → conversations ON DELETE CASCADE, role, content, created_at`. |
 | `shares` | `conv_id PK → conversations ON DELETE CASCADE, public_id UNIQUE, created_at`. |
 
@@ -99,7 +100,7 @@ only ever sees reviewed text blocks, never raw files.
 
 ## Drivers`src/drivers/`: `LLMDriver` interface (`listModels`, `chat`, `chatStream`),
 `DriverRegistry` with global priority
-`ollama → mistral → glm → arcaic-openai → arcaic-gemini → arcaic-qwen → deepseek → anthropic → openai`.
+`ollama → mistral → glm → gemini → arcaic-openai → arcaic-gemini → arcaic-qwen → deepseek → anthropic → openai`.
 Models are addressed as `"driver:model"` (split on the first `:`).
 
 - `OllamaDriver`: model discovery via `GET {OLLAMA_HOST}/api/tags`, chat via

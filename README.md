@@ -80,7 +80,8 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | GET | `/api/conversations/archived` | Bearer | archived chats (hidden from sidebar + search) |
 | POST | `/api/conversations/:id/archive`, `/api/conversations/:id/unarchive` | owner | archive (read-only) / restore to the list |
 | GET | `/api/share/:publicId` | **public** | read-only shared chat JSON |
-| GET | `/api/models` | Bearer | `[{id: "driver:model", …}]` across enabled drivers |
+| GET | `/api/models` | Bearer | `[{id: "driver:model", …}]` across enabled drivers + your own-key providers |
+| GET/PUT/DELETE | `/api/me/providers`, `/api/me/providers/:id` | Bearer | personal providers (BYOK: openai/anthropic/deepseek/gemini) — keys stored server-side, never returned |
 | GET/PATCH | `/api/admin/model-policy` | admin | per-model kill-switch + hourly/daily limits (users filtered, enforced in chat) |
 | POST | `/api/chat` | Bearer | `{model, messages, conversationId?, stream?}` → JSON or SSE |
 
@@ -92,7 +93,8 @@ reply into that conversation (ownership enforced) and auto-titles new chats.
 `$DATA_DIR/kisassistant.db` (WAL mode). Tables: `users` (id, username,
 display_name, avatar_url, theme, email, key_hash), `sessions` (hashed Bearer tokens),
 `conversations` (id, user, title, topic, model, archived_at), `messages`, `shares`,
-`resets` (recovery tokens), `settings` (feature flags)
+`resets` (recovery tokens), `settings` (feature flags),
+`user_provider_keys` (per-user BYOK API keys: user_id, provider, api_key)
 (conv ↔ public id). No migration system — schema is created idempotently at boot.
 
 ## Drivers (backend layout)
@@ -101,10 +103,11 @@ display_name, avatar_url, theme, email, key_hash), `sessions` (hashed Bearer tok
 src/drivers/types.ts     LLMDriver interface + DriverModel + errors
 src/drivers/ollama.ts    OllamaDriver (priority #1) — /api/tags discovery, NDJSON stream
 src/drivers/apiBase.ts   ApiDriverBase (OpenAI-compatible SSE) base class
-src/drivers/apis.ts      Mistral / DeepSeek / Anthropic / OpenAI drivers
+src/drivers/apis.ts      Mistral / DeepSeek / Anthropic / OpenAI / Gemini drivers (global key or per-user override)
 src/drivers/browser.ts   ArcaicBrowserEngine + site configs (openai/qwen/gemini) — throwaway Firefox profile
 src/drivers/arcaic.ts      ArcaicSubDriver ×3 — arcaic-openai / arcaic-gemini / arcaic-qwen (ARCAIC_ENABLED)
 src/drivers/registry.ts  DriverRegistry — priority order + "driver:model" routing
+src/userProviders.ts     personal providers (BYOK): per-user keys, own-key driver factory
 src/db.ts                SQLite store (users, sessions, convs, messages, shares)
 src/auth.ts              login/sessions/rate-limit (admin key = APP_PASSWORD)
 ```

@@ -65,8 +65,7 @@ import {
   listAccessRequests,
   setAccessStatus,
   type AccessStatus,
-} from "./access.ts";
-import { broadcastAccessLive, subscribeAccessLive } from "./accessLive.ts";
+} from "./access.ts";import { broadcastAccessLive, subscribeAccessLive } from "./accessLive.ts";
 import {
   REPORT_REASONS,
   REPORT_STATUSES,
@@ -87,6 +86,17 @@ import {
   recordModelUse,
   setModelPolicyEntry,
 } from "./modelPolicy.ts";
+import {
+  buildUserProviderDriver,
+  deleteUserProviderKey,
+  getUserProviderKey,
+  isUserProviderId,
+  listUserProviders,
+  listUserProviderModels,
+  setUserProviderKey,
+  validProviderKey,
+  type UserProviderId,
+} from "./userProviders.ts";
 import type { ConversationRow } from "./db.ts";
 import type { OllamaDriver } from "./drivers/ollama.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
@@ -668,6 +678,35 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         return json({ enabled: false });
       }
 
+      // --- self-service: personal LLM providers (BYOK) ---
+      // Keys are stored server-side and never returned: GET only exposes
+      // presence + last4. Connected providers add their models to this
+      // user's /api/models list and /api/chat honors the personal key.
+      if (path === "/api/me/providers" && req.method === "GET") {
+        return json({ providers: listUserProviders(user.id) });
+      }
+
+      const providerMatch = path.match(/^\/api\/me\/providers\/([a-z]{3,12})$/);
+      if (providerMatch) {
+        const pid = providerMatch[1]!;
+        if (!isUserProviderId(pid)) {
+          return json({ error: "unknown provider (openai|anthropic|deepseek|gemini)" }, 400);
+        }
+        const provider = pid as UserProviderId;
+        if (req.method === "PUT") {
+          const { ok, body } = await readJson(req);
+          const key = ok ? validProviderKey(body.apiKey) : null;
+          if (!key) return json({ error: "apiKey: 8-256 chars, no whitespace" }, 400);
+          setUserProviderKey(user.id, provider, key);
+          return json({ providers: listUserProviders(user.id) });
+        }
+        if (req.method === "DELETE") {
+          deleteUserProviderKey(user.id, provider);
+          return json({ providers: listUserProviders(user.id) });
+        }
+        return json({ error: "not found" }, 404);
+      }
+
       // --- admin: user management (No-KYC accounts, keys issued by admin) ---
       if (path === "/api/admin/users" && req.method === "GET") {
         if (!admin) return json({ error: "forbidden" }, 403);
@@ -1232,6 +1271,21 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           url.searchParams.get("refresh") ?? url.searchParams.get("force") ?? "",
         );
         const models = await registry.listAllModelsCached(wantRefresh && admin);
+        // Personal providers (BYOK): merge the caller's own-key models.
+        // Same ids as the global drivers, so already-listed ones are skipped
+        // and the model picker groups them with their driver.
+        try {
+          const personal = await listUserProviderModels(user.id);
+          const seen = new Set(models.map((m) => m.id));
+          for (const m of personal) {
+            if (!seen.has(m.id)) {
+              seen.add(m.id);
+              models.push(m);
+            }
+          }
+        } catch {
+          // personal listing is best-effort — global models still served
+        }
         if (admin) return json({ models });
         // Users never see admin-disabled models (nor select them — /api/chat
         // enforces the same policy server-side).
@@ -1284,8 +1338,24 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         let driver, model: string;
         try {
           ({ driver, model } = registry.splitId(body.model));
+          // BYOK precedence: when the caller connected this provider with
+          // their own key, the request is billed to them, not the platform.
+          if (isUserProviderId(driver.name)) {
+            const personalKey = getUserProviderKey(user.id, driver.name);
+            if (personalKey) driver = buildUserProviderDriver(driver.name, personalKey);
+          }
         } catch (e) {
-          return json({ error: (e as Error).message }, 400);
+          // Unknown/disabled global driver — maybe the caller connected it
+          // personally (e.g. platform key unset, user key set).
+          const fullId = body.model as string;
+          const idx = fullId.indexOf(":");
+          const pname = idx === -1 ? "" : fullId.slice(0, idx);
+          const sub = idx === -1 ? "" : fullId.slice(idx + 1);
+          if (!isUserProviderId(pname)) return json({ error: (e as Error).message }, 400);
+          const personalKey = getUserProviderKey(user.id, pname);
+          if (!personalKey || !sub) return json({ error: (e as Error).message }, 400);
+          driver = buildUserProviderDriver(pname, personalKey);
+          model = sub;
         }
         // Per-model access policy (kill-switch + per-user rate limits).
         // Admins bypass; attempts count even when generation later fails.

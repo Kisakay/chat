@@ -379,7 +379,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
             ))}
           </ul>
         )}
-        <div className="mt-3 flex items-center justify-between gap-2 text-sm">
+        <div className="mt-4 flex items-center justify-between gap-2 pt-1 text-sm">
           <span className="opacity-60">{total === 1 ? t("admin.countOne", { total, page, pages }) : t("admin.countMany", { total, page, pages })}</span>
           {pages > 1 && (
             <div className="flex gap-2.5">

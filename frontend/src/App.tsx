@@ -505,6 +505,23 @@ export function App() {
     await refreshConvs();
   }
 
+  /**
+   * Settings "Providers" changed (key saved/removed): reload the model menu
+   * so connected providers appear (or disappear) at the top without a
+   * page refresh. The current pick survives when still available.
+   */
+  async function handleProvidersChanged() {
+    try {
+      const m = await api.models();
+      setModels(m.models);
+      setModel((cur) =>
+        cur && m.models.some((x) => x.id === cur) ? cur : (m.models[0]?.id ?? ""),
+      );
+    } catch {
+      // ignore (session errors reload the page via api layer)
+    }
+  }
+
   // Auth pages render instantly (no splash); the platform boots behind one.
   if (path === "/login") {
     if (user) return null; // bounce to /chat imminent
@@ -630,6 +647,7 @@ export function App() {
         }}
         onViewArchived={openArchived}
         onArchivedChanged={handleArchivedChanged}
+        onProvidersChanged={handleProvidersChanged}
       />
     </div>
   );

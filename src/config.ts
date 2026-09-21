@@ -42,6 +42,9 @@ export const config = {
   openaiApiKey: env("OPENAI_API_KEY", ""),
   openaiEnabled: envBool("OPENAI_ENABLED", false),
 
+  geminiApiKey: env("GEMINI_API_KEY", ""),
+  geminiEnabled: envBool("GEMINI_ENABLED", false),
+
   glmApiKey: env("GLM_API_KEY", ""),
   glmEnabled: envBool("GLM_ENABLED", false),
   // Zhipu has two platforms: international (api.z.ai, default) and
