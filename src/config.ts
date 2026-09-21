@@ -41,6 +41,9 @@ export const config = {
   // Public docs wiki (served by the hosted git forge, e.g. Gitea wiki pages).
   // The app redirects GET /wiki there (302) so the target stays configurable.
   wikiUrl: env("WIKI_URL", "https://git.kisakay.com/k/chat/wiki"),
+
+  // Per-driver debug logging to stdout ([driver:name] lines).
+  driverDebug: envBool("DRIVER_DEBUG", true),
 };
 
 export function assertConfig(): void {

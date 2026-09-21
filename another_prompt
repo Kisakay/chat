@@ -4,6 +4,9 @@ cdn comme sa
 
 http<remote>/cdn/<avatar>/<id of the account>.<extension>
 
+pouvoir gérer dans le code proprement les routes cdn . FU (futur usage/futurproof)
+http<?s>://<root host>/cdn/<x>/<key>.<fileTypeAllowed>
+
 Extension authorisé ONLY:
 jpg/jpeg/webp/png
 

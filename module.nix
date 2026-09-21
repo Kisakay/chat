@@ -75,6 +75,8 @@ in {
         enableACME = true;
         locations."/" = {
           proxyPass = "http://${cfg.host}:${toString cfg.port}";
+          # Never buffer SSE (/api/chat streams tokens like ChatGPT).
+          extraConfig = "proxy_buffering off;";
         };
       };
     };

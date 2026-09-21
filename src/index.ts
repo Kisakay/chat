@@ -377,7 +377,7 @@ const server = Bun.serve({
 
         if (!wantStream) {
           try {
-            const text = await driver.chat(messages, { model });
+            const text = await driver.chat(messages, { model, signal: req.signal });
             persistReply(text);
             return json({ model: body.model, message: { role: "assistant", content: text } });
           } catch (e) {
@@ -385,32 +385,69 @@ const server = Bun.serve({
           }
         }
 
+        // True streaming (ChatGPT-style): driver tokens are forwarded as SSE
+        // events the moment they arrive. Client disconnects are propagated
+        // upstream so the model stops generating, and we never write to a
+        // closed controller (the old "[interrupted: Controller is already
+        // closed]" crash).
+        const abortUpstream = new AbortController();
+        const onClientAbort = () => abortUpstream.abort();
+        req.signal.addEventListener("abort", onClientAbort);
+        let clientGone = false;
         const stream = new ReadableStream({
           async start(controller) {
             const enc = new TextEncoder();
-            const send = (event: string, data: string) =>
-              controller.enqueue(enc.encode(`event: ${event}\ndata: ${data}\n\n`));
+            const safeSend = (event: string, data: string): boolean => {
+              if (clientGone || req.signal.aborted) return false;
+              try {
+                controller.enqueue(enc.encode(`event: ${event}\ndata: ${data}\n\n`));
+                return true;
+              } catch {
+                // Controller already closed (client gone) — stop pulling upstream.
+                clientGone = true;
+                abortUpstream.abort();
+                return false;
+              }
+            };
             let full = "";
             try {
-              for await (const token of driver.chatStream(messages, { model })) {
+              for await (const token of driver.chatStream(messages, { model, signal: abortUpstream.signal })) {
+                if (req.signal.aborted) break;
                 full += token;
-                send("token", JSON.stringify({ token }));
+                if (!safeSend("token", JSON.stringify({ token }))) break;
               }
               persistReply(full);
-              send("done", "{}");
+              safeSend("done", "{}");
             } catch (e) {
-              if (full) persistReply(full + "\n\n[interrupted: " + (e as Error).message + "]");
-              send("error", JSON.stringify({ error: (e as Error).message }));
+              // Genuine driver error: keep the partial text as-is (no internal
+              // markers persisted) and notify the client if still connected.
+              if (full) persistReply(full);
+              if (!req.signal.aborted && !clientGone) {
+                safeSend("error", JSON.stringify({ error: (e as Error).message }));
+              }
             } finally {
-              controller.close();
+              req.signal.removeEventListener("abort", onClientAbort);
+              abortUpstream.abort();
+              if (!clientGone) {
+                try {
+                  controller.close();
+                } catch {
+                  // already closed — fine
+                }
+              }
             }
+          },
+          cancel() {
+            clientGone = true;
+            abortUpstream.abort();
           },
         });
         return new Response(stream, {
           headers: {
             "Content-Type": "text/event-stream",
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive",
+            "X-Accel-Buffering": "no", // nginx: never buffer SSE
           },
         });
       }
