@@ -3,7 +3,7 @@ import { ArrowLeft, Inbox, LayoutDashboard, Mail, ShieldAlert, SlidersHorizontal
 import { api } from "../lib/api.ts";
 import { AdminPanel } from "./AdminPanel.tsx";
 import { AccessRequestsPanel } from "./AccessRequests.tsx";
-import { FlowerMark, LoadingScreen, Spinner, Switch } from "./ui.tsx";
+import { FlowerMark, LoadingScreen, Logo, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 
 type Tab = "accounts" | "access" | "features" | "mail";
@@ -82,7 +82,7 @@ export function AdminCenter() {
           <a href="/" aria-label="Back to chat" className="rounded-full p-2 transition hover:bg-stone-200/60 dark:hover:bg-zinc-800">
             <ArrowLeft size={18} />
           </a>
-          <FlowerMark size={32} />
+          <Logo size={32} className="rounded-xl" />
           <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight">
             <LayoutDashboard size={18} className="text-accent-600 dark:text-accent-400" />
             Admin Center
