@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Globe, FileText, ImagePlus, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, Sparkles, Tag, Unplug, User as UserIcon, UserPlus, X } from "lucide-react";
+import { Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Unplug, User as UserIcon, UserPlus, X } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
@@ -340,10 +340,12 @@ export function SettingsModal({
   user,
   onClose,
   onSaved,
+  onKeyRotated,
 }: {
   user: User | null;
   onClose: () => void;
   onSaved: (u: User) => void;
+  onKeyRotated?: () => void;
 }) {
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -363,6 +365,7 @@ export function SettingsModal({
     { id: "profile", title: "Profile", icon: UserIcon, keywords: ["profile", "avatar", "picture", "photo", "name", "display", "email", "account"] },
     { id: "appearance", title: "Appearance", icon: Palette, keywords: ["appearance", "theme", "dark", "light", "color", "colour", "accent", "palette"] },
     { id: "features", title: "Features", icon: Sparkles, keywords: ["features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable"] },
+    { id: "security", title: "Security", icon: ShieldCheck, keywords: ["security", "key", "rotate", "password", "totp", "2fa", "two", "factor", "authenticator", "passkey", "webauthn"] },
   ] as const;
   type CatId = (typeof CATS)[number]["id"];
   const [cat, setCat] = useState<CatId>("profile");
@@ -560,6 +563,12 @@ export function SettingsModal({
             <FeaturesSection />
               </SettingsPane>
             )}
+
+            {activeCat === "security" && (
+              <SettingsPane>
+                <SecuritySection onKeyRotated={onKeyRotated} />
+              </SettingsPane>
+            )}
           </div>
         </div>
 
@@ -681,6 +690,162 @@ function FeaturesSection() {
           </label>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ---------- Security (settings): key rotation, TOTP, passkeys ---------- */
+
+function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
+  const [totpOn, setTotpOn] = useState<boolean | null>(null);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [otpauthUrl, setOtpauthUrl] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [rotatedKey, setRotatedKey] = useState<string | null>(null);
+  const [armingRotate, setArmingRotate] = useState(false);
+  const [armingDelete, setArmingDelete] = useState(false);
+
+  useEffect(() => {
+    api.totpStatus().then((r) => setTotpOn(r.enabled)).catch(() => setTotpOn(false));
+  }, []);
+
+  async function rotate() {
+    if (!armingRotate) {
+      setArmingRotate(true);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.rotateKey();
+      setRotatedKey(res.key);
+      setArmingRotate(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Rotation failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function startTotp() {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.totpSetup();
+      setSecret(res.secret);
+      setOtpauthUrl(res.otpauthUrl);
+      setCode("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Setup failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmTotp() {
+    if (!secret || code.replace(/\D/g, "").length !== 6) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.totpVerify(secret, code.replace(/\D/g, ""));
+      setTotpOn(true);
+      setSecret(null);
+      setCode("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disableTotp() {
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <p className="mb-1 flex items-center gap-1.5 text-sm font-medium"><KeyRound size={14} className="opacity-60" /> Access key</p>
+        {rotatedKey ? (
+          <div className="rounded-2xl border border-accent-500/40 bg-accent-50 p-3 dark:bg-accent-950/30">
+            <p className="mb-2 text-sm font-medium">New key — copy it now, it won't be shown again:</p>
+            <div className="flex items-center gap-2">
+              <code className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">{rotatedKey}</code>
+              <CopyButton text={rotatedKey} />
+            </div>
+            <p className="mt-2 text-xs opacity-70">Your old sessions are revoked. Log back in with the new key.</p>
+            <Button size="sm" className="mt-2 w-full" onClick={() => onKeyRotated?.()}>Done — log me out</Button>
+          </div>
+        ) : (
+          <>
+            <p className="mb-2 text-xs opacity-60">Rotate your access key. Old sessions are revoked immediately — you'll log back in with the new key.</p>
+            <Button size="sm" variant="secondary" disabled={busy} onClick={rotate}>
+              {armingRotate ? "Click again to confirm rotation" : "Rotate my access key"}
+            </Button>
+          </>
+        )}
+      </div>
+
+      <div>
+        <p className="mb-1 flex items-center gap-1.5 text-sm font-medium"><ShieldCheck size={14} className="opacity-60" /> Two-factor (TOTP)</p>
+        {totpOn === null && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> Checking…</p>}
+        {totpOn === false && !secret && (
+          <>
+            <p className="mb-2 text-xs opacity-60">Add a 6-digit code from your authenticator app on top of your access key.</p>
+            <Button size="sm" variant="secondary" disabled={busy} onClick={startTotp}>Enable two-factor</Button>
+          </>
+        )}
+        {secret && (
+          <div className="space-y-2 rounded-2xl border border-stone-200 p-3 dark:border-zinc-700">
+            <p className="text-xs opacity-70">Add this secret to your authenticator app (or open the otpauth link), then enter a code to confirm:</p>
+            <div className="flex items-center gap-2">
+              <code className="min-w-0 flex-1 break-all rounded-xl bg-stone-100 px-3 py-2 font-mono text-sm dark:bg-zinc-800">{secret}</code>
+              <CopyButton text={secret} />
+            </div>
+            <a href={otpauthUrl} className="block truncate text-xs text-accent-700 underline-offset-2 hover:underline dark:text-accent-400">{otpauthUrl}</a>
+            <div className="flex gap-2">
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="000000"
+                aria-label="Authenticator code"
+                inputMode="numeric"
+                className="text-center tracking-[0.4em]"
+              />
+              <Button size="sm" disabled={busy || code.length !== 6} onClick={confirmTotp}>Confirm</Button>
+            </div>
+          </div>
+        )}
+        {totpOn === true && (
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-36 flex-1">
+              <Field label="Disable with a current code">
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="000000"
+                  aria-label="Current authenticator code"
+                  inputMode="numeric"
+                  className="text-center tracking-[0.4em]"
+                />
+              </Field>
+            </div>
+            <Button size="sm" variant="secondary" disabled={busy || code.length !== 6} onClick={disableTotp} className="!text-red-600 dark:!text-red-400">
+              Disable 2FA
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 rounded-2xl px-1 py-1 opacity-50">
+        <Fingerprint size={16} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium">Passkeys <span className="ml-1 text-xs opacity-60">(soon)</span></span>
+          <span className="block text-xs opacity-60">WebAuthn / platform authenticators — needs a server RP setup.</span>
+        </span>
+      </div>
+
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

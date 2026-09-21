@@ -23,6 +23,10 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [registrationOn, setRegistrationOn] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestOn, setRequestOn] = useState(false);
+  // TOTP second step (set when the server answers totpRequired).
+  const [totpToken, setTotpToken] = useState<string | null>(null);
+  const [totpUsername, setTotpUsername] = useState("");
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     api.methods().then((m) => {
@@ -40,10 +44,31 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
     setBusy(true);
     try {
       const res = await api.login(username.trim().toLowerCase(), key);
+      if ("totpRequired" in res) {
+        setTotpToken(res.totpToken);
+        setTotpUsername(res.username);
+        return;
+      }
       setToken(res.token);
       onLogin(res.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitTotp(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy || !totpToken) return;
+    setError("");
+    setBusy(true);
+    try {
+      const res = await api.totpLogin(totpToken, code);
+      setToken(res.token);
+      onLogin(res.user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid code");
     } finally {
       setBusy(false);
     }
@@ -59,6 +84,42 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             <p className="mt-1 text-sm opacity-60">Sign in to KisAssistant to continue</p>
           </div>
 
+          {totpToken ? (
+            <form onSubmit={submitTotp} className="mt-6 space-y-3">
+              <p className="text-center text-sm opacity-70">
+                Two-factor for <strong>@{totpUsername}</strong> — enter the 6-digit code from your authenticator app.
+              </p>
+              <div className="relative">
+                <KeyRound size={17} className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500" />
+                <Input
+                  variant="soft"
+                  className="pl-12 text-center tracking-[0.5em]"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  aria-label="Authenticator code"
+                  inputMode="numeric"
+                  required
+                />
+              </div>
+              {error && (
+                <p className="rounded-full bg-red-500/10 px-5 py-2.5 text-center text-sm text-red-600 dark:text-red-400" role="alert">
+                  {error}
+                </p>
+              )}
+              <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={busy || code.length !== 6}>
+                {busy ? <Spinner /> : (<>Verify <ArrowRight size={17} /></>)}
+              </Button>
+              <button
+                type="button"
+                onClick={() => { setTotpToken(null); setCode(""); setError(""); }}
+                className="w-full text-center text-sm opacity-60 transition hover:opacity-100 hover:underline"
+              >
+                Back to login
+              </button>
+            </form>
+          ) : (
           <form onSubmit={submit} className="mt-6 space-y-3">
             <div className="relative">
               <User size={17} className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500" />
@@ -96,6 +157,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
               {busy ? <Spinner /> : (<>Unlock <ArrowRight size={17} /></>)}
             </Button>
           </form>
+          )}
           <div className="mt-4 flex items-center gap-3 text-xs opacity-40">
             <span className="h-px flex-1 bg-current" />
             New here?

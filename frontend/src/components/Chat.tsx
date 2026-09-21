@@ -234,7 +234,7 @@ export function Chat({
             </>
           )}
         </div>
-        <form onSubmit={submit} className="mx-auto flex w-full max-w-3xl items-end gap-2 rounded-[1.75rem] border border-stone-200 bg-white p-2 pl-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <form onSubmit={submit} className={`mx-auto flex w-full max-w-3xl items-end gap-2 rounded-[1.75rem] border border-stone-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 ${features.attachments ? "pl-2" : "pl-5"}`}>
           {features.attachments && (
             <button
               type="button"

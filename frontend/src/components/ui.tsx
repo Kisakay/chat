@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Copy, Loader2, X, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn.ts";
+import { useT } from "../lib/i18n.ts";
 
 /* ---------- Button ---------- */
 
@@ -82,7 +83,7 @@ export function Picker({
   onChange,
   options,
   groups,
-  placeholder = "Select…",
+  placeholder,
   ariaLabel,
   disabled,
   icon: Icon,
@@ -100,12 +101,14 @@ export function Picker({
   className?: string;
   align?: "left" | "right";
 }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 208 });
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const all: PickerGroup[] = groups ?? [{ group: "", options: options ?? [] }];
   const selected = all.flatMap((g) => g.options).find((o) => o.value === value);
+  const shownPlaceholder = placeholder ?? t("common.select");
 
   // Position the popover in viewport coords (rendered in a portal so no
   // ancestor overflow — e.g. Modal's overflow-y-auto — can clip it).
@@ -176,7 +179,7 @@ export function Picker({
         )}
       >
         {Icon && <Icon size={15} className="shrink-0 text-accent-600 dark:text-accent-400" />}
-        <span className="truncate">{selected?.label ?? placeholder}</span>
+        <span className="truncate">{selected?.label ?? shownPlaceholder}</span>
         <ChevronDown size={15} className={cn("shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </button>
       {open && createPortal(

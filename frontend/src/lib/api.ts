@@ -60,9 +60,14 @@ async function req<T>(path: string, opts: RequestInit = {}, auth = true): Promis
 
 export const api = {
   login: (username: string, key: string) =>
-    req<{ token: string; expiresAt: number; user: User }>("/api/auth/login", {
+    req<{ token: string; expiresAt: number; user: User } | { totpRequired: true; totpToken: string; username: string }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ username, key }),
+    }, false),
+  totpLogin: (totpToken: string, code: string) =>
+    req<{ token: string; expiresAt: number; user: User }>("/api/auth/totp", {
+      method: "POST",
+      body: JSON.stringify({ totpToken, code }),
     }, false),
   verify: () => req<{ ok: boolean; user: User }>("/api/auth/verify"),
   logout: () => req<{ ok: boolean }>("/api/auth/logout", { method: "POST" }).catch(() => ({ ok: true as const })),
@@ -78,6 +83,20 @@ export const api = {
   me: () => req<{ user: User }>("/api/me"),
   updateMe: (patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>("/api/me", { method: "PATCH", body: JSON.stringify(patch) }),
+
+  /** Rotate your own access key (old sessions revoked, key shown once). */
+  rotateKey: () => req<{ key: string }>("/api/me/key/rotate", { method: "POST" }),
+
+  /** Permanently delete your own account (chats, shares, sessions). */
+  deleteMe: () => req<{ ok: boolean }>("/api/me", { method: "DELETE" }),
+
+  /** TOTP two-factor self-service. */
+  totpStatus: () => req<{ enabled: boolean }>("/api/me/totp"),
+  totpSetup: () => req<{ secret: string; otpauthUrl: string }>("/api/me/totp/setup", { method: "POST" }),
+  totpVerify: (secret: string, code: string) =>
+    req<{ enabled: boolean }>("/api/me/totp/verify", { method: "POST", body: JSON.stringify({ secret, code }) }),
+  totpDisable: (code: string) =>
+    req<{ enabled: boolean }>("/api/me/totp", { method: "DELETE", body: JSON.stringify({ code }) }),
 
   adminList: (p: { q?: string; sort?: string; filter?: string; page?: number; per?: number } = {}) => {
     const qs = new URLSearchParams();

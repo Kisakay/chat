@@ -44,6 +44,16 @@ import {
 } from "./db.ts";
 import type { ChatMessage } from "./drivers/types.ts";
 import {
+  consumeTotpChallenge,
+  createTotpChallenge,
+  getTotpSecret,
+  initTotpTables,
+  newTotpSecret,
+  setTotpSecret,
+  totpAuthUrl,
+  verifyTotp,
+} from "./totp.ts";
+import {
   addAccessMessage,
   createAccessRequest,
   findOpenAccessRequest,
@@ -83,6 +93,7 @@ const registry = new DriverRegistry();
 const ollamaDriver = registry.get("ollama") as OllamaDriver;
 await tools.init();
 initAccessTables();
+initTotpTables();
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -297,8 +308,33 @@ const server = Bun.serve({
         return json({ error: "invalid credentials" }, 401);
       }
       clearAttempts(ip);
+      // Second factor: correct key but TOTP enabled -> short-lived challenge,
+      // the session is only issued after POST /api/auth/totp verifies a code.
+      if (getTotpSecret(user.id)) {
+        const totpToken = createTotpChallenge(user.id);
+        return json({ totpRequired: true, totpToken, username: user.username });
+      }
       const { token, expiresAt } = issueToken(user);
       return json({ token, expiresAt, user });
+    }
+
+    // --- auth: TOTP second step (rate limited, challenge is single-use) ---
+    if (path === "/api/auth/totp" && req.method === "POST") {
+      const ip = clientIp(req, server);
+      if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
+      const { ok, body } = await readJson(req);
+      const userId =
+        ok && typeof body.totpToken === "string" ? consumeTotpChallenge(body.totpToken) : null;
+      const code = ok && typeof body.code === "string" ? body.code : "";
+      const target = userId ? getUserById(userId) : null;
+      if (!target || !verifyTotp(getTotpSecret(target.id), code)) {
+        recordAttempt(ip);
+        await Bun.sleep(400);
+        return json({ error: "invalid code" }, 401);
+      }
+      clearAttempts(ip);
+      const { token, expiresAt } = issueToken(toPublicUser(target));
+      return json({ token, expiresAt, user: toPublicUser(target) });
     }
 
     if (path === "/api/auth/verify" && req.method === "GET") {
@@ -504,6 +540,48 @@ const server = Bun.serve({
         const updated = updateUser(user.id, patch);
         if (!updated) return json({ error: "user not found" }, 404);
         return json({ user: toPublicUser(updated) });
+      }
+
+      // --- self-service security: rotate access key (old sessions revoked) ---
+      if (path === "/api/me/key/rotate" && req.method === "POST") {
+        const key = newAccessKey();
+        updateUser(user.id, { keyHash: hashSecret(key) });
+        deleteUserSessions(user.id);
+        return json({ key });
+      }
+
+      // --- self-service: delete your own account (chats, shares, sessions gone) ---
+      if (path === "/api/me" && req.method === "DELETE") {
+        if (user.username === "admin") return json({ error: "the admin account cannot be deleted" }, 403);
+        deleteUser(user.id);
+        getDb().query("DELETE FROM totp_challenges WHERE user_id = ?").run(user.id);
+        return json({ ok: true });
+      }
+
+      // --- self-service security: TOTP two-factor ---
+      if (path === "/api/me/totp" && req.method === "GET") {
+        return json({ enabled: getTotpSecret(user.id).length > 0 });
+      }
+      if (path === "/api/me/totp/setup" && req.method === "POST") {
+        if (getTotpSecret(user.id)) return json({ error: "TOTP already enabled — disable it first" }, 409);
+        const secret = newTotpSecret();
+        return json({ secret, otpauthUrl: totpAuthUrl(secret, user.username) });
+      }
+      if (path === "/api/me/totp/verify" && req.method === "POST") {
+        const { ok, body } = await readJson(req);
+        const secret = ok && typeof body.secret === "string" ? body.secret : "";
+        const code = ok && typeof body.code === "string" ? body.code : "";
+        if (!/^[A-Z2-7]{16,64}$/.test(secret.trim().toUpperCase())) return json({ error: "invalid secret" }, 400);
+        if (!verifyTotp(secret, code)) return json({ error: "invalid code" }, 401);
+        setTotpSecret(user.id, secret.trim().toUpperCase());
+        return json({ enabled: true });
+      }
+      if (path === "/api/me/totp" && req.method === "DELETE") {
+        const { ok, body } = await readJson(req);
+        const code = ok && typeof body.code === "string" ? body.code : "";
+        if (!verifyTotp(getTotpSecret(user.id), code)) return json({ error: "invalid code" }, 401);
+        setTotpSecret(user.id, "");
+        return json({ enabled: false });
       }
 
       // --- admin: user management (No-KYC accounts, keys issued by admin) ---
