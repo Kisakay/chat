@@ -95,6 +95,28 @@ UUID, same pattern as share links).
   `GET /api/access/ticket/:id` + `POST .../message` (public, ticket bearer),
   `GET /api/admin/access`, `GET/PATCH /api/admin/access/:id`,
   `POST /api/admin/access/:id/message` (admin).
+- Live updates ride WebSockets (no polling): `GET /api/access/ws/:id`
+  (ticket bearer — pushes `access_message` + `access_status` for that ticket)
+  and `GET /api/admin/ws?token=…` (admin Bearer in query string, browsers
+  can't set WS headers — pushes `access_message` + `access_status` +
+  `access_created` for every ticket, driving the AdminCenter badge and the
+  triage list). Clients ping every 25 s (`{"type":"ping"}` → `{"type":"pong"}`)
+  and resync over HTTP on every (re)connect.
+
+## Content reports (flagged AI responses)
+
+Every assistant message carries three actions: **Copy**, **Search the web**
+(DuckDuckGo, new tab) and **Report**. Reporting opens a modal with a reason
+picker (`copyright`, `gore`, `falseinfo`, `bug`) plus optional details, and
+creates a row in the `reports` table with a content snapshot (survives later
+edits/deletion of the chat), the model, and the reporter.
+
+- Reporter: capped at 20 open (`open` + `reviewing`) reports (429 beyond).
+- Admin: **Reports** tab in the Admin Center (badge counts open reports) —
+  filter by status, expand for the full snapshot + reporter details, and set
+  `open → reviewing → resolved / dismissed` with an internal note.
+- Routes: `POST /api/reports` (Bearer), `GET /api/admin/reports`,
+  `PATCH /api/admin/reports/:id` (admin).
 
 ## Key recovery via email (optional)
 

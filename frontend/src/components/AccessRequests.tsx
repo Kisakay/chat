@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Clock, Inbox, Search, SendHorizontal, Undo2, XCircle } from "lucide-react";
-import { api, type AccessMessage, type AccessRequest, type AccessStatus } from "../lib/api.ts";
+import { api, getToken, type AccessMessage, type AccessRequest, type AccessStatus } from "../lib/api.ts";
+import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import { Button, CopyButton, Field, Input, Spinner } from "./ui.tsx";
 import { useT, type StringKey } from "../lib/i18n.ts";
 import { cn } from "../lib/cn.ts";
@@ -23,11 +24,8 @@ export function AccessRequestsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { t } = useT();
-  const listBusy = useRef(false);
 
   async function refresh(select?: string) {
-    if (listBusy.current) return;
-    listBusy.current = true;
     try {
       const res = await api.adminAccessList();
       setRequests(res.requests);
@@ -35,18 +33,25 @@ export function AccessRequestsPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.loadFailed"));
     } finally {
-      listBusy.current = false;
       setLoading(false);
     }
   }
 
   useEffect(() => {
     refresh();
-    // Live list: new requests / replies pop without manual refresh.
-    const id = setInterval(() => {
-      if (!document.hidden) refresh();
-    }, 15000);
-    return () => clearInterval(id);
+    // Live list: the admin firehose pushes every access event (shares its
+    // socket with the AdminCenter badge via the pool). Resync on
+    // (re)connect covers events missed while offline.
+    const token = getToken();
+    if (!token) return;
+    return subscribeAccessLive(wsUrl(`/api/admin/ws?token=${encodeURIComponent(token)}`), {
+      onEvent: (evt) => {
+        if (evt.type !== "pong") refresh();
+      },
+      onSync: () => {
+        refresh();
+      },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -141,16 +146,12 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
     setReason(request.reason);
     setFreshKey(null);
     known.current = { status: request.status, reason: request.reason };
-    let stopped = false;
-    let busy = false;
-    // Live thread: requester replies appear without manual refresh, and a
-    // status change made elsewhere syncs the list (badges, filters).
+    // Live thread: requester replies arrive instantly, and a status change
+    // made elsewhere syncs the list (badges, filters). Resync on
+    // (re)connect covers events missed while offline.
     async function fetchOnce() {
-      if (busy || document.hidden) return;
-      busy = true;
       try {
         const res = await api.adminAccessGet(request.id);
-        if (stopped) return;
         setMessages(res.messages);
         if (
           res.request.status !== known.current.status ||
@@ -160,17 +161,26 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
           onChangedRef.current();
         }
       } catch {
-        // Transient failure: keep last state, retry next tick.
-      } finally {
-        busy = false;
+        // Transient failure: keep last state.
       }
     }
     fetchOnce();
-    const id = setInterval(fetchOnce, 5000);
-    return () => {
-      stopped = true;
-      clearInterval(id);
-    };
+    return subscribeAccessLive(wsUrl(`/api/access/ws/${request.id}`), {
+      onEvent: (evt) => {
+        if (evt.type === "pong" || evt.request_id !== request.id) return;
+        if (evt.type === "access_message") {
+          const msg = evt.message;
+          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+          onChangedRef.current();
+        } else if (evt.type === "access_status") {
+          known.current = { status: evt.request.status, reason: evt.request.reason };
+          onChangedRef.current();
+        }
+      },
+      onSync: () => {
+        fetchOnce();
+      },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request.id]);
 

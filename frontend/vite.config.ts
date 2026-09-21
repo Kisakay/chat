@@ -11,7 +11,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:3000",
+      // Object form needed for ws:true — access-request live updates ride
+      // a WebSocket under /api (proxied in dev, same-origin in prod).
+      "/api": { target: "http://localhost:3000", ws: true },
     },
   },
 });

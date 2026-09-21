@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Eye, EyeOff, Inbox, LayoutDashboard, Mail, Send, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
-import { api } from "../lib/api.ts";
+import { ArrowLeft, Eye, EyeOff, Flag, Inbox, LayoutDashboard, Mail, Send, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
+import { api, getToken } from "../lib/api.ts";
+import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import { AdminPanel } from "./AdminPanel.tsx";
 import { AccessRequestsPanel } from "./AccessRequests.tsx";
+import { ReportsPanel } from "./ReportsPanel.tsx";
 import { Button, CopyButton, FlowerMark, Input, LoadingScreen, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 import { useT } from "../lib/i18n.ts";
 
-type Tab = "accounts" | "access" | "features" | "mail";
+type Tab = "accounts" | "access" | "reports" | "features" | "mail";
 
 function applyTheme(theme: string) {
   const root = document.documentElement;
@@ -24,10 +26,12 @@ export function AdminCenter() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [openAccessCount, setOpenAccessCount] = useState(0);
+  const [openReportCount, setOpenReportCount] = useState(0);
 
   const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
     { id: "accounts", label: t("center.tabAccounts"), icon: Users },
     { id: "access", label: t("center.tabAccess"), icon: Inbox },
+    { id: "reports", label: t("center.tabReports"), icon: Flag },
     { id: "features", label: t("center.tabFeatures"), icon: SlidersHorizontal },
     { id: "mail", label: t("center.tabMail"), icon: Mail },
   ];
@@ -46,30 +50,40 @@ export function AdminCenter() {
       .catch(() => setAllowed(false));
   }, []);
 
-  // Live badge on the Access tab: poll the open (pending + reviewing)
-  // request count so new demands pop without opening the tab.
+  // Live badges on the Access/Reports tabs: the admin firehose pushes every access
+  // event, so the open counts stay fresh with zero polling (reports re-fetch
+  // alongside). Resync on (re)connect covers events missed while offline.
   useEffect(() => {
     if (!allowed) return;
-    let stopped = false;
     async function fetchCount() {
       try {
         const res = await api.adminAccessList();
-        if (stopped) return;
         setOpenAccessCount(
           res.requests.filter((r) => r.status === "pending" || r.status === "reviewing").length,
         );
       } catch {
-        // Transient failure: keep last count, retry next tick.
+        // Transient failure: keep last count.
+      }
+      try {
+        const res = await api.adminReportList();
+        setOpenReportCount(
+          res.reports.filter((r) => r.status === "open" || r.status === "reviewing").length,
+        );
+      } catch {
+        // Transient failure: keep last count.
       }
     }
     fetchCount();
-    const id = setInterval(() => {
-      if (!document.hidden) fetchCount();
-    }, 15000);
-    return () => {
-      stopped = true;
-      clearInterval(id);
-    };
+    const token = getToken();
+    if (!token) return;
+    return subscribeAccessLive(wsUrl(`/api/admin/ws?token=${encodeURIComponent(token)}`), {
+      onEvent: (evt) => {
+        if (evt.type !== "pong") fetchCount();
+      },
+      onSync: () => {
+        fetchCount();
+      },
+    });
   }, [allowed]);
 
   async function toggle(patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean }) {
@@ -122,7 +136,7 @@ export function AdminCenter() {
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  "relative flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
+                  "flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
                   tab === t.id
                     ? "bg-white text-stone-900 shadow dark:bg-zinc-800 dark:text-zinc-100"
                     : "opacity-60 hover:opacity-100",
@@ -137,6 +151,15 @@ export function AdminCenter() {
                     className="absolute -right-0.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[11px] font-bold leading-5 text-white shadow"
                   >
                     {openAccessCount > 99 ? "99+" : openAccessCount}
+                  </span>
+                )}
+                {t.id === "reports" && openReportCount > 0 && (
+                  <span
+                    role="status"
+                    aria-label={`${t.label}: ${openReportCount}`}
+                    className="absolute -right-0.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[11px] font-bold leading-5 text-white shadow"
+                  >
+                    {openReportCount > 99 ? "99+" : openReportCount}
                   </span>
                 )}
               </button>
@@ -157,6 +180,12 @@ export function AdminCenter() {
         {tab === "access" && (
           <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <AccessRequestsPanel />
+          </section>
+        )}
+
+        {tab === "reports" && (
+          <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <ReportsPanel />
           </section>
         )}
 

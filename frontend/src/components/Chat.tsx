@@ -1,15 +1,28 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, BookOpen, Bot, Cpu, FileText, Menu, PanelLeftOpen, Paperclip, ScanText, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
+import { Archive, ArchiveRestore, BookOpen, Bot, Check, Copy, Cpu, FileText, Flag, Menu, PanelLeftOpen, Paperclip, ScanText, Search, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
 import type { Attachment, ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
-import { AssistantAvatar, Avatar, FlowerMark, IconButton, Picker, type PickerGroup, Spinner } from "./ui.tsx";
+import { api, type ReportReason } from "../lib/api.ts";
+import { AssistantAvatar, Avatar, Button, Field, FlowerMark, IconButton, Modal, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
 import { cn } from "../lib/cn.ts";
 import { useFeatures } from "../lib/features.ts";
-import { useT } from "../lib/i18n.ts";
+import { useT, type StringKey } from "../lib/i18n.ts";
 
-function MessageBubble({ msg, authorAvatar, authorName }: { msg: ChatMessage; authorAvatar?: string; authorName: string }) {
+const REPORT_REASONS: ReportReason[] = ["copyright", "gore", "falseinfo", "bug"];
+
+function MessageBubble({ msg, index, authorAvatar, authorName, onReport }: { msg: ChatMessage; index: number; authorAvatar?: string; authorName: string; onReport?: (index: number) => void }) {
   const { t } = useT();
   const isUser = msg.role === "user";
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(msg.content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {});
+  }
+  function searchWeb() {
+    window.open(`https://duckduckgo.com/?q=${encodeURIComponent(msg.content.slice(0, 400))}`, "_blank", "noopener,noreferrer");
+  }
   return (
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
       {isUser
@@ -29,8 +42,114 @@ function MessageBubble({ msg, authorAvatar, authorName }: { msg: ChatMessage; au
             <Markdown text={msg.content} />
           </div>
         )}
+        {!isUser && onReport && (
+          <div className="mt-1.5 flex items-center gap-0.5 opacity-70 transition hover:opacity-100">
+            <IconButton title={copied ? t("common.copied") : t("msg.copy")} onClick={copy}>
+              {copied ? <Check size={14} className="text-accent-500" /> : <Copy size={14} />}
+            </IconButton>
+            <IconButton title={t("msg.search")} onClick={searchWeb}>
+              <Search size={14} />
+            </IconButton>
+            <IconButton title={t("msg.report")} onClick={() => onReport(index)}>
+              <Flag size={14} />
+            </IconButton>
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function ReportDialog({ open, onClose, conversationId, messageIndex, content, model }: {
+  open: boolean;
+  onClose: () => void;
+  conversationId: string | null;
+  messageIndex: number;
+  content: string;
+  model: string;
+}) {
+  const { t } = useT();
+  const [reason, setReason] = useState("");
+  const [details, setDetails] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setReason("");
+      setDetails("");
+      setError("");
+      setSent(false);
+    }
+  }, [open, messageIndex]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reason || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.createReport({
+        conversationId: conversationId ?? undefined,
+        messageIndex,
+        reason: reason as ReportReason,
+        details: details.trim(),
+        content,
+        model,
+      });
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("report.failed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title={t("report.title")} icon={Flag}>
+      {sent ? (
+        <div className="space-y-4">
+          <p className="flex items-center gap-2 rounded-2xl bg-emerald-600/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+            <Check size={16} /> {t("report.sent")}
+          </p>
+          <div className="flex justify-end">
+            <Button variant="secondary" onClick={onClose}>{t("common.close")}</Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          <Field label={t("report.reason")}>
+            <Picker
+              value={reason}
+              onChange={setReason}
+              options={REPORT_REASONS.map((r) => ({ value: r, label: t(`report.reason.${r}` as StringKey) }))}
+              placeholder={t("report.reasonPh")}
+              ariaLabel={t("report.reason")}
+              align="left"
+            />
+          </Field>
+          <Field label={t("report.details")}>
+            <textarea
+              rows={3}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder={t("report.detailsPh")}
+              aria-label={t("report.details")}
+              maxLength={2000}
+              className="max-h-40 w-full resize-none rounded-2xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-500"
+            />
+          </Field>
+          {error && <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button type="submit" disabled={!reason || busy}>
+              {busy ? <Spinner size={14} /> : <Flag size={14} />} {t("report.submit")}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Modal>
   );
 }
 
@@ -80,6 +199,7 @@ export function Chat({
 }) {
   const [draft, setDraft] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
+  const [reportIndex, setReportIndex] = useState<number | null>(null);
   const { t } = useT();
   const features = useFeatures();
   const boxRef = useRef<HTMLDivElement>(null);
@@ -169,7 +289,7 @@ export function Chat({
             </div>
           )}
           {messages.filter((m) => m.role !== "system").map((m, i) => (
-            <MessageBubble key={i} msg={m} authorAvatar={user.avatarUrl} authorName={user.displayName} />
+            <MessageBubble key={i} msg={m} index={i} authorAvatar={user.avatarUrl} authorName={user.displayName} onReport={readOnly ? undefined : setReportIndex} />
           ))}
           {streaming !== "" && (
             <div className="flex gap-3">
@@ -306,6 +426,20 @@ export function Chat({
           </a>
         </p>
       </div>
+      {(() => {
+        const shown = messages.filter((m) => m.role !== "system");
+        const target = reportIndex !== null ? shown[reportIndex] : undefined;
+        return (
+          <ReportDialog
+            open={reportIndex !== null}
+            onClose={() => setReportIndex(null)}
+            conversationId={conv?.id ?? null}
+            messageIndex={reportIndex ?? 0}
+            content={target?.content ?? ""}
+            model={conv?.model || model}
+          />
+        );
+      })()}
     </div>
   );
 }

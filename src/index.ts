@@ -66,6 +66,19 @@ import {
   setAccessStatus,
   type AccessStatus,
 } from "./access.ts";
+import { broadcastAccessLive, subscribeAccessLive } from "./accessLive.ts";
+import {
+  REPORT_REASONS,
+  REPORT_STATUSES,
+  createReport,
+  getReport,
+  initReportsTables,
+  listReports,
+  setReportShadowbanned,
+  setReportStatus,
+  type ReportReason,
+  type ReportStatus,
+} from "./reports.ts";
 import type { ConversationRow } from "./db.ts";
 import type { OllamaDriver } from "./drivers/ollama.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
@@ -95,6 +108,7 @@ const registry = new DriverRegistry();
 const ollamaDriver = registry.get("ollama") as OllamaDriver;
 await tools.init();
 initAccessTables();
+initReportsTables();
 initTotpTables();
 
 function json(data: unknown, status = 200): Response {
@@ -179,13 +193,48 @@ async function readJson(req: Request): Promise<{ ok: boolean; body: Record<strin
   }
 }
 
-const server = Bun.serve({
+/** WebSocket -> hub unsubscribe (cleaned up on close). */
+const wsUnsub = new WeakMap<object, () => void>();
+
+const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
   port: config.port,
   hostname: config.host,
   // SSE chat streams can legitimately go silent for a while (cold model load,
   // slow/thinking models). Bun's default 10s idle timeout would kill them
   // mid-generation — disable it (0). Nginx in front has its own timeouts.
   idleTimeout: 0,
+  websocket: {
+    open(ws) {
+      wsUnsub.set(
+        ws,
+        subscribeAccessLive({
+          ticketId: ws.data.ticketId,
+          isAdmin: ws.data.isAdmin,
+          send: (frame) => {
+            try {
+              ws.send(frame);
+              return true;
+            } catch {
+              return false;
+            }
+          },
+        }),
+      );
+    },
+    message(ws, msg) {
+      // Heartbeat only — clients ping, we pong. Anything else is ignored.
+      try {
+        const m = JSON.parse(typeof msg === "string" ? msg : Buffer.from(msg as Uint8Array).toString());
+        if (m?.type === "ping") ws.send(JSON.stringify({ type: "pong" }));
+      } catch {
+        // malformed frame — ignore
+      }
+    },
+    close(ws) {
+      wsUnsub.get(ws)?.();
+      wsUnsub.delete(ws);
+    },
+  },
   async fetch(req, server) {
     const url = new URL(req.url);
     const path = url.pathname;
@@ -475,8 +524,10 @@ const server = Bun.serve({
         return json({ error: "a request for this username or email is already open" }, 409);
       }
       const created = createAccessRequest({ username, email, message });
-      addAccessMessage(created.id, "user", message);
+      const firstMsg = addAccessMessage(created.id, "user", message);
       clearAttempts(ip);
+      broadcastAccessLive({ type: "access_created", request_id: created.id, request: created });
+      broadcastAccessLive({ type: "access_message", request_id: created.id, message: firstMsg });
       // Ticket page: /review/<uuid> (unguessable, same pattern as share links).
       const reviewUrl = `${config.appUrl}/review/${created.id}`;
       sendAccessReceivedEmail(email, username, reviewUrl).catch(() => {});
@@ -504,9 +555,29 @@ const server = Bun.serve({
         }
         const msg = addAccessMessage(r.id, "user", text);
         clearAttempts(ip);
+        broadcastAccessLive({ type: "access_message", request_id: r.id, message: msg });
         return json({ message: msg }, 201);
       }
       return json({ error: "not found" }, 404);
+    }
+
+    // --- live access-request updates (WebSocket, replaces HTTP polling) ---
+    // Ticket socket: capability auth by unguessable UUID, exactly like
+    // GET /api/access/ticket/:id above. Admin socket: admin Bearer via
+    // ?token= (browsers can't set WS headers) or Authorization header.
+    const ticketWsMatch = path.match(/^\/api\/access\/ws\/([0-9a-f-]{36})$/);
+    if (ticketWsMatch && req.method === "GET") {
+      const t = getAccessRequest(ticketWsMatch[1]!);
+      if (!t) return json({ error: "invalid ticket link" }, 404);
+      if (server.upgrade(req, { data: { ticketId: t.id, isAdmin: false } })) return;
+      return json({ error: "websocket upgrade failed" }, 500);
+    }
+    if (path === "/api/admin/ws" && req.method === "GET") {
+      const token = url.searchParams.get("token") ?? extractBearer(req);
+      const u = token ? verifyToken(token) : null;
+      if (!u?.isAdmin) return json({ error: "unauthorized" }, 401);
+      if (server.upgrade(req, { data: { ticketId: null, isAdmin: true } })) return;
+      return json({ error: "websocket upgrade failed" }, 500);
     }
 
     // --- everything below requires auth ---
@@ -643,7 +714,7 @@ const server = Bun.serve({
         return json({ user: toPublicUser(created), key }, 201);
       }
 
-      const adminUserMatch = path.match(/^\/api\/admin\/users\/([0-9a-f-]{10,50})(\/regenerate)?$/);
+      const adminUserMatch = path.match(/^\/api\/admin\/users\/([0-9a-f-]{10,50})(\/regenerate|\/shadowban)?$/);
       if (adminUserMatch) {
         if (!admin) return json({ error: "forbidden" }, 403);
         const target = getUserById(adminUserMatch[1]!);
@@ -657,6 +728,13 @@ const server = Bun.serve({
           updateUser(target.id, { keyHash: hashSecret(key) });
           deleteUserSessions(target.id);
           return json({ key });
+        }
+        if (req.method === "POST" && adminUserMatch[2] === "/shadowban") {
+          const { ok, body } = await readJson(req);
+          if (!ok || typeof body.shadowbanned !== "boolean") {
+            return json({ error: "expected { shadowbanned: boolean }" }, 400);
+          }
+          return json({ shadowbanned: setReportShadowbanned(target.id, body.shadowbanned) === 1 });
         }
         if (req.method === "PATCH" && !adminUserMatch[2]) {
           const { ok, body } = await readJson(req);
@@ -828,6 +906,80 @@ const server = Bun.serve({
         }
       }
 
+      // --- content reports (flagged AI responses) ---
+      if (path === "/api/reports" && req.method === "POST") {
+        const { ok, body } = await readJson(req);
+        if (!ok) return json({ error: "invalid JSON" }, 400);
+        const reason = body.reason as ReportReason | undefined;
+        if (!reason || !(REPORT_REASONS as readonly string[]).includes(reason)) {
+          return json({ error: "reason must be copyright|gore|falseinfo|bug" }, 400);
+        }
+        const details = body.details === undefined ? "" : cleanStr(body.details, 2000);
+        if (details === null) return json({ error: "details: max 2000 chars" }, 400);
+        const clientContent = typeof body.content === "string" ? body.content.slice(0, 20000) : "";
+        const clientPrompt = typeof body.prompt === "string" ? body.prompt.slice(0, 20000) : "";
+        const clientModel = typeof body.model === "string" ? body.model.slice(0, 160) : "";
+        let conversationId = "";
+        let messageIndex = -1;
+        if (body.conversationId !== undefined) {
+          if (typeof body.conversationId !== "string" || !body.conversationId) {
+            return json({ error: "bad conversationId" }, 400);
+          }
+          const conv = getConversation(body.conversationId);
+          if (!conv || conv.user_id !== user.id) return json({ error: "conversation not found" }, 404);
+          conversationId = conv.id;
+          if (body.messageIndex !== undefined) {
+            if (!Number.isInteger(body.messageIndex) || (body.messageIndex as number) < 0) {
+              return json({ error: "bad messageIndex" }, 400);
+            }
+            messageIndex = body.messageIndex as number;
+          }
+        }
+        try {
+          const report = createReport({
+            reporterId: user.id,
+            reporterName: user.displayName,
+            conversationId,
+            messageIndex,
+            reason,
+            details,
+            clientContent,
+            clientPrompt,
+            clientModel,
+          });
+          return json({ report }, 201);
+        } catch (e) {
+          if ((e as Error).message === "TOO_MANY_OPEN") return json({ error: "too many open reports" }, 429);
+          if ((e as Error).message === "ALREADY_REPORTED") {
+            return json({ error: "already reported", report: (e as Error & { report: unknown }).report }, 409);
+          }
+          throw e;
+        }
+      }
+
+      if (path === "/api/admin/reports" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        return json({ reports: listReports() });
+      }
+
+      const reportMatch = path.match(/^\/api\/admin\/reports\/([0-9a-f-]{36})$/);
+      if (reportMatch) {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const target = getReport(reportMatch[1]!);
+        if (!target) return json({ error: "report not found" }, 404);
+        if (req.method === "PATCH") {
+          const { ok, body } = await readJson(req);
+          if (!ok) return json({ error: "invalid JSON" }, 400);
+          const status = body.status as ReportStatus | undefined;
+          if (!status || !(REPORT_STATUSES as readonly string[]).includes(status)) {
+            return json({ error: "status must be open|reviewing|resolved|dismissed" }, 400);
+          }
+          const adminNote = body.adminNote === undefined ? "" : cleanStr(body.adminNote, 1000);
+          if (adminNote === null) return json({ error: "adminNote: max 1000 chars" }, 400);
+          return json({ report: setReportStatus(target.id, status, adminNote) });
+        }
+      }
+
       // --- admin: access-request wishlist triage ---
       if (path === "/api/admin/access" && req.method === "GET") {
         if (!admin) return json({ error: "forbidden" }, 403);
@@ -850,6 +1002,7 @@ const server = Bun.serve({
           const msg = addAccessMessage(target.id, "admin", text);
           // Every admin reply is forwarded to the requester (notification-only).
           sendAccessMessageEmail(target.email, target.username, true, text, reviewUrl).catch(() => {});
+          broadcastAccessLive({ type: "access_message", request_id: target.id, message: msg });
           return json({ message: msg });
         }
         if (req.method === "PATCH" && !accessMatch[2]) {
@@ -874,6 +1027,7 @@ const server = Bun.serve({
           if (status !== target.status && status !== "pending") {
             sendAccessStatusEmail(target.email, target.username, status, reason, reviewUrl, key).catch(() => {});
           }
+          if (updated) broadcastAccessLive({ type: "access_status", request_id: updated.id, request: updated });
           return json({ request: updated, ...(key ? { key } : {}) });
         }
         return json({ error: "not found" }, 404);

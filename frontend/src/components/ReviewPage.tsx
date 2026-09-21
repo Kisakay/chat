@@ -9,6 +9,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { api, type AccessMessage, type AccessRequest } from "../lib/api.ts";
+import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import {
   Button,
   CopyButton,
@@ -82,32 +83,36 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
     }
   }
 
-  useEffect(() => {
-    let stopped = false;
-    load();
-    // Live updates: short-poll the ticket so admin replies and the
-    // decision show up without a manual refresh. No WS infra on the
-    // backend — traffic here is tiny, polling is the clean fit.
-    let busy = false;
-    async function poll() {
-      if (stopped || busy || document.hidden) return;
-      busy = true;
-      try {
-        const res = await api.accessTicket(ticketId);
-        if (stopped) return;
-        setRequest(res.request);
-        setMessages(res.messages);
-      } catch {
-        // Transient failure: keep last known state, retry next tick.
-      } finally {
-        busy = false;
-      }
+  /** Silent resync after a (re)connect — never flips to the error state. */
+  async function refreshSilent() {
+    try {
+      const res = await api.accessTicket(ticketId);
+      setRequest(res.request);
+      setMessages(res.messages);
+    } catch {
+      // Transient failure: keep last known state.
     }
-    const id = setInterval(poll, 5000);
-    return () => {
-      stopped = true;
-      clearInterval(id);
-    };
+  }
+
+  useEffect(() => {
+    load();
+    // Live updates over WebSocket: admin replies and the decision arrive
+    // instantly; resync on (re)connect covers events missed while offline.
+    const close = subscribeAccessLive(wsUrl(`/api/access/ws/${ticketId}`), {
+      onEvent: (evt) => {
+        if (evt.type === "pong" || evt.request_id !== ticketId) return;
+        if (evt.type === "access_message") {
+          const msg = evt.message;
+          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+        } else if (evt.type === "access_status") {
+          setRequest(evt.request);
+        }
+      },
+      onSync: () => {
+        refreshSilent();
+      },
+    });
+    return close;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 

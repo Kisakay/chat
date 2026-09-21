@@ -21,6 +21,27 @@ export interface AccessMessage {
   created_at: number;
 }
 
+export type ReportReason = "copyright" | "gore" | "falseinfo" | "bug";
+export type ReportStatus = "open" | "reviewing" | "resolved" | "dismissed";
+
+export interface Report {
+  id: string;
+  reporter_id: string;
+  reporter_name: string;
+  conversation_id: string;
+  message_index: number;
+  content: string;
+  prompt: string;
+  model: string;
+  reason: ReportReason;
+  details: string;
+  status: ReportStatus;
+  admin_note: string;
+  reporter_shadowbanned: number;
+  created_at: number;
+  updated_at: number;
+}
+
 const TOKEN_KEY = "kisassistant_token";
 
 export function getToken(): string | null {
@@ -183,6 +204,29 @@ export const api = {
     req<{ message: AccessMessage }>(`/api/admin/access/${id}/message`, {
       method: "POST",
       body: JSON.stringify({ body }),
+    }),
+
+  /** Content reports (flagged AI responses). */
+  createReport: (r: {
+    conversationId?: string;
+    messageIndex?: number;
+    reason: ReportReason;
+    details?: string;
+    content?: string;
+    prompt?: string;
+    model?: string;
+  }) =>
+    req<{ report: Report }>("/api/reports", {
+      method: "POST",
+      body: JSON.stringify(r),
+    }),
+
+  /** Admin: report triage. */
+  adminReportList: () => req<{ reports: Report[] }>("/api/admin/reports"),
+  adminReportPatch: (id: string, patch: { status: ReportStatus; adminNote?: string }) =>
+    req<{ report: Report }>(`/api/admin/reports/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
     }),
   ollamaPull: async (
     name: string,
