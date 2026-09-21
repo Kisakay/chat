@@ -475,26 +475,7 @@ export function Logo({ size = 36, className }: { size?: number; className?: stri
 /* ---------- Switch (feature toggle) ---------- */
 
 export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative h-6 w-11 shrink-0 rounded-full transition",
-        checked ? "bg-emerald-600 dark:bg-emerald-500" : "bg-stone-300 dark:bg-zinc-700",
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
-          checked ? "left-[1.375rem]" : "left-0.5",
-        )}
-      />
-    </button>
-  );
+  return <Toggle checked={checked} onChange={onChange} label={label} />;
 }
 
 /* ---------- Misc ---------- */
@@ -503,7 +484,8 @@ export function Spinner({ size = 18 }: { size?: number }) {
   return <Loader2 size={size} className="animate-spin" />;
 }
 
-/** Accessible on/off switch (emerald→accent colored when on). */
+/** Accessible on/off switch (accent colored when on). Flex-based so the knob
+ *  is always perfectly centered — no border/padding math to break. */
 export function Toggle({
   checked,
   onChange,
@@ -524,16 +506,14 @@ export function Toggle({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative h-6 w-11 shrink-0 rounded-full border transition disabled:opacity-40",
-        checked
-          ? "border-transparent bg-accent-600 dark:bg-accent-500"
-          : "border-stone-300 bg-stone-200 dark:border-zinc-600 dark:bg-zinc-700",
+        "flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50 disabled:cursor-not-allowed disabled:opacity-40",
+        checked ? "bg-accent-600 dark:bg-accent-500" : "bg-stone-300 dark:bg-zinc-700",
       )}
     >
       <span
         className={cn(
-          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all dark:bg-zinc-100",
-          checked ? "left-[1.4rem]" : "left-0.5",
+          "h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 dark:bg-zinc-100",
+          checked ? "translate-x-5" : "translate-x-0",
         )}
       />
     </button>
@@ -555,5 +535,28 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
       {done ? <Check size={13} className="text-accent-500" /> : <Copy size={13} />}
       {done ? "Copied" : label}
     </button>
+  );
+}
+
+/* ---------- Loading screen ---------- */
+
+/** Animated blooming flower shown while the app boots (themed, mobile-safe). */
+export function LoadingScreen() {
+  const petals = [0, 60, 120, 180, 240, 300];
+  return (
+    <div className="grid min-h-full place-items-center" role="status" aria-label="Loading KisAssistant">
+      <div className="flex flex-col items-center gap-4 px-6 text-center">
+        <svg width="72" height="72" viewBox="0 0 100 100" className="h-16 w-16 sm:h-20 sm:w-20" aria-hidden="true">
+          {petals.map((r, i) => (
+            <g key={r} transform={`rotate(${r} 50 50)`}>
+              <ellipse cx="50" cy="25" rx="13" ry="21" className="flower-petal fill-accent-500" style={{ animationDelay: `${i * 0.22}s` }} />
+            </g>
+          ))}
+          <circle cx="50" cy="50" r="10" className="flower-core fill-accent-700 dark:fill-accent-400" />
+        </svg>
+        <p className="font-serif text-2xl font-bold tracking-tight">KisAssistant</p>
+        <p className="loading-dots text-sm opacity-60">Preparing your chats</p>
+      </div>
+    </div>
   );
 }

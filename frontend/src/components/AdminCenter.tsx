@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, LayoutDashboard, Mail, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { AdminPanel } from "./AdminPanel.tsx";
-import { Logo, Spinner, Switch } from "./ui.tsx";
+import { LoadingScreen, Logo, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 
 type Tab = "accounts" | "features" | "mail";
@@ -57,7 +57,7 @@ export function AdminCenter() {
   }
 
   if (allowed === null) {
-    return <div className="grid min-h-full place-items-center text-sm opacity-60"><Spinner /> Checking admin access…</div>;
+    return <LoadingScreen />;
   }
 
   if (!allowed) {

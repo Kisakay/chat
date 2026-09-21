@@ -43,8 +43,8 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 - Admin creates users (`username`, display name, avatar URL, theme) — the API
   returns a `ka_…` access key **once**; keys are stored hashed (sha256).
 - Users log in with `{ username, key }`. Regenerating a key revokes old sessions.
-- Per-account: display name, avatar URL (host images e.g. on `catbox.moe` and
-  paste the link; empty = initials avatar), theme (`auto`/`light`/`dark`).
+- Per-account: display name, avatar (uploaded to the built-in CDN from profile
+  settings), theme (`auto`/`light`/`dark`), accent color, feature flags.
 
 ## API
 
@@ -60,6 +60,9 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | POST | `/api/admin/users/:id/regenerate` | admin | new key, old sessions revoked |
 | GET/PATCH | `/api/admin/settings` | admin | feature flags: registrationEnabled, ocrEnabled |
 | GET/POST | `/api/conversations` | Bearer | server-persisted chats (title, topic, model) |
+| GET | `/api/conversations/search?q=` | Bearer | search titles, topics + old prompts (with snippet) |
+| POST | `/api/admin/ollama/pull` | admin | pull a model from the Ollama library (NDJSON progress) |
+| DELETE | `/api/admin/ollama/models/:name` | admin | remove a local Ollama model |
 | GET/PATCH/DELETE | `/api/conversations/:id` | owner | incl. messages on GET |
 | POST/GET/DELETE | `/api/conversations/:id/share` | owner | public link `/share/:publicId` |
 | GET | `/api/share/:publicId` | **public** | read-only shared chat JSON |

@@ -47,8 +47,8 @@ unshare. See `AGENTS.md`.
 1. Log in as `admin` with the `APP_PASSWORD` key.
 2. Open **Accounts** → *New account* → username (+ display name).
 3. Copy the one-time `ka_…` key and hand it to the owner (chat, QR code, …).
-4. Users set their display name, avatar (upload box in profile settings, or a
-   remote URL e.g. from `catbox.moe`) and theme in the profile settings.
+4. Users set their display name, avatar (upload a picture in the profile settings —
+   hosted on the built-in CDN), theme, accent color and feature flags in the settings.
 5. Rotate a compromised key with the regenerate button (old sessions die);
    delete removes the account with all its chats and shares.
 

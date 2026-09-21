@@ -9,7 +9,7 @@ import { ConvEditDialog, FilePreviewModal, SettingsModal, ShareModal } from "./c
 import { AdminCenter } from "./components/AdminCenter.tsx";
 import { SharePage } from "./components/SharePage.tsx";
 import { ResetPage } from "./components/ResetPage.tsx";
-import { ConfirmDialog } from "./components/ui.tsx";
+import { ConfirmDialog, LoadingScreen } from "./components/ui.tsx";
 
 function shareIdFromPath(): string | null {
   const m = window.location.pathname.match(/^\/share\/([A-Za-z0-9_-]{6,64})\/?$/);
@@ -256,7 +256,7 @@ export function App() {
   }
 
   if (checking) {
-    return <div className="grid min-h-full place-items-center text-sm opacity-60">Loading…</div>;
+    return <LoadingScreen />;
   }
 
   if (!user) {

@@ -11,7 +11,6 @@ import {
   Share2,
   Tag,
   Trash2,
-  Users,
   X,
 } from "lucide-react";
 import type { Conversation, User } from "../lib/types.ts";

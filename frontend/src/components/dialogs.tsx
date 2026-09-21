@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Globe, FileText, ImagePlus, Link2, Mail, Palette, Pencil, ScanText, Settings2, Sparkles, Tag, Unplug, UserPlus } from "lucide-react";
+import { Globe, FileText, ImagePlus, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, Sparkles, Tag, Unplug, User as UserIcon, UserPlus, X } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
@@ -354,7 +354,16 @@ export function SettingsModal({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [search, setSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Section search: each section lists keywords; a section shows when the
+  // query is empty or matches its title/keywords.
+  function show(...keywords: string[]): boolean {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return keywords.some((k) => k.toLowerCase().includes(q));
+  }
 
   useEffect(() => {
     if (user) {
@@ -364,6 +373,7 @@ export function SettingsModal({
       setTheme(user.theme);
       setError("");
       setUploadError("");
+      setSearch("");
     }
   }, [user]);
 
@@ -409,83 +419,122 @@ export function SettingsModal({
   }
 
   return (
-    <Modal open={user !== null} onClose={onClose} title="Profile & appearance" icon={Settings2}>
+    <Modal open={user !== null} onClose={onClose} title="Settings" icon={Settings2} wide>
       <form onSubmit={save} className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Avatar name={displayName || "?"} url={avatarUrl || undefined} size={52} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{displayName || "…"}</p>
-            <p className="truncate text-xs opacity-60">@{user?.username}</p>
-          </div>
-        </div>
-        <div>
-          <span className="mb-1.5 block text-sm font-medium opacity-80">Avatar upload</span>
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Upload avatar"
-            onClick={() => fileRef.current?.click()}
-            onKeyDown={(e) => e.key === "Enter" && fileRef.current?.click()}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              const f = e.dataTransfer.files?.[0];
-              if (f) uploadFile(f);
-            }}
-            className={cn(
-              "flex cursor-pointer items-center gap-3 rounded-3xl border-2 border-dashed px-4 py-3.5 transition",
-              dragOver
-                ? "border-accent-500 bg-accent-500/10"
-                : "border-stone-200 hover:border-accent-500/60 hover:bg-stone-50 dark:border-zinc-700 dark:hover:bg-zinc-800/60",
-            )}
-          >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
-              {uploading ? <Spinner size={17} /> : <ImagePlus size={17} />}
-            </span>
-            <span className="min-w-0 flex-1 text-sm">
-              <span className="block font-medium">{uploading ? "Uploading…" : dragOver ? "Drop it!" : "Drop an image or click to upload"}</span>
-              <span className="block text-xs opacity-60">jpg · png · webp — max 5MB — 5 changes per 2h</span>
-            </span>
-          </div>
+        <div className="relative">
+          <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" />
           <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) uploadFile(f);
-              e.target.value = "";
-            }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search settings…"
+            aria-label="Search settings"
+            className="w-full rounded-2xl border border-stone-200/70 bg-stone-100 py-2 pl-9 pr-8 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 focus:bg-white dark:border-zinc-800 dark:bg-zinc-800/60 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900"
           />
-          {uploadError && <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
+          {search && (
+            <button
+              type="button"
+              aria-label="Clear settings search"
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 opacity-60 transition hover:opacity-100"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
-        <Field label="Display name">
-          <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required />
-        </Field>
-        <Field label="Avatar URL" hint="Host an image on catbox.moe (or anywhere) and paste the direct link here. Empty = initials.">
-          <Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" inputMode="url" />
-        </Field>
-        <Field label="Recovery email" hint="Optional. Used only to send you a fresh access key if you lose it.">
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" />
-        </Field>
-        <Field label="Theme">
-          <Picker
-            ariaLabel="Theme"
-            value={theme}
-            onChange={setTheme}
-            align="left"
-            options={[
-              { value: "auto", label: "Auto (follows system)" },
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
-            ]}
-          />
-        </Field>
-        <AccentSection />
-        <FeaturesSection />
+
+        {show("profile", "avatar", "picture", "photo", "name", "display", "email", "account") && (
+          <SettingSection icon={UserIcon} title="Profile">
+            <div className="flex items-center gap-3">
+              <Avatar name={displayName || "?"} url={avatarUrl || undefined} size={52} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{displayName || "…"}</p>
+                <p className="truncate text-xs opacity-60">@{user?.username}</p>
+              </div>
+            </div>
+            <div>
+              <span className="mb-1.5 block text-sm font-medium opacity-80">Avatar upload</span>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Upload avatar"
+                onClick={() => fileRef.current?.click()}
+                onKeyDown={(e) => e.key === "Enter" && fileRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) uploadFile(f);
+                }}
+                className={cn(
+                  "flex cursor-pointer items-center gap-3 rounded-3xl border-2 border-dashed px-4 py-3.5 transition",
+                  dragOver
+                    ? "border-accent-500 bg-accent-500/10"
+                    : "border-stone-200 hover:border-accent-500/60 hover:bg-stone-50 dark:border-zinc-700 dark:hover:bg-zinc-800/60",
+                )}
+              >
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
+                  {uploading ? <Spinner size={17} /> : <ImagePlus size={17} />}
+                </span>
+                <span className="min-w-0 flex-1 text-sm">
+                  <span className="block font-medium">{uploading ? "Uploading…" : dragOver ? "Drop it!" : "Drop an image or click to upload"}</span>
+                  <span className="block text-xs opacity-60">jpg · png · webp — max 5MB — 5 changes per 2h</span>
+                </span>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadFile(f);
+                  e.target.value = "";
+                }}
+              />
+              {uploadError && <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
+            </div>
+            <Field label="Display name">
+              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required />
+            </Field>
+            <Field label="Recovery email" hint="Optional. Used only to send you a fresh access key if you lose it.">
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" />
+            </Field>
+          </SettingSection>
+        )}
+
+        {show("appearance", "theme", "dark", "light", "color", "colour", "accent", "palette") && (
+          <SettingSection icon={Palette} title="Appearance">
+            <Field label="Theme">
+              <Picker
+                ariaLabel="Theme"
+                value={theme}
+                onChange={setTheme}
+                align="left"
+                options={[
+                  { value: "auto", label: "Auto (follows system)" },
+                  { value: "light", label: "Light" },
+                  { value: "dark", label: "Dark" },
+                ]}
+              />
+            </Field>
+            <AccentSection />
+          </SettingSection>
+        )}
+
+        {show("features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable") && (
+          <SettingSection icon={Sparkles} title="Features" hint="Turn composer capabilities on or off. Applied instantly, saved on this device.">
+            <FeaturesSection />
+          </SettingSection>
+        )}
+
+        {search.trim() && !show("profile", "avatar", "picture", "photo", "name", "display", "email", "account")
+          && !show("appearance", "theme", "dark", "light", "color", "colour", "accent", "palette")
+          && !show("features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable") && (
+          <p className="px-2 py-4 text-center text-sm opacity-50">No settings match “{search.trim()}”.</p>
+        )}
+
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" type="button" onClick={onClose}>Cancel</Button>
@@ -493,6 +542,31 @@ export function SettingsModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+/* ---------- Settings sections ---------- */
+
+function SettingSection({
+  icon: Icon,
+  title,
+  hint,
+  children,
+}: {
+  icon: typeof Settings2;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-stone-200/70 p-4 dark:border-zinc-800">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+        <Icon size={15} className="opacity-60" />
+        {title}
+      </h3>
+      {hint && <p className="mb-3 text-xs opacity-60">{hint}</p>}
+      <div className="mt-3 space-y-4">{children}</div>
+    </section>
   );
 }
 
@@ -515,10 +589,6 @@ function AccentSection() {
 
   return (
     <div>
-      <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium opacity-80">
-        <Palette size={14} />
-        Accent color
-      </span>
       <div className="flex flex-wrap items-center gap-2">
         {ACCENT_PRESETS.map((p) => (
           <button
@@ -557,7 +627,6 @@ function AccentSection() {
           />
         </label>
       </div>
-      <p className="mt-1.5 text-xs opacity-60">Applied instantly, saved on this device.</p>
     </div>
   );
 }
@@ -568,10 +637,6 @@ function FeaturesSection() {
   const flags = useFeatures();
   return (
     <div>
-      <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium opacity-80">
-        <Sparkles size={14} />
-        Features
-      </span>
       <div className="space-y-1">
         {FEATURES.map((f) => (
           <label
@@ -597,7 +662,6 @@ function FeaturesSection() {
           </label>
         ))}
       </div>
-      <p className="mt-1.5 text-xs opacity-60">Applied instantly, saved on this device.</p>
     </div>
   );
 }

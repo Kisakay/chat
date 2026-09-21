@@ -1,0 +1,4 @@
+# KisAssistant — crawlers, LLM agents and scrapers are welcome on public pages.
+# Authenticated app routes (/api/* except /api/share/:id) require a Bearer key.
+User-agent: *
+Allow: /
