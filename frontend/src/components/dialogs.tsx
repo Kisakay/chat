@@ -498,6 +498,9 @@ export function SettingsModal({
           )}
         </div>
 
+        {search.trim() && visibleCats.length === 0 ? (
+          <p className="px-2 py-4 text-center text-sm opacity-50">{t("settings.noMatch", { q: search.trim() })}</p>
+        ) : (
         <div className="flex flex-col gap-4 sm:flex-row">
           <nav aria-label="Settings categories" className="flex shrink-0 gap-1.5 overflow-x-auto sm:w-44 sm:flex-col">
             {visibleCats.map((c) => (
@@ -635,9 +638,6 @@ export function SettingsModal({
             )}
           </div>
         </div>
-
-        {search.trim() && visibleCats.length === 0 && (
-          <p className="px-2 py-4 text-center text-sm opacity-50">{t("settings.noMatch", { q: search.trim() })}</p>
         )}
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

@@ -201,6 +201,7 @@ const server = Bun.serve({
         model: s.conv.model,
         authorName: s.authorName,
         authorAvatarUrl: s.authorAvatarUrl,
+        archived: s.archived,
         sharedAt: s.sharedAt,
         messages: s.messages.map((m) => ({ role: m.role, content: m.content })),
       });

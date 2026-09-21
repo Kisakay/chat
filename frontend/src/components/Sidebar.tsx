@@ -274,13 +274,13 @@ export function Sidebar({
       )}
 
       <div className="space-y-2 rounded-2xl border border-stone-200/70 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
-        <button onClick={onOpenSettings} className="m-0.5 flex w-[calc(100%-4px)] items-center gap-2.5 rounded-xl p-1.5 text-left transition hover:bg-accent-600/10" title={t("sidebar.settingsTip")}>
+        <button onClick={onOpenSettings} className="flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left transition hover:bg-accent-600/10" title={t("sidebar.settingsTip")}>
           <Avatar name={user.displayName} url={user.avatarUrl} size={34} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{user.displayName}</span>
             <span className="block truncate text-xs opacity-60">@{user.username}{user.isAdmin ? ` · ${t("sidebar.admin")}` : ""}</span>
           </span>
-          <Settings size={16} className="opacity-50" />
+          <Settings size={16} className="mr-2 shrink-0 opacity-50" />
         </button>
         <div className="flex gap-1.5">
           {user.isAdmin && (

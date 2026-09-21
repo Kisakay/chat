@@ -52,6 +52,7 @@ export interface SharedChat {
   model: string;
   authorName: string;
   authorAvatarUrl: string;
+  archived: boolean;
   sharedAt: number;
   messages: ChatMessage[];
 }

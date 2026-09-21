@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bot, CloudOff, Globe, User as UserIcon } from "lucide-react";
+import { Archive, Bot, CloudOff, Globe, User as UserIcon } from "lucide-react";
 import { api } from "../lib/api.ts";
 import type { SharedChat } from "../lib/types.ts";
 import { AssistantAvatar, Avatar, FlowerMark } from "./ui.tsx";
@@ -23,11 +23,16 @@ export function SharePage({ publicId }: { publicId: string }) {
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2.5 px-4 py-3">
           <FlowerMark size={36} dynamic={false} />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{chat?.title ?? t("share.fallback")}</p>
+            <p className="truncate font-semibold">{chat?.title ?? "Shared chat"}</p>
             {chat && (
-              <p className="flex items-center gap-1.5 text-xs opacity-60">
-                <Globe size={11} /> {t("share.by", { name: chat.authorName })} · {new Date(chat.sharedAt).toLocaleDateString()}
+              <p className="flex flex-wrap items-center gap-1.5 text-xs opacity-60">
+                <Globe size={11} /> by {chat.authorName} · {new Date(chat.sharedAt).toLocaleDateString()}
                 {chat.model && <> · {chat.model.split(":").pop()}</>}
+                {chat.archived && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-stone-200/70 px-2 py-0.5 font-medium opacity-100 dark:bg-zinc-800">
+                    <Archive size={11} /> Archived
+                  </span>
+                )}
               </p>
             )}
           </div>

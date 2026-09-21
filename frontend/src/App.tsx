@@ -36,7 +36,7 @@ function reviewIdFromPath(): string | null {
 
 /** Minimum time the boot splash stays visible, so the bloom animation
  *  actually plays even when the session restores instantly. */
-const MIN_SPLASH_MS = 2500;
+const MIN_SPLASH_MS = 1500;
 
 function applyTheme(theme: string) {
   const root = document.documentElement;

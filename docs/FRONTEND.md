@@ -19,7 +19,7 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
 - `lib/api.ts` — typed `fetch` wrapper: Bearer header from `localStorage`,
   `{ error }` parsing, `ApiError` with status, auto logout+reload on 401
   (except on `/share/*`). `chatStream()` parses SSE `token`/`done`/`error`.
-- Boot shows `LoadingScreen` for at least 2.5 s (`MIN_SPLASH_MS` in `App.tsx`)
+- Boot shows `LoadingScreen` for at least 1.5 s (`MIN_SPLASH_MS` in `App.tsx`)
   so the bloom animation always plays, even when the session restores instantly.
 - Sending: ensure a server conversation exists (created lazily on first send),
   optimistic user message, stream tokens into `streaming`, then append the full
@@ -57,8 +57,9 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
   `/api/admin/settings`), SMTP viewer (password blurred by default, eye toggle
   to reveal) + connectivity tester (verify + send test mail). Follows the platform theme.
 - `SharePage.tsx` — public read-only view, fetches `/api/share/:id` unauthenticated
-  (`{ title, topic, model, authorName, authorAvatarUrl, sharedAt, messages }`);
-  user messages render the author's avatar via `Avatar` (URL or initials).
+  (`{ title, topic, model, authorName, authorAvatarUrl, archived, sharedAt, messages }`);
+  user messages render the author's avatar via `Avatar` (URL or initials);
+  an "Archived" pill shows when the source conversation is archived.
 - `Markdown.tsx` — `react-markdown` + GFM; code blocks get a language label and
   a copy button.
 

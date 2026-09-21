@@ -408,7 +408,7 @@ export function deleteShare(convId: string): void {
   getDb().query("DELETE FROM shares WHERE conv_id = ?").run(convId);
 }
 
-export function getShareByPublic(publicId: string): { conv: ConversationRow; messages: MessageRow[]; authorName: string; authorAvatarUrl: string; sharedAt: number } | null {
+export function getShareByPublic(publicId: string): { conv: ConversationRow; messages: MessageRow[]; authorName: string; authorAvatarUrl: string; archived: boolean; sharedAt: number } | null {
   const d = getDb();
   const s = d.query("SELECT * FROM shares WHERE public_id = ?").get(publicId) as { conv_id: string; created_at: number } | null;
   if (!s) return null;
@@ -420,6 +420,7 @@ export function getShareByPublic(publicId: string): { conv: ConversationRow; mes
     messages: getMessages(conv.id).filter((m) => m.role !== "system"),
     authorName: author?.display_name || "Someone",
     authorAvatarUrl: author?.avatar_url || "",
+    archived: conv.archived_at !== 0,
     sharedAt: s.created_at,
   };
 }
