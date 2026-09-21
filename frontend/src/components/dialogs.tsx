@@ -358,11 +358,22 @@ export function SettingsModal({
   const [theme, setTheme] = useState("auto");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
+  const [stagedFile, setStagedFile] = useState<File | null>(null);
+  const [stagedUrl, setStagedUrl] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  // Object URLs must be revoked or they leak; the ref mirrors the latest
+  // staged URL so unmount/close cleanup always revokes the right one.
+  const stagedUrlRef = useRef<string | null>(null);
+
+  function discardStaged() {
+    if (stagedUrlRef.current) URL.revokeObjectURL(stagedUrlRef.current);
+    stagedUrlRef.current = null;
+    setStagedUrl(null);
+    setStagedFile(null);
+  }
 
   // Two-column settings: categories on the left, content on the right.
   // Searching filters the category list and jumps to the first match.
@@ -391,10 +402,23 @@ export function SettingsModal({
       setError("");
       setUploadError("");
       setSearch("");
+      discardStaged();
+    } else {
+      // Modal closed (Save, Cancel, Escape, backdrop): drop the staged file
+      // so the next open previews the saved avatar again.
+      discardStaged();
     }
   }, [user]);
 
-  async function uploadFile(f: File) {
+  // Safety net: revoke the object URL if the component unmounts mid-stage.
+  useEffect(() => () => {
+    if (stagedUrlRef.current) URL.revokeObjectURL(stagedUrlRef.current);
+  }, []);
+
+  // Staging is preview-only: no bytes leave the browser until Save.
+  // (The CDN path is fixed per account, so PUTing early would publish the
+  // picture immediately and Cancel could never undo it.)
+  function stageFile(f: File) {
     if (!user) return;
     if (f.size > 5 * 1024 * 1024) {
       setUploadError(t("sec.avatarTooBig"));
@@ -404,19 +428,12 @@ export function SettingsModal({
       setUploadError(t("sec.avatarType"));
       return;
     }
-    setUploading(true);
     setUploadError("");
-    try {
-      const res = await api.uploadAvatar(user.id, f);
-      setAvatarUrl(res.url); // applied when you press Save
-      // Same URL path every upload -> bump the CDN version so every <Avatar>
-      // preview (this modal, sidebar, chat bubbles) re-fetches immediately.
-      bumpCdnVersion();
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : t("attach.uploadFailed"));
-    } finally {
-      setUploading(false);
-    }
+    if (stagedUrlRef.current) URL.revokeObjectURL(stagedUrlRef.current);
+    const url = URL.createObjectURL(f);
+    stagedUrlRef.current = url;
+    setStagedFile(f);
+    setStagedUrl(url);
   }
 
   async function save(e: React.FormEvent) {
@@ -425,7 +442,24 @@ export function SettingsModal({
     setBusy(true);
     setError("");
     try {
-      const res = await api.updateMe({ displayName: displayName.trim(), avatarUrl: avatarUrl.trim(), email: email.trim(), theme });
+      // Save is the only point that touches the network for the avatar:
+      // push the staged bytes first, then persist the resulting URL.
+      let url = avatarUrl.trim();
+      if (stagedFile) {
+        try {
+          const up = await api.uploadAvatar(user.id, stagedFile);
+          url = up.url;
+          // Same CDN path every upload -> bump the version so every <Avatar>
+          // (sidebar, chat bubbles) re-fetches the new bytes immediately.
+          bumpCdnVersion();
+        } catch (err) {
+          setUploadError(err instanceof Error ? err.message : t("attach.uploadFailed"));
+          setBusy(false);
+          return;
+        }
+        discardStaged();
+      }
+      const res = await api.updateMe({ displayName: displayName.trim(), avatarUrl: url, email: email.trim(), theme });
       onSaved(res.user);
       onClose();
     } catch (err) {
@@ -484,11 +518,22 @@ export function SettingsModal({
             {activeCat === "profile" && (
               <SettingsPane>
                 <div className="flex items-center gap-3">
-              <Avatar name={displayName || "?"} url={avatarUrl || undefined} size={52} />
+              <Avatar name={displayName || "?"} url={stagedUrl ?? avatarUrl ?? undefined} size={52} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{displayName || "…"}</p>
                 <p className="truncate text-xs opacity-60">@{user?.username}</p>
               </div>
+              {stagedUrl && (
+                <button
+                  type="button"
+                  onClick={discardStaged}
+                  aria-label={t("common.cancel")}
+                  title={t("common.cancel")}
+                  className="rounded-full p-1.5 transition hover:bg-stone-200/60 dark:hover:bg-zinc-800"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
             <div>
               <span className="mb-1.5 block text-sm font-medium opacity-80">{t("settings.avatarUpload")}</span>
@@ -504,7 +549,7 @@ export function SettingsModal({
                   e.preventDefault();
                   setDragOver(false);
                   const f = e.dataTransfer.files?.[0];
-                  if (f) uploadFile(f);
+                  if (f) stageFile(f);
                 }}
                 className={cn(
                   "flex cursor-pointer items-center gap-3 rounded-3xl border-2 border-dashed px-4 py-3.5 transition",
@@ -514,10 +559,10 @@ export function SettingsModal({
                 )}
               >
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
-                  {uploading ? <Spinner size={17} /> : <ImagePlus size={17} />}
+                  <ImagePlus size={17} />
                 </span>
                 <span className="min-w-0 flex-1 text-sm">
-                  <span className="block font-medium">{uploading ? t("settings.uploading") : dragOver ? t("settings.dropActive") : t("settings.dropIdle")}</span>
+                  <span className="block font-medium">{dragOver ? t("settings.dropActive") : t("settings.dropIdle")}</span>
                   <span className="block text-xs opacity-60">{t("settings.avatarHint")}</span>
                 </span>
               </div>
@@ -528,7 +573,7 @@ export function SettingsModal({
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) uploadFile(f);
+                  if (f) stageFile(f);
                   e.target.value = "";
                 }}
               />

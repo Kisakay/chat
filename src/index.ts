@@ -34,8 +34,10 @@ import {
   getUserByUsername,
   isRegistrationEnabled,
   listConversations,
+  listArchivedConversations,
   listUsers,
   peekReset,
+  setConversationArchived,
   setSetting,
   toPublicUser,
   touchConversation,
@@ -917,6 +919,11 @@ const server = Bun.serve({
         return json({ conversations: listConversations(user.id) });
       }
 
+      // Archived chats (hidden from the sidebar, managed in settings).
+      if (path === "/api/conversations/archived" && req.method === "GET") {
+        return json({ conversations: listArchivedConversations(user.id) });
+      }
+
       // Full-text-ish search over your own chats: titles, topics AND old
       // prompts/replies. Returns the matching conversations, most recent
       // first, with a short snippet of the first hit.
@@ -928,7 +935,7 @@ const server = Bun.serve({
           `SELECT c.*, m.content AS hit, m.role AS hit_role FROM conversations c
            LEFT JOIN messages m ON m.conv_id = c.id
              AND m.content LIKE ? ESCAPE '\\'
-           WHERE c.user_id = ? AND (c.title LIKE ? ESCAPE '\\' OR c.topic LIKE ? ESCAPE '\\' OR m.id IS NOT NULL)
+            WHERE c.user_id = ? AND c.archived_at = 0 AND (c.title LIKE ? ESCAPE '\\' OR c.topic LIKE ? ESCAPE '\\' OR m.id IS NOT NULL)
            GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 30`,
         ).all(like, user.id, like, like) as (ConversationRow & { hit: string | null; hit_role: string | null })[];
         return json({
@@ -957,6 +964,13 @@ const server = Bun.serve({
           model: typeof body.model === "string" ? body.model : undefined,
         });
         return json({ conversation: conv }, 201);
+      }
+
+      const archiveMatch = path.match(/^\/api\/conversations\/([0-9a-f-]{10,50})\/(archive|unarchive)$/);
+      if (archiveMatch && req.method === "POST") {
+        const conv = getConversation(archiveMatch[1]!);
+        if (!conv || conv.user_id !== user.id) return json({ error: "conversation not found" }, 404);
+        return json({ conversation: setConversationArchived(conv.id, archiveMatch[2] === "archive") });
       }
 
       const convMatch = path.match(/^\/api\/conversations\/([0-9a-f-]{10,50})(\/(share))?$/);
@@ -1075,6 +1089,8 @@ const server = Bun.serve({
           if (typeof body.conversationId !== "string") return json({ error: "bad conversationId" }, 400);
           conv = getConversation(body.conversationId);
           if (!conv || conv.user_id !== user.id) return json({ error: "conversation not found" }, 404);
+          // Archived chats are read-only: no new messages may be written.
+          if (conv.archived_at) return json({ error: "conversation is archived (read-only) — unarchive it to write again" }, 403);
           // Persist the new user message (dedupe against last stored one).
           const lastUser = [...messages].reverse().find((m) => m.role === "user");
           const stored = getMessages(conv.id);

@@ -4,8 +4,10 @@ import { api } from "../lib/api.ts";
 import type { SharedChat } from "../lib/types.ts";
 import { AssistantAvatar, Avatar, FlowerMark } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
+import { useT } from "../lib/i18n.ts";
 
 export function SharePage({ publicId }: { publicId: string }) {
+  const { t } = useT();
   const [chat, setChat] = useState<SharedChat | null>(null);
   const [error, setError] = useState("");
 
@@ -21,16 +23,16 @@ export function SharePage({ publicId }: { publicId: string }) {
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2.5 px-4 py-3">
           <FlowerMark size={36} dynamic={false} />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{chat?.title ?? "Shared chat"}</p>
+            <p className="truncate font-semibold">{chat?.title ?? t("share.fallback")}</p>
             {chat && (
               <p className="flex items-center gap-1.5 text-xs opacity-60">
-                <Globe size={11} /> by {chat.authorName} · {new Date(chat.sharedAt).toLocaleDateString()}
+                <Globe size={11} /> {t("share.by", { name: chat.authorName })} · {new Date(chat.sharedAt).toLocaleDateString()}
                 {chat.model && <> · {chat.model.split(":").pop()}</>}
               </p>
             )}
           </div>
           <a href="/" className="rounded-full bg-accent-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-500 dark:bg-accent-500 dark:text-zinc-950">
-            Open KisAssistant
+            {t("share.open")}
           </a>
         </div>
       </header>
@@ -41,27 +43,27 @@ export function SharePage({ publicId }: { publicId: string }) {
               <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-stone-200/70 text-stone-500 dark:bg-zinc-800 dark:text-zinc-400">
                 <CloudOff size={28} />
               </span>
-              <h1 className="bg-gradient-to-br from-stone-900 via-stone-700 to-accent-700 bg-clip-text font-serif text-4xl font-black italic tracking-tight text-transparent dark:from-zinc-100 dark:via-zinc-300 dark:to-accent-400">This shared chat is gone</h1>
+              <h1 className="bg-gradient-to-br from-stone-900 via-stone-700 to-accent-700 bg-clip-text font-serif text-4xl font-black italic tracking-tight text-transparent dark:from-zinc-100 dark:via-zinc-300 dark:to-accent-400">{t("share.gone")}</h1>
               <p className="mt-2 text-sm opacity-70">
-                The link is invalid, expired, or the author unshared it.
+                {t("share.goneSub")}
                 {error && error.toLowerCase() !== "not found" ? ` (${error})` : ""}
               </p>
               <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
                 <a href="/" className="rounded-full bg-accent-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-500 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400">
-                  Open KisAssistant
+                  {t("share.open")}
                 </a>
                 <button
                   onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = "/")}
                   className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
                 >
-                  Go back
+                  {t("share.back")}
                 </button>
               </div>
             </div>
             <FlowerMark size={28} dynamic={false} className="mx-auto mt-6 opacity-40" />
           </div>
         )}
-        {!chat && !error && <p className="py-16 text-center text-sm opacity-60">Loading shared chat…</p>}
+        {!chat && !error && <p className="py-16 text-center text-sm opacity-60">{t("share.loading")}</p>}
         {chat?.messages.map((m, i) => (
           <div key={i} className="flex gap-3">
             {m.role === "user"

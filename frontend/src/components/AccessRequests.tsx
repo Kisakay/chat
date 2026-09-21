@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, Clock, Inbox, Search, SendHorizontal, Undo2, XCircle } from "lucide-react";
 import { api, type AccessMessage, type AccessRequest, type AccessStatus } from "../lib/api.ts";
 import { Button, CopyButton, Field, Input, Spinner } from "./ui.tsx";
+import { useT, type StringKey } from "../lib/i18n.ts";
 import { cn } from "../lib/cn.ts";
 
-const STATUS_STYLE: Record<AccessStatus, { label: string; cls: string }> = {
-  pending: { label: "Pending", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
-  reviewing: { label: "Reviewing", cls: "bg-sky-500/10 text-sky-700 dark:text-sky-400" },
-  accepted: { label: "Accepted", cls: "bg-accent-500/10 text-accent-700 dark:text-accent-400" },
-  refused: { label: "Refused", cls: "bg-red-500/10 text-red-600 dark:text-red-400" },
+const STATUS_STYLE: Record<AccessStatus, { cls: string }> = {
+  pending: { cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+  reviewing: { cls: "bg-sky-500/10 text-sky-700 dark:text-sky-400" },
+  accepted: { cls: "bg-accent-500/10 text-accent-700 dark:text-accent-400" },
+  refused: { cls: "bg-red-500/10 text-red-600 dark:text-red-400" },
 };
 
 type Filter = "all" | AccessStatus;
@@ -21,6 +22,7 @@ export function AccessRequestsPanel() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { t } = useT();
 
   async function refresh(select?: string) {
     try {
@@ -28,7 +30,7 @@ export function AccessRequestsPanel() {
       setRequests(res.requests);
       if (select) setSelectedId(select);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed");
+      setError(err instanceof Error ? err.message : t("admin.loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -57,27 +59,27 @@ export function AccessRequestsPanel() {
                   : "bg-stone-200/70 hover:bg-stone-300/60 dark:bg-zinc-800 dark:hover:bg-zinc-700",
               )}
             >
-              {f} · {n}
+              {t(`access.filter.${f}` as StringKey)} · {n}
             </button>
           );
         })}
         <button
           onClick={() => refresh()}
           className="ml-auto rounded-full p-2 opacity-60 transition hover:bg-stone-200/60 hover:opacity-100 dark:hover:bg-zinc-800"
-          title="Refresh"
-          aria-label="Refresh requests"
+          title={t("access.refresh")}
+          aria-label={t("access.refreshAria")}
         >
           <Undo2 size={15} />
         </button>
       </div>
 
       {error && <p className="rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>}
-      {loading && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> Loading…</p>}
+      {loading && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("common.loading")}</p>}
 
       {!loading && visible.length === 0 && (
         <p className="flex items-center justify-center gap-2 rounded-3xl border border-dashed border-stone-300 px-4 py-8 text-sm opacity-50 dark:border-zinc-700">
           <Inbox size={16} />
-          {pendingCount > 0 ? "Nothing with this status." : "No access requests. The wishlist is empty."}
+          {pendingCount > 0 ? t("access.emptyFiltered") : t("access.empty")}
         </p>
       )}
 
@@ -98,10 +100,10 @@ export function AccessRequestsPanel() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">@{r.username} <span className="font-normal opacity-50">{r.email}</span></span>
-                <span className="block truncate text-xs opacity-60">{r.message} · {r.message_count} message{r.message_count === 1 ? "" : "s"}</span>
+                <span className="block truncate text-xs opacity-60">{r.message} · {r.message_count === 1 ? t("access.msgOne") : t("access.msgMany", { n: r.message_count })}</span>
               </span>
               <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-medium", STATUS_STYLE[r.status].cls)}>
-                {STATUS_STYLE[r.status].label}
+                {t(`access.status.${r.status}` as StringKey)}
               </span>
             </button>
             {selectedId === r.id && <TicketDetail request={r} onChanged={() => refresh(r.id)} />}

@@ -23,6 +23,7 @@ export interface ConversationRow {
   title: string;
   topic: string;
   model: string;
+  archived_at: number;
   created_at: number;
   updated_at: number;
 }
@@ -118,6 +119,11 @@ export function getDb(): Database {
   const cols = db.query("PRAGMA table_info(users)").all() as { name: string }[];
   if (!cols.some((c) => c.name === "email")) {
     db.exec("ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''");
+  }
+  // Archive flag added after the initial schema — keep idempotent.
+  const convCols = db.query("PRAGMA table_info(conversations)").all() as { name: string }[];
+  if (!convCols.some((c) => c.name === "archived_at")) {
+    db.exec("ALTER TABLE conversations ADD COLUMN archived_at INTEGER NOT NULL DEFAULT 0");
   }
   // Admin pseudo-account row (auth still goes through APP_PASSWORD from .env).
   const admin = db.query("SELECT id FROM users WHERE username = 'admin'").get() as { id: string } | null;
@@ -242,6 +248,7 @@ export function createConversation(userId: string, opts: { title?: string; topic
     title: opts.title?.slice(0, 120) || "New chat",
     topic: opts.topic?.slice(0, 120) || "",
     model: opts.model?.slice(0, 160) || "",
+    archived_at: 0,
     created_at: now,
     updated_at: now,
   };
@@ -252,7 +259,21 @@ export function createConversation(userId: string, opts: { title?: string; topic
 }
 
 export function listConversations(userId: string): ConversationRow[] {
-  return getDb().query("SELECT * FROM conversations WHERE user_id = ? ORDER BY updated_at DESC").all(userId) as ConversationRow[];
+  return getDb().query("SELECT * FROM conversations WHERE user_id = ? AND archived_at = 0 ORDER BY updated_at DESC").all(userId) as ConversationRow[];
+}
+
+/** Archived chats: hidden from the sidebar, managed in settings. */
+export function listArchivedConversations(userId: string): ConversationRow[] {
+  return getDb().query("SELECT * FROM conversations WHERE user_id = ? AND archived_at != 0 ORDER BY updated_at DESC").all(userId) as ConversationRow[];
+}
+
+/**
+ * (Un)archive a conversation. archived_at is left out of updated_at on
+ * purpose so an unarchived chat returns to its chronological place.
+ */
+export function setConversationArchived(id: string, archived: boolean): ConversationRow | null {
+  getDb().query("UPDATE conversations SET archived_at = ? WHERE id = ?").run(archived ? Date.now() : 0, id);
+  return getConversation(id);
 }
 
 export function getConversation(id: string): ConversationRow | null {
