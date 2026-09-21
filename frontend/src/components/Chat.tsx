@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Archive, ArchiveRestore, BookOpen, Bot, Check, Copy, Cpu, FileText, Flag, Menu, PanelLeftOpen, Paperclip, ScanText, Search, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
 import type { Attachment, ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
-import { api, type ReportReason } from "../lib/api.ts";
+import { api, ApiError, type ReportReason } from "../lib/api.ts";
 import { AssistantAvatar, Avatar, Button, Field, FlowerMark, IconButton, Modal, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
+import { UserMessageContent } from "./MessageContent.tsx";
 import { cn } from "../lib/cn.ts";
 import { useFeatures } from "../lib/features.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
@@ -34,8 +35,8 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport }: { msg
           {isUser ? t("chat.you") : "KisAssistant"}
         </div>
         {isUser ? (
-          <div className="whitespace-pre-wrap rounded-3xl rounded-tr-lg bg-accent-600 px-4 py-2.5 text-[15px] text-white dark:bg-accent-500 dark:text-zinc-950">
-            {msg.content}
+          <div className="break-words whitespace-pre-wrap rounded-3xl rounded-tr-lg bg-accent-600 px-4 py-2.5 text-[15px] text-white dark:bg-accent-500 dark:text-zinc-950">
+            <UserMessageContent content={msg.content} />
           </div>
         ) : (
           <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-5 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -60,12 +61,13 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport }: { msg
   );
 }
 
-function ReportDialog({ open, onClose, conversationId, messageIndex, content, model }: {
+function ReportDialog({ open, onClose, conversationId, messageIndex, content, prompt, model }: {
   open: boolean;
   onClose: () => void;
   conversationId: string | null;
   messageIndex: number;
   content: string;
+  prompt: string;
   model: string;
 }) {
   const { t } = useT();
@@ -74,6 +76,7 @@ function ReportDialog({ open, onClose, conversationId, messageIndex, content, mo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [duplicate, setDuplicate] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -81,6 +84,7 @@ function ReportDialog({ open, onClose, conversationId, messageIndex, content, mo
       setDetails("");
       setError("");
       setSent(false);
+      setDuplicate(false);
     }
   }, [open, messageIndex]);
 
@@ -96,11 +100,16 @@ function ReportDialog({ open, onClose, conversationId, messageIndex, content, mo
         reason: reason as ReportReason,
         details: details.trim(),
         content,
+        prompt,
         model,
       });
       setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("report.failed"));
+      if (err instanceof ApiError && err.status === 409) {
+        setDuplicate(true);
+      } else {
+        setError(err instanceof Error ? err.message : t("report.failed"));
+      }
     } finally {
       setBusy(false);
     }
@@ -108,7 +117,16 @@ function ReportDialog({ open, onClose, conversationId, messageIndex, content, mo
 
   return (
     <Modal open={open} onClose={onClose} title={t("report.title")} icon={Flag}>
-      {sent ? (
+      {sent || duplicate ? (
+        <div className="space-y-4">
+          <p className="flex items-center gap-2 rounded-2xl bg-emerald-600/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+            <Check size={16} /> {duplicate ? t("report.alreadyReported") : t("report.sent")}
+          </p>
+          <div className="flex justify-end">
+            <Button variant="secondary" onClick={onClose}>{t("common.close")}</Button>
+          </div>
+        </div>
+      ) : (
         <div className="space-y-4">
           <p className="flex items-center gap-2 rounded-2xl bg-emerald-600/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
             <Check size={16} /> {t("report.sent")}
@@ -429,6 +447,7 @@ export function Chat({
       {(() => {
         const shown = messages.filter((m) => m.role !== "system");
         const target = reportIndex !== null ? shown[reportIndex] : undefined;
+        const prev = reportIndex !== null && reportIndex > 0 ? shown[reportIndex - 1] : undefined;
         return (
           <ReportDialog
             open={reportIndex !== null}
@@ -436,6 +455,7 @@ export function Chat({
             conversationId={conv?.id ?? null}
             messageIndex={reportIndex ?? 0}
             content={target?.content ?? ""}
+            prompt={prev && prev.role === "user" ? prev.content : ""}
             model={conv?.model || model}
           />
         );

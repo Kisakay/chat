@@ -4,6 +4,7 @@ import { api } from "../lib/api.ts";
 import type { SharedChat } from "../lib/types.ts";
 import { AssistantAvatar, Avatar, FlowerMark } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
+import { UserMessageContent } from "./MessageContent.tsx";
 import { useT } from "../lib/i18n.ts";
 
 export function SharePage({ publicId }: { publicId: string }) {
@@ -80,7 +81,7 @@ export function SharePage({ publicId }: { publicId: string }) {
                 {m.role === "user" ? chat.authorName : "KisAssistant"}
               </div>
               {m.role === "user" ? (
-                <div className="whitespace-pre-wrap rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-5 py-3 text-[15px] dark:border-zinc-800 dark:bg-zinc-900">{m.content}</div>
+                <div className="break-words whitespace-pre-wrap rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-5 py-3 text-[15px] dark:border-zinc-800 dark:bg-zinc-900"><UserMessageContent content={m.content} tone="plain" /></div>
               ) : (
                 <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-5 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
                   <Markdown text={m.content} />

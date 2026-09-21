@@ -135,6 +135,11 @@ export const api = {
     req<{ user: User; key: string }>("/api/admin/users", { method: "POST", body: JSON.stringify(u) }),
   adminDelete: (id: string) => req<{ ok: boolean }>(`/api/admin/users/${id}`, { method: "DELETE" }),
   adminRegenerate: (id: string) => req<{ key: string }>(`/api/admin/users/${id}/regenerate`, { method: "POST" }),
+  adminShadowban: (id: string, shadowbanned: boolean) =>
+    req<{ shadowbanned: boolean }>(`/api/admin/users/${id}/shadowban`, {
+      method: "POST",
+      body: JSON.stringify({ shadowbanned }),
+    }),
   adminPatch: (id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
 

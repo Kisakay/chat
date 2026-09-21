@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Clock, Flag, Inbox, Search, Undo2, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Eye, EyeOff, Flag, Inbox, Search, Undo2, XCircle } from "lucide-react";
 import { api, type Report, type ReportStatus } from "../lib/api.ts";
-import { Button, Field, Input, Spinner } from "./ui.tsx";
+import { Button, ConfirmDialog, Field, Input, Spinner } from "./ui.tsx";
 import { useT, type StringKey } from "../lib/i18n.ts";
 import { cn } from "../lib/cn.ts";
 
@@ -118,6 +118,11 @@ export function ReportsPanel() {
               <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-medium", STATUS_STYLE[r.status].cls)}>
                 {t(`reports.status.${r.status}` as StringKey)}
               </span>
+              {r.reporter_shadowbanned === 1 && (
+                <span className="shrink-0 rounded-full bg-stone-500/10 px-2.5 py-1 text-xs font-medium opacity-70">
+                  {t("reports.unreliable")}
+                </span>
+              )}
             </button>
             {selectedId === r.id && <ReportDetail report={r} onChanged={() => refresh(r.id)} />}
           </li>
