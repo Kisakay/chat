@@ -447,6 +447,7 @@ const en = {
   "review.whyLabel": "Why should you get access?",
   "review.whyHint": "10+ characters. This starts your ticket thread.",
   "review.whyPh": "I want to…",
+  "review.emailLabel": "Email",
   "review.sendRequest": "Send request",
   "review.received": "Request received",
   "review.reserved":
@@ -885,6 +886,7 @@ const es: Dict = {
   "review.whyLabel": "¿Por qué darte acceso?",
   "review.whyHint": "10+ caracteres. Esto abre tu ticket.",
   "review.whyPh": "Quiero…",
+  "review.emailLabel": "Email",
   "review.sendRequest": "Enviar solicitud",
   "review.received": "Solicitud recibida",
   "review.reserved":
@@ -1320,6 +1322,7 @@ const fr: Dict = {
   "review.whyLabel": "Pourquoi vous donner l'accès ?",
   "review.whyHint": "10+ caractères. Ceci ouvre votre ticket.",
   "review.whyPh": "Je veux…",
+  "review.emailLabel": "Email",
   "review.sendRequest": "Envoyer la demande",
   "review.received": "Demande reçue",
   "review.reserved":
@@ -1742,6 +1745,7 @@ const ru: Dict = {
   "review.whyLabel": "Почему вам дать доступ?",
   "review.whyHint": "10+ символов. Это откроет тикет.",
   "review.whyPh": "Я хочу…",
+  "review.emailLabel": "Email",
   "review.sendRequest": "Отправить заявку",
   "review.received": "Заявка получена",
   "review.reserved":
@@ -2170,6 +2174,7 @@ const it: Dict = {
   "review.whyLabel": "Perché darti accesso?",
   "review.whyHint": "10+ caratteri. Questo apre il tuo ticket.",
   "review.whyPh": "Voglio…",
+  "review.emailLabel": "Email",
   "review.sendRequest": "Invia richiesta",
   "review.received": "Richiesta ricevuta",
   "review.reserved":
@@ -2589,6 +2594,7 @@ const pt: Dict = {
   "review.whyLabel": "Porque dar-te acesso?",
   "review.whyHint": "10+ caracteres. Isto abre o teu ticket.",
   "review.whyPh": "Quero…",
+  "review.emailLabel": "Email",
   "review.sendRequest": "Enviar pedido",
   "review.received": "Pedido recebido",
   "review.reserved":

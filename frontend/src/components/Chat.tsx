@@ -150,7 +150,7 @@ export function Chat({
             placeholder={models.length === 0 ? t("chat.noModels") : t("chat.selectModel")}
             disabled={models.length === 0}
           />
-          {conv && (
+          {conv && !readOnly && (
             <IconButton title={t("sidebar.share")} onClick={onShare}>
               <Share2 size={17} />
             </IconButton>
