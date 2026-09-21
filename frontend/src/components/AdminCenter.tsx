@@ -138,7 +138,7 @@ export function AdminCenter() {
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
+                  "relative flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
                   tab === t.id
                     ? "bg-white text-stone-900 shadow dark:bg-zinc-800 dark:text-zinc-100"
                     : "opacity-60 hover:opacity-100",

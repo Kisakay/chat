@@ -155,40 +155,42 @@ function ModelRow({ model, onChanged, onError }: {
         <span className="block truncate text-sm font-medium">{model.label || model.id}</span>
         <span className="block truncate font-mono text-xs opacity-50">{model.id}</span>
       </span>
-      <label className="flex items-center gap-1.5 text-xs opacity-80">
-        <Input
-          type="number"
-          min={0}
-          max={1000000}
-          value={hourly}
-          disabled={busy}
-          placeholder={t("models.unlimited")}
-          aria-label={t("models.hourly")}
-          onChange={(e) => setHourly(e.target.value)}
-          onBlur={(e) => commitNumber("hourly", e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          }}
-          className="w-24"
-        />
+      <label className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs opacity-80">
+        <span className="w-24 shrink-0">
+          <Input
+            type="number"
+            min={0}
+            max={1000000}
+            value={hourly}
+            disabled={busy}
+            placeholder={t("models.unlimited")}
+            aria-label={t("models.hourly")}
+            onChange={(e) => setHourly(e.target.value)}
+            onBlur={(e) => commitNumber("hourly", e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+          />
+        </span>
         {t("models.hourly")}
       </label>
-      <label className="flex items-center gap-1.5 text-xs opacity-80">
-        <Input
-          type="number"
-          min={0}
-          max={1000000}
-          value={daily}
-          disabled={busy}
-          placeholder={t("models.unlimited")}
-          aria-label={t("models.daily")}
-          onChange={(e) => setDaily(e.target.value)}
-          onBlur={(e) => commitNumber("daily", e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-          }}
-          className="w-24"
-        />
+      <label className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs opacity-80">
+        <span className="w-24 shrink-0">
+          <Input
+            type="number"
+            min={0}
+            max={1000000}
+            value={daily}
+            disabled={busy}
+            placeholder={t("models.unlimited")}
+            aria-label={t("models.daily")}
+            onChange={(e) => setDaily(e.target.value)}
+            onBlur={(e) => commitNumber("daily", e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
+          />
+        </span>
         {t("models.daily")}
       </label>
       <Switch

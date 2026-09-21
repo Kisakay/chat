@@ -1,11 +1,11 @@
 /**
  * Runtime accent color (settings → accent color). Predefined palettes plus a
- * custom picker; shades 50–900 are derived from a single base hex via HSL and
+ * custom picker; shades 50–950 are derived from a single base hex via HSL and
  * written to the --ka-accent-* CSS variables that back Tailwind's `accent`
  * palette. Persisted per-browser (localStorage), like the feature flags.
  */
 
-export type AccentShades = Record<"50" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900", string>;
+export type AccentShades = Record<"50" | "100" | "200" | "300" | "400" | "500" | "600" | "700" | "800" | "900" | "950", string>;
 
 export interface AccentPreset {
   id: string;
@@ -25,11 +25,11 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 ];
 
 const STORAGE_KEY = "ka:accent";
-const SHADE_KEYS = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"] as const;
-// Lightness ramps for 50→900 around a mid 500 (HSL L values in %).
+const SHADE_KEYS = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"] as const;
+// Lightness ramps for 50→950 around a mid 500 (HSL L values in %).
 const RAMP: Record<(typeof SHADE_KEYS)[number], number> = {
   "50": 97, "100": 93, "200": 86, "300": 76, "400": 64,
-  "500": 52, "600": 45, "700": 38, "800": 30, "900": 24,
+  "500": 52, "600": 45, "700": 38, "800": 30, "900": 24, "950": 15,
 };
 
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
@@ -66,7 +66,7 @@ function hslToRgbTriplet(h: number, s: number, l: number): string {
   return `${to(r)} ${to(g)} ${to(b)}`;
 }
 
-/** Build the 50–900 ramp from a base hex (HSL ramp, emerald-style). */
+/** Build the 50–950 ramp from a base hex (HSL ramp, emerald-style). */
 export function shadesFor(baseHex: string): AccentShades {
   const { h, s } = hexToHsl(baseHex);
   const out = {} as AccentShades;

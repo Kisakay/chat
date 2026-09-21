@@ -21,6 +21,7 @@ export default {
           700: "rgb(var(--ka-accent-700) / <alpha-value>)",
           800: "rgb(var(--ka-accent-800) / <alpha-value>)",
           900: "rgb(var(--ka-accent-900) / <alpha-value>)",
+          950: "rgb(var(--ka-accent-950) / <alpha-value>)",
         },
       },
     },

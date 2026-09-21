@@ -172,6 +172,16 @@ function cleanStr(v: unknown, max: number): string | null {
   return t;
 }
 
+// Optional free-text fields (report details, admin notes, decision reasons):
+// missing or blank → "", otherwise length-checked. Without this, sending ""
+// (which is what the frontend does when the field is left empty) would hit
+// cleanStr's empty check and wrongly 400 with a "max N chars" error.
+function cleanOptionalStr(v: unknown, max: number): string | null {
+  if (v === undefined) return "";
+  if (typeof v === "string" && v.trim() === "") return "";
+  return cleanStr(v, max);
+}
+
 function validTheme(v: unknown): v is string {
   return v === "auto" || v === "light" || v === "dark";
 }
@@ -962,7 +972,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         if (!reason || !(REPORT_REASONS as readonly string[]).includes(reason)) {
           return json({ error: "reason must be copyright|gore|falseinfo|bug" }, 400);
         }
-        const details = body.details === undefined ? "" : cleanStr(body.details, 2000);
+        const details = cleanOptionalStr(body.details, 2000);
         if (details === null) return json({ error: "details: max 2000 chars" }, 400);
         const clientContent = typeof body.content === "string" ? body.content.slice(0, 20000) : "";
         const clientPrompt = typeof body.prompt === "string" ? body.prompt.slice(0, 20000) : "";
@@ -1022,7 +1032,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (!status || !(REPORT_STATUSES as readonly string[]).includes(status)) {
             return json({ error: "status must be open|reviewing|resolved|dismissed" }, 400);
           }
-          const adminNote = body.adminNote === undefined ? "" : cleanStr(body.adminNote, 1000);
+          const adminNote = cleanOptionalStr(body.adminNote, 1000);
           if (adminNote === null) return json({ error: "adminNote: max 1000 chars" }, 400);
           return json({ report: setReportStatus(target.id, status, adminNote) });
         }
@@ -1097,7 +1107,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (status !== "pending" && status !== "reviewing" && status !== "accepted" && status !== "refused") {
             return json({ error: "status must be pending|reviewing|accepted|refused" }, 400);
           }
-          const reason = body.reason === undefined ? "" : cleanStr(body.reason, 500);
+          const reason = cleanOptionalStr(body.reason, 500);
           if (reason === null) return json({ error: "reason: max 500 chars" }, 400);
           if ((target.status === "accepted" || target.status === "refused") && status !== target.status) {
             return json({ error: "ticket closed" }, 409);
