@@ -19,6 +19,8 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
 - `lib/api.ts` — typed `fetch` wrapper: Bearer header from `localStorage`,
   `{ error }` parsing, `ApiError` with status, auto logout+reload on 401
   (except on `/share/*`). `chatStream()` parses SSE `token`/`done`/`error`.
+- Boot shows `LoadingScreen` for at least 2.5 s (`MIN_SPLASH_MS` in `App.tsx`)
+  so the bloom animation always plays, even when the session restores instantly.
 - Sending: ensure a server conversation exists (created lazily on first send),
   optimistic user message, stream tokens into `streaming`, then append the full
   assistant message and refresh the list (server auto-titles new chats).

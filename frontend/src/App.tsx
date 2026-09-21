@@ -33,6 +33,10 @@ function reviewIdFromPath(): string | null {
   return m ? m[1]! : null;
 }
 
+/** Minimum time the boot splash stays visible, so the bloom animation
+ *  actually plays even when the session restores instantly. */
+const MIN_SPLASH_MS = 2500;
+
 function applyTheme(theme: string) {
   const root = document.documentElement;
   const dark =
@@ -43,7 +47,7 @@ function applyTheme(theme: string) {
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(!SHARE_ID && !RESET_TOKEN && !REVIEW_ID && !IS_ADMIN_PAGE && !!getToken());
+  const [checking, setChecking] = useState(!SHARE_ID && !RESET_TOKEN && !REVIEW_ID && !IS_ADMIN_PAGE);
   const [models, setModels] = useState<DriverModel[]>([]);
   const [model, setModel] = useState("");
   const [convs, setConvs] = useState<Conversation[]>([]);
@@ -90,10 +94,15 @@ export function App() {
     }
   }, []);
 
-  // Session restore
+  // Session restore (boot splash stays at least MIN_SPLASH_MS)
   useEffect(() => {
+    const t0 = Date.now();
+    const done = () => {
+      const wait = Math.max(0, MIN_SPLASH_MS - (Date.now() - t0));
+      window.setTimeout(() => setChecking(false), wait);
+    };
     if (!getToken()) {
-      setChecking(false);
+      done();
       return;
     }
     api.verify()
@@ -112,7 +121,7 @@ export function App() {
         if (c.conversations.length > 0) setActiveId(c.conversations[0]!.id);
       })
       .catch(() => {})
-      .finally(() => setChecking(false));
+      .finally(done);
   }, []);
 
   // Load messages for active conversation

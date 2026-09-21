@@ -8,6 +8,74 @@ export function mailEnabled(): boolean {
   return config.smtpHost.length > 0;
 }
 
+/** Sanitized snapshot for the Admin Center mail viewer (admin-only route). */
+export function smtpStatus(): {
+  enabled: boolean;
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  hasPass: boolean;
+  from: string;
+  appUrl: string;
+} {
+  return {
+    enabled: mailEnabled(),
+    host: config.smtpHost,
+    port: config.smtpPort,
+    secure: config.smtpSecure,
+    user: config.smtpUser,
+    pass: config.smtpPass,
+    hasPass: config.smtpPass.length > 0,
+    from: config.smtpFrom,
+    appUrl: config.appUrl,
+  };
+}
+
+/** Verify SMTP connectivity (connect + auth, no mail sent). Throws on failure. */
+export async function verifySmtp(): Promise<void> {
+  if (!mailEnabled()) throw new Error("SMTP_HOST not set — mail is disabled");
+  const mailer = await loadMailer();
+  if (!mailer) throw new Error("nodemailer not installed — run `bun install` for email support");
+  const t = mailer.createTransport({
+    host: config.smtpHost,
+    port: config.smtpPort,
+    secure: config.smtpSecure,
+    auth: config.smtpUser ? { user: config.smtpUser, pass: config.smtpPass } : undefined,
+  });
+  try {
+    await t.verify();
+  } finally {
+    t.close();
+  }
+}
+
+/** Send a connectivity test mail to `to`. Throws on failure, returns messageId. */
+export async function sendSmtpTestMail(to: string): Promise<string> {
+  if (!mailEnabled()) throw new Error("SMTP_HOST not set — mail is disabled");
+  const mailer = await loadMailer();
+  if (!mailer) throw new Error("nodemailer not installed — run `bun install` for email support");
+  const t = mailer.createTransport({
+    host: config.smtpHost,
+    port: config.smtpPort,
+    secure: config.smtpSecure,
+    auth: config.smtpUser ? { user: config.smtpUser, pass: config.smtpPass } : undefined,
+  });
+  try {
+    const info = await t.sendMail({
+      from: config.smtpFrom,
+      to,
+      subject: "KisAssistant — SMTP test",
+      text: "This is a KisAssistant SMTP connectivity test. If you received it, outgoing mail works.",
+      html: `<p>This is a <strong>KisAssistant</strong> SMTP connectivity test. If you received it, outgoing mail works.</p>`,
+    });
+    return info.messageId ?? "";
+  } finally {
+    t.close();
+  }
+}
+
 // Lazy import: the backend boots (and serves) fine without node_modules
 // installed; SMTP is only needed when actually sending.
 async function loadMailer(): Promise<typeof import("nodemailer") | null> {

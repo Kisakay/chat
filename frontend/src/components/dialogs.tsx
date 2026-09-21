@@ -109,7 +109,7 @@ export function RecoverDialog({ open, onClose, from }: { open: boolean; onClose:
         <div className="space-y-4">
           <p className="text-sm opacity-80">
             {t("dlg.recoverSent", {
-              user: "@" + (username.trim().toLowerCase() || "…"),
+              user: username.trim().toLowerCase() || "…",
               fromPart: from ? t("dlg.recoverSentFrom", { from }) : "",
             })}
           </p>
@@ -253,35 +253,35 @@ export function RegisterDialog({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Create an account" icon={UserPlus}>
+    <Modal open={open} onClose={onClose} title={t("dlg.registerTitle")} icon={UserPlus}>
       {key ? (
         <div className="space-y-4">
           <p className="text-sm opacity-80">
-            Welcome, <strong>@{username.trim().toLowerCase()}</strong>! Your access key — copy it now, it won't be shown again:
+            {t("dlg.regWelcome", { user: username.trim().toLowerCase() })}
           </p>
           <div className="flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-2xl bg-stone-100 px-3 py-2.5 text-sm dark:bg-zinc-800">{key}</code>
             <CopyButton text={key} />
           </div>
           <div className="flex justify-end">
-            <Button size="sm" onClick={() => { onDone(username.trim().toLowerCase(), key); onClose(); }}>Copy & continue to login</Button>
+            <Button size="sm" onClick={() => { onDone(username.trim().toLowerCase(), key); onClose(); }}>{t("dlg.regContinue")}</Button>
           </div>
         </div>
       ) : (
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Username">
+          <Field label={t("common.username")}>
             <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="alice" maxLength={32} required />
           </Field>
-          <Field label="Display name">
+          <Field label={t("common.displayName")}>
             <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Alice" maxLength={60} />
           </Field>
-          <Field label="Email (optional, for key recovery)">
+          <Field label={t("dlg.emailOpt")}>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" />
           </Field>
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" size="sm" type="button" onClick={onClose}>Cancel</Button>
-            <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : "Register"}</Button>
+            <Button variant="secondary" size="sm" type="button" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : t("login.register")}</Button>
           </div>
         </form>
       )}
@@ -292,6 +292,7 @@ export function RegisterDialog({
 /* ---------- Share ---------- */
 
 export function ShareModal({ conv, onClose }: { conv: Conversation | null; onClose: () => void }) {
+  const { t } = useT();
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -305,7 +306,7 @@ export function ShareModal({ conv, onClose }: { conv: Conversation | null; onClo
     setError("");
     api.share(conv.id)
       .then((r) => setUrl(window.location.origin + r.url))
-      .catch((err) => setError(err instanceof Error ? err.message : "Share failed"))
+      .catch((err) => setError(err instanceof Error ? err.message : t("dlg.reqFailed")))
       .finally(() => setBusy(false));
   }, [conv]);
 
@@ -316,20 +317,20 @@ export function ShareModal({ conv, onClose }: { conv: Conversation | null; onClo
   }
 
   return (
-    <Modal open={conv !== null} onClose={onClose} title="Share publicly" icon={Globe}>
-      {busy && <p className="flex items-center gap-2 text-sm opacity-70"><Spinner size={15} /> Creating public link…</p>}
+    <Modal open={conv !== null} onClose={onClose} title={t("dlg.shareTitle")} icon={Globe}>
+      {busy && <p className="flex items-center gap-2 text-sm opacity-70"><Spinner size={15} /> {t("dlg.shareCreating")}</p>}
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {url && (
         <div className="space-y-4">
-          <p className="text-sm opacity-70">Anyone with this link can read <strong>{conv?.title}</strong>. No login required.</p>
+          <p className="text-sm opacity-70">{t("dlg.shareIntro", { title: conv?.title ?? "" })}</p>
           <div className="flex items-center gap-2 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-800">
             <Link2 size={15} className="shrink-0 opacity-50" />
             <span className="min-w-0 flex-1 truncate">{url}</span>
             <CopyButton text={url} />
           </div>
           <div className="flex justify-between">
-            <Button variant="ghost" size="sm" onClick={unshare}><Unplug size={15} /> Unshare</Button>
-            <Button size="sm" onClick={onClose}>Done</Button>
+            <Button variant="ghost" size="sm" onClick={unshare}><Unplug size={15} /> {t("dlg.unshare")}</Button>
+            <Button size="sm" onClick={onClose}>{t("common.done")}</Button>
           </div>
         </div>
       )}
@@ -350,6 +351,7 @@ export function SettingsModal({
   onSaved: (u: User) => void;
   onKeyRotated?: () => void;
 }) {
+  const { t } = useT();
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [email, setEmail] = useState("");
@@ -365,10 +367,10 @@ export function SettingsModal({
   // Two-column settings: categories on the left, content on the right.
   // Searching filters the category list and jumps to the first match.
   const CATS = [
-    { id: "profile", title: "Profile", icon: UserIcon, keywords: ["profile", "avatar", "picture", "photo", "name", "display", "email", "account"] },
-    { id: "appearance", title: "Appearance", icon: Palette, keywords: ["appearance", "theme", "dark", "light", "color", "colour", "accent", "palette"] },
-    { id: "features", title: "Features", icon: Sparkles, keywords: ["features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable"] },
-    { id: "security", title: "Security", icon: ShieldCheck, keywords: ["security", "key", "rotate", "password", "totp", "2fa", "two", "factor", "authenticator", "passkey", "webauthn"] },
+    { id: "profile", title: t("settings.profile"), icon: UserIcon, keywords: ["profile", "avatar", "picture", "photo", "name", "display", "email", "account"] },
+    { id: "appearance", title: t("settings.appearance"), icon: Palette, keywords: ["appearance", "theme", "dark", "light", "color", "colour", "accent", "palette", "language", "langue", "idioma", "lingua", "язык"] },
+    { id: "features", title: t("settings.features"), icon: Sparkles, keywords: ["features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable"] },
+    { id: "security", title: t("settings.security"), icon: ShieldCheck, keywords: ["security", "key", "rotate", "password", "totp", "2fa", "two", "factor", "authenticator", "passkey", "webauthn"] },
   ] as const;
   type CatId = (typeof CATS)[number]["id"];
   const [cat, setCat] = useState<CatId>("profile");
@@ -395,11 +397,11 @@ export function SettingsModal({
   async function uploadFile(f: File) {
     if (!user) return;
     if (f.size > 5 * 1024 * 1024) {
-      setUploadError("File too large (max 5MB).");
+      setUploadError(t("sec.avatarTooBig"));
       return;
     }
     if (!/^image\/(jpeg|png|webp)$/.test(f.type)) {
-      setUploadError("Only jpg, png or webp images are accepted.");
+      setUploadError(t("sec.avatarType"));
       return;
     }
     setUploading(true);
@@ -411,7 +413,7 @@ export function SettingsModal({
       // preview (this modal, sidebar, chat bubbles) re-fetches immediately.
       bumpCdnVersion();
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
+      setUploadError(err instanceof Error ? err.message : t("attach.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -427,28 +429,28 @@ export function SettingsModal({
       onSaved(res.user);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("common.saveFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Modal open={user !== null} onClose={onClose} title="Settings" icon={Settings2} wide>
+    <Modal open={user !== null} onClose={onClose} title={t("settings.title")} icon={Settings2} wide>
       <form onSubmit={save} className="space-y-4">
         <div className="relative">
           <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search settings…"
-            aria-label="Search settings"
+            placeholder={t("settings.searchPh")}
+            aria-label={t("settings.searchAria")}
             className="w-full rounded-2xl border border-stone-200/70 bg-stone-100 py-2 pl-9 pr-8 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 focus:bg-white dark:border-zinc-800 dark:bg-zinc-800/60 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900"
           />
           {search && (
             <button
               type="button"
-              aria-label="Clear settings search"
+              aria-label={t("settings.clearSearch")}
               onClick={() => setSearch("")}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 opacity-60 transition hover:opacity-100"
             >
@@ -489,11 +491,11 @@ export function SettingsModal({
               </div>
             </div>
             <div>
-              <span className="mb-1.5 block text-sm font-medium opacity-80">Avatar upload</span>
+              <span className="mb-1.5 block text-sm font-medium opacity-80">{t("settings.avatarUpload")}</span>
               <div
                 role="button"
                 tabIndex={0}
-                aria-label="Upload avatar"
+                aria-label={t("settings.avatarUpload")}
                 onClick={() => fileRef.current?.click()}
                 onKeyDown={(e) => e.key === "Enter" && fileRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}

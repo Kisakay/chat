@@ -89,7 +89,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
           {totpToken ? (
             <form onSubmit={submitTotp} className="mt-6 space-y-3">
               <p className="text-center text-sm opacity-70">
-                {t("login.totpIntro", { user: "@" + totpUsername })}
+                {t("login.totpIntro", { user: totpUsername })}
               </p>
               <div className="relative">
                 <KeyRound size={17} className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500" />
