@@ -36,6 +36,15 @@ export function Markdown({ text }: { text: string }) {
           code({ children }) {
             return <code>{children}</code>;
           },
+          table({ children }) {
+            // Wide tables would blow the bubble off-screen on mobile —
+            // scroll them inside their own pane instead.
+            return (
+              <div className="overflow-x-auto pb-1">
+                <table>{children}</table>
+              </div>
+            );
+          },
         }}
       >
         {text}

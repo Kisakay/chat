@@ -402,6 +402,11 @@ export function SettingsModal({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            // The search field lives inside the settings <form>: Enter must
+            // only filter, never submit (save + close the modal).
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault();
+            }}
             placeholder={t("settings.searchPh")}
             aria-label={t("settings.searchAria")}
             className="w-full rounded-2xl border border-stone-200/70 bg-stone-100 py-2 pl-9 pr-8 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 focus:bg-white dark:border-zinc-800 dark:bg-zinc-800/60 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900"
@@ -419,7 +424,16 @@ export function SettingsModal({
         </div>
 
         {search.trim() && visibleCats.length === 0 ? (
-          <p className="px-2 py-4 text-center text-sm opacity-50">{t("settings.noMatch", { q: search.trim() })}</p>
+          <div className="space-y-2 px-2 py-4 text-center">
+            <p className="text-sm opacity-50">{t("settings.noMatch", { q: search.trim() })}</p>
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="rounded-full border border-stone-200 bg-white px-3.5 py-1.5 text-sm transition hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+            >
+              {t("settings.clearSearch")}
+            </button>
+          </div>
         ) : (
         <div className="flex flex-col gap-4 sm:flex-row">
           <nav aria-label="Settings categories" className="flex shrink-0 gap-1.5 overflow-x-auto sm:w-44 sm:flex-col">
@@ -427,7 +441,10 @@ export function SettingsModal({
               <button
                 key={c.id}
                 type="button"
-                onClick={() => setCat(c.id)}
+                // Picking a category exits search mode: keeping the query
+                // would leave the nav filtered (often down to this single
+                // button, or empty) and trap the user in the search view.
+                onClick={() => { setCat(c.id); setSearch(""); }}
                 aria-current={activeCat === c.id}
                 className={cn(
                   "flex shrink-0 items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-sm transition",

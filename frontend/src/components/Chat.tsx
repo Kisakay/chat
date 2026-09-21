@@ -25,11 +25,11 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport, isFaile
     window.open(`https://duckduckgo.com/?q=${encodeURIComponent(msg.content.slice(0, 400))}`, "_blank", "noopener,noreferrer");
   }
   return (
-    <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
+    <div className={cn("flex gap-2 sm:gap-3", isUser && "flex-row-reverse")}>
       {isUser
         ? <Avatar name={authorName} url={authorAvatar} size={32} />
         : <AssistantAvatar size={32} />}
-      <div className={cn("min-w-0 max-w-[85%]", isUser && "flex flex-col items-end")}>
+      <div className={cn("min-w-0 max-w-[88%] sm:max-w-[85%]", isUser && "flex flex-col items-end")}>
         <div className="mb-1 flex items-center gap-1.5 text-xs opacity-60">
           {isUser ? <UserIcon size={12} /> : <Bot size={12} />}
           {isUser ? t("chat.you") : "KisAssistant"}
@@ -39,7 +39,7 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport, isFaile
             <UserMessageContent content={msg.content} />
           </div>
         ) : (
-          <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-5 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
             <Markdown text={msg.content} />
           </div>
         )}
@@ -313,8 +313,8 @@ export function Chat({
         </div>
       </header>
 
-      <div ref={boxRef} className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-8">
-        <div className="mx-auto w-full max-w-3xl space-y-5">
+      <div ref={boxRef} className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-8 sm:py-6">
+        <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-5">
           {messages.length === 0 && !streaming && (
             <div className="py-16 text-center">
               <FlowerMark size={56} dynamic={false} className="mx-auto mb-4" />
@@ -326,11 +326,11 @@ export function Chat({
             <MessageBubble key={i} msg={m} index={i} authorAvatar={user.avatarUrl} authorName={user.displayName} onReport={readOnly ? undefined : setReportIndex} isFailed={failedIndex === i} retryCount={retryCount} maxRetries={maxRetries} retryDisabled={sending} onRetry={failedIndex === i && retryCount < maxRetries ? onRetry : undefined} />
           ))}
           {streaming !== "" && (
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <AssistantAvatar size={32} />
-              <div className="min-w-0 max-w-[85%]">
+              <div className="min-w-0 max-w-[88%] sm:max-w-[85%]">
                 <div className="mb-1 text-xs opacity-60">KisAssistant</div>
-                <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-5 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="typing-cursor"><Markdown text={streaming} /></div>
                 </div>
               </div>

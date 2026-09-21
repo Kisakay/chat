@@ -465,7 +465,7 @@ const GRADIENTS = [
 export function Avatar({ name, url, size = 36 }: { name: string; url?: string; size?: number }) {
   const cdnV = useCdnVersion();
   if (url) {
-    return <img src={withCdnVersion(url, cdnV)} alt={name} width={size} height={size} className="rounded-full object-cover" style={{ width: size, height: size }} />;
+    return <img src={withCdnVersion(url, cdnV)} alt={name} width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />;
   }
   const initial = (name.trim()[0] || "?").toUpperCase();
   const g = GRADIENTS[(name.charCodeAt(0) || 0) % GRADIENTS.length];
