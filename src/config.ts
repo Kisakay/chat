@@ -14,6 +14,10 @@ function envInt(name: string, fallback: number): number {
 }
 
 export const config = {
+  // "production" under the NixOS module / CI builds, "development" locally.
+  nodeEnv: env("NODE_ENV", "development"),
+  isProduction: env("NODE_ENV", "development") === "production",
+
   port: envInt("PORT", 3000),
   host: env("HOST", "127.0.0.1"),
   appPassword: env("APP_PASSWORD", ""),
@@ -43,7 +47,8 @@ export const config = {
   wikiUrl: env("WIKI_URL", "https://git.kisakay.com/k/chat/wiki"),
 
   // Per-driver debug logging to stdout ([driver:name] lines).
-  driverDebug: envBool("DRIVER_DEBUG", true),
+  // On by default in development, off unless asked for in production.
+  driverDebug: envBool("DRIVER_DEBUG", !env("NODE_ENV", "development")),
 
   // Local file CDN (avatars today, more namespaces tomorrow).
   // Dev default is a folder next to the codebase; NixOS module points it
