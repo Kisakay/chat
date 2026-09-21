@@ -126,48 +126,6 @@ body {
   animation: loading-in 0.45s ease-out both;
 }
 
-/* Loader halo: expanding accent glow + revolving dashed orbit with a dot. */
-.loader-halo {
-  position: relative;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-}
-.loader-halo::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgb(var(--ka-accent-500) / 0.28) 0%, transparent 65%);
-  animation: halo-ping 2.6s ease-out infinite;
-}
-@keyframes halo-ping {
-  0% { transform: scale(0.72); opacity: 0.6; }
-  70% { transform: scale(1.14); opacity: 0; }
-  100% { transform: scale(1.14); opacity: 0; }
-}
-.loader-orbit {
-  position: absolute;
-  inset: 8px;
-  border-radius: 9999px;
-  border: 1.5px dashed rgb(var(--ka-accent-500) / 0.45);
-  animation: orbit-spin 5s linear infinite;
-}
-.loader-orbit::after {
-  content: "";
-  position: absolute;
-  top: -3.5px;
-  left: 50%;
-  width: 7px;
-  height: 7px;
-  margin-left: -3.5px;
-  border-radius: 9999px;
-  background: rgb(var(--ka-accent-500));
-  box-shadow: 0 0 8px rgb(var(--ka-accent-500));
-}
-@keyframes orbit-spin {
-  to { transform: rotate(1turn); }
-}
 /* Loader title: soft accent glow pulse. */
 .loader-title {
   animation: title-glow 2.6s ease-in-out infinite;
@@ -175,30 +133,6 @@ body {
 @keyframes title-glow {
   0%, 100% { opacity: 0.92; }
   50% { opacity: 1; text-shadow: 0 0 18px rgb(var(--ka-accent-500) / 0.35); }
-}
-/* Indeterminate shimmer bar. */
-.loader-bar {
-  display: block;
-  width: 11rem;
-  height: 3px;
-  border-radius: 9999px;
-  background: rgb(0 0 0 / 0.1);
-  overflow: hidden;
-}
-.dark .loader-bar {
-  background: rgb(255 255 255 / 0.12);
-}
-.loader-bar > span {
-  display: block;
-  height: 100%;
-  width: 35%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgb(var(--ka-accent-400)), rgb(var(--ka-accent-600)));
-  animation: bar-slide 1.5s ease-in-out infinite;
-}
-@keyframes bar-slide {
-  0% { transform: translateX(-110%); }
-  100% { transform: translateX(320%); }
 }
 
 .loading-dots::after {
@@ -229,8 +163,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .flower-petal, .flower-core, .loading-dots::after, .loading-enter, .typing-cursor::after,
-  .toast-enter, .toast-exit {
+  .flower-petal, .flower-petal-inner, .flower-core, .loading-dots::after, .loading-enter, .typing-cursor::after,
+  .loader-title {
     animation: none;
   }
 }

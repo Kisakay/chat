@@ -536,30 +536,30 @@ export function FlowerMark({ size, className, dynamic = true }: { size?: number;
         </radialGradient>
       </defs>
       {outer.map((p, i) => (
-        <ellipse
-          key={p.r}
-          cx="50"
-          cy="27"
-          rx="13.5"
-          ry={p.ry}
-          fill={`url(#${petalId})`}
-          transform={`rotate(${p.r} 50 50)`}
-          className={dynamic ? "flower-petal" : undefined}
-          style={dynamic ? { animationDelay: `${i * 0.2}s` } : undefined}
-        />
+        <g key={p.r} transform={`rotate(${p.r} 50 50)`}>
+          <ellipse
+            cx="50"
+            cy="27"
+            rx="13.5"
+            ry={p.ry}
+            fill={`url(#${petalId})`}
+            className={dynamic ? "flower-petal" : undefined}
+            style={dynamic ? { animationDelay: `${i * 0.2}s` } : undefined}
+          />
+        </g>
       ))}
       {inner.map((p, i) => (
-        <ellipse
-          key={p.r}
-          cx="50"
-          cy="34"
-          rx="8"
-          ry={p.ry}
-          fill={`url(#${petalInId})`}
-          transform={`rotate(${p.r} 50 50)`}
-          className={dynamic ? "flower-petal-inner" : undefined}
-          style={dynamic ? { animationDelay: `${i * 0.2 + 0.6}s` } : undefined}
-        />
+        <g key={p.r} transform={`rotate(${p.r} 50 50)`}>
+          <ellipse
+            cx="50"
+            cy="34"
+            rx="8"
+            ry={p.ry}
+            fill={`url(#${petalInId})`}
+            className={dynamic ? "flower-petal-inner" : undefined}
+            style={dynamic ? { animationDelay: `${i * 0.2 + 0.6}s` } : undefined}
+          />
+        </g>
       ))}
       <g className={dynamic ? "flower-core" : undefined}>
         <circle cx="50" cy="50" r="10.5" fill="#f59e0b" opacity="0.22" />
@@ -659,13 +659,9 @@ export function LoadingScreen() {
   return (
     <div className="loading-enter grid min-h-full place-items-center" role="status" aria-label="Loading KisAssistant">
       <div className="flex flex-col items-center gap-4 px-6 text-center">
-        <span className="loader-halo">
-          <span className="loader-orbit" aria-hidden="true" />
-          <FlowerMark className="h-16 w-16 sm:h-20 sm:w-20" />
-        </span>
+        <FlowerMark className="h-16 w-16 sm:h-20 sm:w-20" />
         <p className="loader-title font-serif text-2xl font-bold tracking-tight">KisAssistant</p>
         <p className="loading-dots text-sm opacity-60">{t("loading.tagline")}</p>
-        <span className="loader-bar" aria-hidden="true"><span /></span>
       </div>
     </div>
   );

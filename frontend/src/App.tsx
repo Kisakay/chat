@@ -634,6 +634,7 @@ export function App() {
         onClose={() => setEditConv(null)}
         onSaved={(c) => {
           setConvs((prev) => prev.map((x) => (x.id === c.id ? c : x)));
+          pushToast(t("toast.convUpdated", { title: c.title }), { icon: "edit" });
         }}
       />
       <ShareModal conv={shareConv} onClose={() => setShareConv(null)} />
@@ -650,6 +651,8 @@ export function App() {
         onSaved={(u) => {
           if (u.theme !== user?.theme) {
             pushToast(t("toast.themeChanged"), { icon: "theme", tag: "theme" });
+          } else {
+            pushToast(t("toast.settingsSaved"), { icon: "check" });
           }
           setUser(u);
           applyTheme(u.theme);

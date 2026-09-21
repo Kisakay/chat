@@ -229,6 +229,7 @@ export function ShareModal({ conv, onClose }: { conv: Conversation | null; onClo
   async function unshare() {
     if (!conv) return;
     await api.unshare(conv.id);
+    pushToast(t("toast.unshared"), { icon: "unshare" });
     onClose();
   }
 

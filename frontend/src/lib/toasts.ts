@@ -14,6 +14,8 @@ export type ToastIcon =
   | "model"
   | "theme"
   | "accent"
+  | "unshare"
+  | "edit"
   | "check";
 
 export interface Toast {

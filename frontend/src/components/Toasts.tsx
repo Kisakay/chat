@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Archive, ArchiveRestore, Check, Cpu, Palette, SunMoon, Trash2, type LucideIcon } from "lucide-react";
+import { Archive, ArchiveRestore, Check, Cpu, Palette, Pencil, SunMoon, Trash2, Unplug, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn.ts";
 import { removeToast, TOAST_DISPLAY_MS, useToasts, type Toast, type ToastIcon } from "../lib/toasts.ts";
 
@@ -10,6 +10,8 @@ const ICONS: Record<ToastIcon, LucideIcon> = {
   model: Cpu,
   theme: SunMoon,
   accent: Palette,
+  unshare: Unplug,
+  edit: Pencil,
   check: Check,
 };
 
