@@ -149,9 +149,6 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             ))}
           </ul>
         </div>
-        <p className="mt-4 text-center text-xs opacity-50">
-          Admin key lives in the server <code>.env</code>; user keys are issued by the admin.
-        </p>
       </div>
     </div>
   );
