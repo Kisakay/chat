@@ -10,8 +10,16 @@ import type { DriverModel, LLMDriver } from "./types.ts";
  */
 const PRIORITY = ["ollama", "mistral", "glm", "puppeteer-openai", "deepseek", "anthropic", "openai"];
 
+/** How long the user-facing model list stays in memory before re-hitting upstream. */
+export const MODEL_CACHE_TTL_MS = 60_000;
+
 export class DriverRegistry {
   private drivers: Map<string, LLMDriver>;
+  // In-memory model list cache: user requests are served from here so we
+  // don't hit Ollama (/api/tags) on every login. Refreshed at most once
+  // per MODEL_CACHE_TTL_MS; admins can force a refresh.
+  private modelsCache: { models: DriverModel[]; at: number } | null = null;
+  private modelsInflight: Promise<DriverModel[]> | null = null;
 
   constructor() {
     const all: LLMDriver[] = [
@@ -47,6 +55,36 @@ export class DriverRegistry {
       }
     }
     return out;
+  }
+
+  /**
+   * Cached variant of listAllModels for user-facing requests.
+   * - Serves the in-memory list when fresher than MODEL_CACHE_TTL_MS.
+   * - Otherwise refetches upstream once (concurrent callers share the
+   *   same in-flight promise instead of hammering Ollama).
+   * - `force=true` bypasses the cache (admin "Ollama models" view).
+   */
+  async listAllModelsCached(force = false): Promise<DriverModel[]> {
+    const now = Date.now();
+    if (!force && this.modelsCache && now - this.modelsCache.at < MODEL_CACHE_TTL_MS) {
+      return this.modelsCache.models;
+    }
+    if (!force && this.modelsInflight) return this.modelsInflight;
+    const p = this.listAllModels().then((models) => {
+      this.modelsCache = { models, at: Date.now() };
+      return models;
+    }).finally(() => {
+      if (this.modelsInflight === p) this.modelsInflight = null;
+    });
+    // Only share the promise for non-forced loads; a forced admin refresh
+    // always goes upstream even if a user load is in flight.
+    if (!force) this.modelsInflight = p;
+    return p;
+  }
+
+  /** Drop the cached model list (e.g. after an admin pull/delete). */
+  invalidateModelsCache(): void {
+    this.modelsCache = null;
   }
 
   /**

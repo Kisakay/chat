@@ -139,7 +139,8 @@ export const api = {
   unshare: (id: string) => req<{ ok: boolean }>(`/api/conversations/${id}/share`, { method: "DELETE" }),
   publicShare: (publicId: string) => req<SharedChat>(`/api/share/${publicId}`, {}, false),
 
-  models: () => req<{ models: DriverModel[] }>("/api/models"),
+  models: (opts: { refresh?: boolean } = {}) =>
+    req<{ models: DriverModel[] }>(`/api/models${opts.refresh ? "?refresh=1" : ""}`),
 
   /** Access-request wishlist (public, no auth). */
   accessRequest: (a: { username: string; email: string; message: string }) =>

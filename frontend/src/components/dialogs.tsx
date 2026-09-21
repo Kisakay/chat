@@ -794,7 +794,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
       <div>
         <p className="mb-1 flex items-center gap-1.5 text-sm font-medium"><KeyRound size={14} className="opacity-60" /> Access key</p>
         <p className="mb-2 text-xs opacity-60">Rotate your access key. Old sessions are revoked immediately — you'll log back in with the new key.</p>
-        <Button size="sm" variant="secondary" disabled={busy} onClick={rotate}>
+        <Button size="sm" variant="secondary" type="button" disabled={busy} onClick={rotate}>
           {armingRotate ? "Click again to confirm rotation" : "Rotate my access key"}
         </Button>
       </div>
@@ -805,7 +805,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
         {totpOn === false && !secret && (
           <>
             <p className="mb-2 text-xs opacity-60">Add a 6-digit code from your authenticator app on top of your access key.</p>
-            <Button size="sm" variant="secondary" disabled={busy} onClick={startTotp}>Enable two-factor</Button>
+            <Button size="sm" variant="secondary" type="button" disabled={busy} onClick={startTotp}>Enable two-factor</Button>
           </>
         )}
         {secret && (
@@ -825,7 +825,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
                 inputMode="numeric"
                 className="text-center tracking-[0.4em]"
               />
-              <Button size="sm" disabled={busy || code.length !== 6} onClick={confirmTotp}>Confirm</Button>
+              <Button size="sm" type="button" disabled={busy || code.length !== 6} onClick={confirmTotp}>Confirm</Button>
             </div>
           </div>
         )}
@@ -843,7 +843,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
                 />
               </Field>
             </div>
-            <Button size="sm" variant="secondary" disabled={busy || code.length !== 6} onClick={disableTotp} className="!text-red-600 dark:!text-red-400">
+            <Button size="sm" variant="secondary" type="button" disabled={busy || code.length !== 6} onClick={disableTotp} className="!text-red-600 dark:!text-red-400">
               Disable 2FA
             </Button>
           </div>
@@ -863,7 +863,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
           <Trash2 size={14} /> Danger zone
         </p>
         <p className="mb-2 text-xs opacity-60">Permanently delete your account with all chats, shares and sessions. Cannot be undone.</p>
-        <Button size="sm" variant="secondary" disabled={busy} onClick={() => setConfirmDelete(true)} className="!text-red-600 dark:!text-red-400">
+        <Button size="sm" variant="secondary" type="button" disabled={busy} onClick={() => setConfirmDelete(true)} className="!text-red-600 dark:!text-red-400">
           Delete my account
         </Button>
       </div>

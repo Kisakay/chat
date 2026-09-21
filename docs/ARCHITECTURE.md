@@ -103,6 +103,11 @@ Models are addressed as `"driver:model"` (split on the first `:`).
 
 - `OllamaDriver`: model discovery via `GET {OLLAMA_HOST}/api/tags`, chat via
   `POST /api/chat` with NDJSON streaming.
+- `GET /api/models` is served from an in-memory cache in `DriverRegistry`
+  (`MODEL_CACHE_TTL_MS` = 60 s) so logins don't hit Ollama every time.
+  Concurrent misses share one in-flight upstream fetch. Admins pass
+  `?refresh=1` to force a fresh fetch (used by the "Ollama models" view);
+  the flag is ignored for non-admins. Admin pull/delete invalidate the cache.
 - `ApiDriverBase`: shared OpenAI-compatible `/models` + `/chat/completions`
   (SSE) implementation; concrete drivers only set base URL, key, and fallback
   model list. A driver is enabled only when its `*_ENABLED` flag is set **and**

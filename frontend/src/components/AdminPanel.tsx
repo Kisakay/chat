@@ -32,7 +32,8 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
 
   async function refreshInstalled() {
     try {
-      const res = await api.models();
+      // Admin view: force a fresh upstream fetch, bypassing the 60s user cache.
+      const res = await api.models({ refresh: true });
       setInstalled(res.models.filter((m) => m.driver === "ollama"));
     } catch { /* ignore */ }
   }

@@ -50,6 +50,7 @@ export interface SharedChat {
   topic: string;
   model: string;
   authorName: string;
+  authorAvatarUrl: string;
   sharedAt: number;
   messages: ChatMessage[];
 }

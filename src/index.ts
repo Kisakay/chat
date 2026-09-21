@@ -198,6 +198,7 @@ const server = Bun.serve({
         topic: s.conv.topic,
         model: s.conv.model,
         authorName: s.authorName,
+        authorAvatarUrl: s.authorAvatarUrl,
         sharedAt: s.sharedAt,
         messages: s.messages.map((m) => ({ role: m.role, content: m.content })),
       });
@@ -768,16 +769,21 @@ const server = Bun.serve({
               // Passthrough of the NDJSON progress lines (status/digest/completed/total).
               const dec = new TextDecoder();
               let buf = "";
+              let pulledOk = true;
               for await (const chunk of res.body) {
-                if (req.signal.aborted) break;
+                if (req.signal.aborted) { pulledOk = false; break; }
                 buf += dec.decode(chunk, { stream: true });
                 let nl: number;
                 while ((nl = buf.indexOf("\n")) >= 0) {
                   const line = buf.slice(0, nl).trim();
                   buf = buf.slice(nl + 1);
-                  if (line && !send(JSON.parse(line))) break;
+                  if (line && !send(JSON.parse(line))) { pulledOk = false; break; }
                 }
+                if (!pulledOk) break;
               }
+              // A new model landed on the Ollama host: drop the cached list
+              // so the next user request picks it up (subject to TTL).
+              if (pulledOk && !req.signal.aborted) registry.invalidateModelsCache();
               send({ status: "done" });
             } catch (e) {
               if (!req.signal.aborted && !clientGone) send({ error: (e as Error).message });
@@ -812,6 +818,7 @@ const server = Bun.serve({
             signal: AbortSignal.timeout(15_000),
           });
           if (!res.ok) return json({ error: `ollama /api/delete failed: ${res.status}` }, 502);
+          registry.invalidateModelsCache();
           return json({ ok: true });
         } catch (e) {
           return json({ error: (e as Error).message }, 502);
@@ -967,7 +974,13 @@ const server = Bun.serve({
       }
 
       if (path === "/api/models" && req.method === "GET") {
-        const models = await registry.listAllModels();
+        // User-facing list is served from an in-memory cache (TTL 60s) so
+        // every login doesn't hit Ollama. Admins pass ?refresh=1 to force
+        // a fresh upstream fetch (Ollama models view).
+        const wantRefresh = /^(1|true|yes)$/i.test(
+          url.searchParams.get("refresh") ?? url.searchParams.get("force") ?? "",
+        );
+        const models = await registry.listAllModelsCached(wantRefresh && admin);
         return json({ models });
       }
 

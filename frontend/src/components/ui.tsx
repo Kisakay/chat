@@ -11,9 +11,10 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: "sm" | "md" | "lg" | "icon";
 };
 
-export function Button({ variant = "primary", size = "md", className, ...props }: ButtonProps) {
+export function Button({ variant = "primary", size = "md", type = "button", className, ...props }: ButtonProps) {
   return (
     <button
+      type={type}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-full font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50",
         size === "sm" && "px-3.5 py-1.5 text-sm",
@@ -566,6 +567,7 @@ export function CopyButton({ text, label }: { text: string; label?: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
+      type="button"
       onClick={() => {
         navigator.clipboard.writeText(text).then(() => {
           setDone(true);

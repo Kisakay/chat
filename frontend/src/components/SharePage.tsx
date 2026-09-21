@@ -65,7 +65,7 @@ export function SharePage({ publicId }: { publicId: string }) {
         {chat?.messages.map((m, i) => (
           <div key={i} className="flex gap-3">
             {m.role === "user"
-              ? <Avatar name={chat.authorName} size={32} />
+              ? <Avatar name={chat.authorName} url={chat.authorAvatarUrl || undefined} size={32} />
               : <AssistantAvatar size={32} />}
             <div className="min-w-0 max-w-[90%] flex-1">
               <div className="mb-1 flex items-center gap-1.5 text-xs opacity-60">
