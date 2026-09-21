@@ -57,7 +57,9 @@ unshare. See `AGENTS.md`.
 The sidebar **Admin Center** button (admin only) opens the `/admin` page with
 four tabs: **Accounts** (same manager as before, incl. the Ollama model
 catalog), **Access** (access-request wishlist triage, see below),
-**Features** (server-side switches), **Mail** (SMTP status).
+**Features** (server-side switches), **Mail** (SMTP credentials viewer +
+connectivity tester: `GET /api/admin/mail`, `POST /api/admin/mail/verify`,
+`POST /api/admin/mail/test`, admin Bearer only).
 
 - `registration_enabled` (default off): when on, the login page shows a
   working **Register** button — anyone can create an account (key shown once)

@@ -273,7 +273,7 @@ const en = {
   "center.lockedSub": "Log in with the admin account to open the Admin Center.",
   "center.regTitle": "Public registration",
   "center.regDesc":
-    "Show the Register button on the login page. Off = admin-created accounts only.",
+    "Show the Register button on the login page. Off = admin-created accounts only. Turning it on retires the wishlist below.",
   "center.accTitle": "Access requests (wishlist)",
   "center.accDescOn":
     "Unavailable while public registration is on — it replaces the wishlist.",
@@ -318,6 +318,144 @@ const en = {
   "app.deleteConvTitle": "Delete conversation?",
   "app.deleteConvMsg":
     "“{title}” and all its messages will be permanently removed.",
+
+  "settings.language": "Language",
+  "settings.languageHint":
+    "Interface language. Applied instantly, saved on this device.",
+  "settings.security": "Security",
+
+  "sec.accessKey": "Access key",
+  "sec.accessKeyHint":
+    "Rotate your access key. Old sessions are revoked immediately — you'll log back in with the new key.",
+  "sec.rotate": "Rotate my access key",
+  "sec.rotateConfirm": "Click again to confirm rotation",
+  "sec.rotationFailed": "Rotation failed",
+  "sec.totp": "Two-factor (TOTP)",
+  "sec.totpChecking": "Checking…",
+  "sec.totpAddHint":
+    "Add a 6-digit code from your authenticator app on top of your access key.",
+  "sec.totpEnable": "Enable two-factor",
+  "sec.totpSecretHint":
+    "Add this secret to your authenticator app (or open the otpauth link), then enter a code to confirm:",
+  "sec.totpConfirm": "Confirm",
+  "sec.totpDisableLabel": "Disable with a current code",
+  "sec.totpDisable": "Disable 2FA",
+  "sec.setupFailed": "Setup failed",
+  "sec.passkeys": "Passkeys",
+  "sec.passkeysHint":
+    "WebAuthn / platform authenticators — needs a server RP setup.",
+  "sec.danger": "Danger zone",
+  "sec.dangerHint":
+    "Permanently delete your account with all chats, shares and sessions. Cannot be undone.",
+  "sec.deleteMe": "Delete my account",
+  "sec.deleteFailed": "Delete failed",
+  "sec.newKeyTitle": "New access key",
+  "sec.newKeyHint":
+    "Copy it now — it won't be shown again. Your old sessions are revoked.",
+  "sec.newKeyDone": "Done — log me out",
+  "sec.deleteTitle": "Delete your account?",
+  "sec.deleteMsg":
+    "This permanently removes your account with all conversations, shares and sessions. This cannot be undone.",
+  "sec.deleteForever": "Delete forever",
+  "sec.avatarTooBig": "File too large (max 5MB).",
+  "sec.avatarType": "Only jpg, png or webp images are accepted.",
+
+  "center.tabAccess": "Access",
+
+  "center.smtpHost": "Host",
+  "center.smtpPort": "Port",
+  "center.smtpUser": "User",
+  "center.smtpPass": "Password",
+  "center.smtpFrom": "From",
+  "center.smtpAppUrl": "App URL",
+  "center.notSet": "(not set)",
+  "center.noAuth": "(no auth)",
+  "center.tlsImplicit": "implicit TLS (465)",
+  "center.tlsStarttls": "STARTTLS (587)",
+  "center.showPass": "Show SMTP password",
+  "center.hidePass": "Hide SMTP password",
+  "center.hiddenPass": "hidden password",
+  "center.mailTestTitle": "Connectivity test",
+  "center.mailTestDesc":
+    "Verify the connection, then send a real test mail to an address you control.",
+  "center.verifyConn": "Verify connection",
+  "center.verifying": "Verifying…",
+  "center.sendTest": "Send test mail",
+  "center.sendingMail": "Sending…",
+  "center.testToAria": "Test recipient email",
+  "center.connOk": "Connection OK — SMTP host reachable, auth accepted.",
+  "center.verifyFailed": "Verification failed",
+  "center.testSent": "Test mail sent to {to}{tail}.",
+  "center.mailSendFailed": "Send failed",
+  "center.credsNote":
+    "Credentials live in the server environment (see docs/OPERATIONS.md), read-only here. Users set their recovery address in profile settings or at account creation.",
+
+  "access.status.pending": "Pending",
+  "access.status.reviewing": "Reviewing",
+  "access.status.accepted": "Accepted",
+  "access.status.refused": "Refused",
+  "access.filter.all": "all",
+  "access.filter.pending": "pending",
+  "access.filter.reviewing": "reviewing",
+  "access.filter.accepted": "accepted",
+  "access.filter.refused": "refused",
+  "access.refresh": "Refresh",
+  "access.refreshAria": "Refresh requests",
+  "access.empty": "No access requests. The wishlist is empty.",
+  "access.emptyFiltered": "Nothing with this status.",
+  "access.msgOne": "1 message",
+  "access.msgMany": "{n} messages",
+  "access.accountCreated": "Account created — key shown once, copy it now:",
+  "access.replyPh": "Reply (emailed to the requester)…",
+  "access.replyAria": "Reply to requester",
+  "access.reasonLabel": "Reason (emailed with the decision)",
+  "access.reasonPh": "Optional reason…",
+  "access.btnReviewing": "Reviewing",
+  "access.btnAccept": "Accept",
+  "access.btnRefuse": "Refuse",
+  "access.closedNote": "Ticket closed ({status}).",
+  "access.reasonWord": "Reason",
+  "access.youAdmin": "You (admin)",
+  "access.sendFailed": "Send failed",
+  "access.updateFailed": "Update failed",
+
+  "review.title": "Access request",
+  "review.loadingTicket": "Loading ticket…",
+  "review.notFound": "Ticket not found",
+  "review.notFoundSub":
+    "This link is unknown. Check the URL from your email, or file a new request from the login page.",
+  "review.adminNote": "Admin note:",
+  "review.acceptedHint":
+    "Your account was created — check your email for the access key, then log in.",
+  "review.closedHint":
+    "This ticket is closed. Replies by email are not read — if needed, file a new request.",
+  "review.replyPh": "Argue your case…",
+  "review.replyAria": "Reply to your ticket",
+  "review.mailHint":
+    "Email notifications are one-way — always reply here, not by email.",
+  "review.status.pending": "Pending review",
+  "review.status.reviewing": "Under review",
+  "review.status.accepted": "Accepted",
+  "review.status.refused": "Refused",
+  "review.admin": "Admin",
+  "review.you": "You",
+  "review.requestTitle": "Request access",
+  "review.requestIntro":
+    "Reserve a username and tell us why you want in. An admin reviews every request — you follow the discussion on your personal ticket page and by email.",
+  "review.emailHint":
+    "Required — status updates and ticket replies land here.",
+  "review.whyLabel": "Why should you get access?",
+  "review.whyHint": "10+ characters. This starts your ticket thread.",
+  "review.whyPh": "I want to…",
+  "review.sendRequest": "Send request",
+  "review.received": "Request received",
+  "review.reserved":
+    "@{user} is reserved for you while an admin reviews it. A confirmation email with your personal ticket link is on its way.",
+  "review.copyLink": "Copy link",
+  "review.openTicket": "Open my ticket",
+
+  "admin.editUserTitle": "Edit @{user}",
+  "admin.avatarUrl": "Avatar URL",
 } as const;
 
 export type StringKey = keyof typeof en;
@@ -575,7 +713,7 @@ const es: Dict = {
   "center.lockedSub": "Inicia sesión como admin para abrir el Centro de admin.",
   "center.regTitle": "Registro público",
   "center.regDesc":
-    "Muestra el botón Registrarse en el login. Off = solo cuentas del admin.",
+    "Muestra el botón Registrarse en el login. Off = solo cuentas del admin. Activarlo jubila la lista de espera.",
   "center.accTitle": "Solicitudes de acceso (lista)",
   "center.accDescOn": "No disponible con registro público — lo reemplaza.",
   "center.accDescOff":
@@ -618,6 +756,144 @@ const es: Dict = {
 
   "app.deleteConvTitle": "¿Eliminar conversación?",
   "app.deleteConvMsg": "«{title}» y sus mensajes se eliminarán.",
+
+  "settings.language": "Idioma",
+  "settings.languageHint":
+    "Idioma de la interfaz. Al instante, en este dispositivo.",
+  "settings.security": "Seguridad",
+
+  "sec.accessKey": "Clave de acceso",
+  "sec.accessKeyHint":
+    "Rota tu clave de acceso. Las sesiones antiguas se revocan al instante — volverás con la nueva.",
+  "sec.rotate": "Rotar mi clave",
+  "sec.rotateConfirm": "Pulsa de nuevo para confirmar",
+  "sec.rotationFailed": "No se pudo rotar",
+  "sec.totp": "Doble factor (TOTP)",
+  "sec.totpChecking": "Verificando…",
+  "sec.totpAddHint":
+    "Añade un código de 6 dígitos de tu app además de tu clave.",
+  "sec.totpEnable": "Activar doble factor",
+  "sec.totpSecretHint":
+    "Añade este secreto a tu app (o abre el enlace otpauth) y escribe un código para confirmar:",
+  "sec.totpConfirm": "Confirmar",
+  "sec.totpDisableLabel": "Desactivar con un código actual",
+  "sec.totpDisable": "Desactivar 2FA",
+  "sec.setupFailed": "No se pudo configurar",
+  "sec.passkeys": "Passkeys",
+  "sec.passkeysHint":
+    "WebAuthn / autenticadores del sistema — requiere RP en el servidor.",
+  "sec.danger": "Zona de peligro",
+  "sec.dangerHint":
+    "Elimina tu cuenta con chats, shares y sesiones. Sin vuelta atrás.",
+  "sec.deleteMe": "Eliminar mi cuenta",
+  "sec.deleteFailed": "No se pudo eliminar",
+  "sec.newKeyTitle": "Nueva clave de acceso",
+  "sec.newKeyHint":
+    "Cópiala ahora — no se mostrará de nuevo. Tus sesiones se revocan.",
+  "sec.newKeyDone": "Listo — cerrar sesión",
+  "sec.deleteTitle": "¿Eliminar tu cuenta?",
+  "sec.deleteMsg":
+    "Esto elimina tu cuenta con conversaciones, shares y sesiones. Sin vuelta atrás.",
+  "sec.deleteForever": "Eliminar para siempre",
+  "sec.avatarTooBig": "Archivo muy grande (máx. 5MB).",
+  "sec.avatarType": "Solo se aceptan imágenes jpg, png o webp.",
+
+  "center.tabAccess": "Acceso",
+
+  "center.smtpHost": "Servidor",
+  "center.smtpPort": "Puerto",
+  "center.smtpUser": "Usuario",
+  "center.smtpPass": "Contraseña",
+  "center.smtpFrom": "Remitente",
+  "center.smtpAppUrl": "URL de la app",
+  "center.notSet": "(sin definir)",
+  "center.noAuth": "(sin auth)",
+  "center.tlsImplicit": "TLS implícito (465)",
+  "center.tlsStarttls": "STARTTLS (587)",
+  "center.showPass": "Mostrar contraseña SMTP",
+  "center.hidePass": "Ocultar contraseña SMTP",
+  "center.hiddenPass": "contraseña oculta",
+  "center.mailTestTitle": "Prueba de conexión",
+  "center.mailTestDesc":
+    "Verifica la conexión y envía un email real a una dirección tuya.",
+  "center.verifyConn": "Verificar conexión",
+  "center.verifying": "Verificando…",
+  "center.sendTest": "Enviar email de prueba",
+  "center.sendingMail": "Enviando…",
+  "center.testToAria": "Email de prueba",
+  "center.connOk": "Conexión OK — SMTP accesible, auth aceptada.",
+  "center.verifyFailed": "Verificación fallida",
+  "center.testSent": "Email enviado a {to}{tail}.",
+  "center.mailSendFailed": "No se pudo enviar",
+  "center.credsNote":
+    "Las credenciales viven en el servidor (ver docs/OPERATIONS.md), solo lectura aquí. El email se define en el perfil o al crear la cuenta.",
+
+  "access.status.pending": "Pendiente",
+  "access.status.reviewing": "En revisión",
+  "access.status.accepted": "Aceptada",
+  "access.status.refused": "Rechazada",
+  "access.filter.all": "todas",
+  "access.filter.pending": "pendientes",
+  "access.filter.reviewing": "en revisión",
+  "access.filter.accepted": "aceptadas",
+  "access.filter.refused": "rechazadas",
+  "access.refresh": "Actualizar",
+  "access.refreshAria": "Actualizar solicitudes",
+  "access.empty": "Sin solicitudes. La lista está vacía.",
+  "access.emptyFiltered": "Nada con este estado.",
+  "access.msgOne": "1 mensaje",
+  "access.msgMany": "{n} mensajes",
+  "access.accountCreated": "Cuenta creada — clave única, cópiala ahora:",
+  "access.replyPh": "Responder (llega por email)…",
+  "access.replyAria": "Responder al solicitante",
+  "access.reasonLabel": "Motivo (se envía con la decisión)",
+  "access.reasonPh": "Motivo opcional…",
+  "access.btnReviewing": "Revisar",
+  "access.btnAccept": "Aceptar",
+  "access.btnRefuse": "Rechazar",
+  "access.closedNote": "Ticket cerrado ({status}).",
+  "access.reasonWord": "Motivo",
+  "access.youAdmin": "Tú (admin)",
+  "access.sendFailed": "No se pudo enviar",
+  "access.updateFailed": "No se pudo actualizar",
+
+  "review.title": "Solicitud de acceso",
+  "review.loadingTicket": "Cargando ticket…",
+  "review.notFound": "Ticket no encontrado",
+  "review.notFoundSub":
+    "Este enlace no existe. Revisa la URL de tu email o pide acceso desde el login.",
+  "review.adminNote": "Nota del admin:",
+  "review.acceptedHint":
+    "Tu cuenta fue creada — revisa tu email con la clave e inicia sesión.",
+  "review.closedHint":
+    "Ticket cerrado. Los emails no se leen — si hace falta, pide acceso de nuevo.",
+  "review.replyPh": "Defiende tu caso…",
+  "review.replyAria": "Responder a tu ticket",
+  "review.mailHint":
+    "Los emails son unidireccionales — responde aquí, no por email.",
+  "review.status.pending": "Pendiente de revisión",
+  "review.status.reviewing": "En revisión",
+  "review.status.accepted": "Aceptada",
+  "review.status.refused": "Rechazada",
+  "review.admin": "Admin",
+  "review.you": "Tú",
+  "review.requestTitle": "Solicitar acceso",
+  "review.requestIntro":
+    "Reserva un usuario y cuéntanos por qué quieres entrar. Un admin revisa cada solicitud — sigues el hilo en tu ticket y por email.",
+  "review.emailHint":
+    "Obligatorio — avisos y respuestas llegan aquí.",
+  "review.whyLabel": "¿Por qué darte acceso?",
+  "review.whyHint": "10+ caracteres. Esto abre tu ticket.",
+  "review.whyPh": "Quiero…",
+  "review.sendRequest": "Enviar solicitud",
+  "review.received": "Solicitud recibida",
+  "review.reserved":
+    "@{user} queda reservado mientras un admin lo revisa. Un email con tu ticket va en camino.",
+  "review.copyLink": "Copiar enlace",
+  "review.openTicket": "Abrir mi ticket",
+
+  "admin.editUserTitle": "Editar @{user}",
+  "admin.avatarUrl": "URL del avatar",
 };
 
 const fr: Dict = {
@@ -873,7 +1149,7 @@ const fr: Dict = {
   "center.lockedSub": "Connectez-vous en admin pour ouvrir le Centre admin.",
   "center.regTitle": "Inscription publique",
   "center.regDesc":
-    "Affiche le bouton S'inscrire au login. Off = comptes admin uniquement.",
+    "Affiche le bouton S'inscrire au login. Off = comptes admin uniquement. L'activer retire la liste d'attente ci-dessous.",
   "center.accTitle": "Demandes d'accès (liste)",
   "center.accDescOn": "Indispo avec l'inscription publique — elle la remplace.",
   "center.accDescOff":
@@ -915,6 +1191,144 @@ const fr: Dict = {
 
   "app.deleteConvTitle": "Supprimer la conversation ?",
   "app.deleteConvMsg": "« {title} » et ses messages seront supprimés.",
+
+  "settings.language": "Langue",
+  "settings.languageHint":
+    "Langue de l'interface. Aussitôt, sur cet appareil.",
+  "settings.security": "Sécurité",
+
+  "sec.accessKey": "Clé d'accès",
+  "sec.accessKeyHint":
+    "Faites tourner votre clé. Les anciennes sessions sont révoquées aussitôt — reconnectez-vous avec la neuve.",
+  "sec.rotate": "Faire tourner ma clé",
+  "sec.rotateConfirm": "Recliquez pour confirmer",
+  "sec.rotationFailed": "Rotation impossible",
+  "sec.totp": "Double facteur (TOTP)",
+  "sec.totpChecking": "Vérification…",
+  "sec.totpAddHint":
+    "Ajoutez un code à 6 chiffres de votre app en plus de votre clé.",
+  "sec.totpEnable": "Activer le double facteur",
+  "sec.totpSecretHint":
+    "Ajoutez ce secret à votre app (ou ouvrez le lien otpauth), puis entrez un code :",
+  "sec.totpConfirm": "Confirmer",
+  "sec.totpDisableLabel": "Désactiver avec un code actuel",
+  "sec.totpDisable": "Désactiver 2FA",
+  "sec.setupFailed": "Configuration impossible",
+  "sec.passkeys": "Passkeys",
+  "sec.passkeysHint":
+    "WebAuthn / authentificateurs système — requiert un RP serveur.",
+  "sec.danger": "Zone dangereuse",
+  "sec.dangerHint":
+    "Supprime votre compte avec chats, partages et sessions. Irréversible.",
+  "sec.deleteMe": "Supprimer mon compte",
+  "sec.deleteFailed": "Suppression impossible",
+  "sec.newKeyTitle": "Nouvelle clé d'accès",
+  "sec.newKeyHint":
+    "Copiez-la vite — plus affichée ensuite. Vos sessions sont révoquées.",
+  "sec.newKeyDone": "OK — me déconnecter",
+  "sec.deleteTitle": "Supprimer votre compte ?",
+  "sec.deleteMsg":
+    "Supprime définitivement votre compte avec conversations, partages et sessions. Irréversible.",
+  "sec.deleteForever": "Supprimer pour toujours",
+  "sec.avatarTooBig": "Fichier trop lourd (5 Mo max).",
+  "sec.avatarType": "Seules les images jpg, png ou webp sont acceptées.",
+
+  "center.tabAccess": "Accès",
+
+  "center.smtpHost": "Serveur",
+  "center.smtpPort": "Port",
+  "center.smtpUser": "Utilisateur",
+  "center.smtpPass": "Mot de passe",
+  "center.smtpFrom": "Expéditeur",
+  "center.smtpAppUrl": "URL de l'app",
+  "center.notSet": "(non défini)",
+  "center.noAuth": "(sans auth)",
+  "center.tlsImplicit": "TLS implicite (465)",
+  "center.tlsStarttls": "STARTTLS (587)",
+  "center.showPass": "Afficher le mot de passe SMTP",
+  "center.hidePass": "Masquer le mot de passe SMTP",
+  "center.hiddenPass": "mot de passe masqué",
+  "center.mailTestTitle": "Test de connexion",
+  "center.mailTestDesc":
+    "Vérifiez la connexion, puis envoyez un vrai mail de test à une adresse à vous.",
+  "center.verifyConn": "Vérifier la connexion",
+  "center.verifying": "Vérification…",
+  "center.sendTest": "Envoyer un mail de test",
+  "center.sendingMail": "Envoi…",
+  "center.testToAria": "Email de test",
+  "center.connOk": "Connexion OK — hôte SMTP joignable, auth acceptée.",
+  "center.verifyFailed": "Vérification échouée",
+  "center.testSent": "Mail de test envoyé à {to}{tail}.",
+  "center.mailSendFailed": "Envoi impossible",
+  "center.credsNote":
+    "Les identifiants vivent sur le serveur (voir docs/OPERATIONS.md), lecture seule ici. L'email se règle dans le profil ou à la création.",
+
+  "access.status.pending": "En attente",
+  "access.status.reviewing": "En examen",
+  "access.status.accepted": "Acceptée",
+  "access.status.refused": "Refusée",
+  "access.filter.all": "tous",
+  "access.filter.pending": "en attente",
+  "access.filter.reviewing": "en examen",
+  "access.filter.accepted": "acceptés",
+  "access.filter.refused": "refusés",
+  "access.refresh": "Actualiser",
+  "access.refreshAria": "Actualiser les demandes",
+  "access.empty": "Aucune demande. La liste est vide.",
+  "access.emptyFiltered": "Rien avec ce statut.",
+  "access.msgOne": "1 message",
+  "access.msgMany": "{n} messages",
+  "access.accountCreated": "Compte créé — clé unique, copiez-la :",
+  "access.replyPh": "Répondre (envoyé par email)…",
+  "access.replyAria": "Répondre au demandeur",
+  "access.reasonLabel": "Motif (envoyé avec la décision)",
+  "access.reasonPh": "Motif optionnel…",
+  "access.btnReviewing": "Examiner",
+  "access.btnAccept": "Accepter",
+  "access.btnRefuse": "Refuser",
+  "access.closedNote": "Ticket fermé ({status}).",
+  "access.reasonWord": "Motif",
+  "access.youAdmin": "Vous (admin)",
+  "access.sendFailed": "Envoi impossible",
+  "access.updateFailed": "Mise à jour impossible",
+
+  "review.title": "Demande d'accès",
+  "review.loadingTicket": "Chargement du ticket…",
+  "review.notFound": "Ticket introuvable",
+  "review.notFoundSub":
+    "Ce lien est inconnu. Vérifiez l'URL de votre email, ou refaites une demande depuis le login.",
+  "review.adminNote": "Note admin :",
+  "review.acceptedHint":
+    "Votre compte est créé — vérifiez votre email avec la clé, puis connectez-vous.",
+  "review.closedHint":
+    "Ticket fermé. Les emails ne sont pas lus — si besoin, refaites une demande.",
+  "review.replyPh": "Plaidez votre cas…",
+  "review.replyAria": "Répondre à votre ticket",
+  "review.mailHint":
+    "Les emails sont à sens unique — répondez ici, pas par email.",
+  "review.status.pending": "En attente d'examen",
+  "review.status.reviewing": "En cours d'examen",
+  "review.status.accepted": "Acceptée",
+  "review.status.refused": "Refusée",
+  "review.admin": "Admin",
+  "review.you": "Vous",
+  "review.requestTitle": "Demander l'accès",
+  "review.requestIntro":
+    "Réservez un pseudo et dites pourquoi vous voulez entrer. Un admin examine chaque demande — suivez le fil sur votre ticket et par email.",
+  "review.emailHint":
+    "Requis — avis et réponses arrivent ici.",
+  "review.whyLabel": "Pourquoi vous donner l'accès ?",
+  "review.whyHint": "10+ caractères. Ceci ouvre votre ticket.",
+  "review.whyPh": "Je veux…",
+  "review.sendRequest": "Envoyer la demande",
+  "review.received": "Demande reçue",
+  "review.reserved":
+    "@{user} est réservé pendant l'examen admin. Un email avec votre ticket est en route.",
+  "review.copyLink": "Copier le lien",
+  "review.openTicket": "Ouvrir mon ticket",
+
+  "admin.editUserTitle": "Modifier @{user}",
+  "admin.avatarUrl": "URL de l'avatar",
 };
 
 const ru: Dict = {
@@ -1161,7 +1575,7 @@ const ru: Dict = {
   "center.locked": "Только админы",
   "center.lockedSub": "Войдите как админ, чтобы открыть центр.",
   "center.regTitle": "Открытая регистрация",
-  "center.regDesc": "Кнопка регистрации на входе. Выкл = только админ создаёт.",
+  "center.regDesc": "Кнопка регистрации на входе. Выкл = только админ создаёт. Включение закрывает лист ожидания ниже.",
   "center.accTitle": "Заявки (лист ожидания)",
   "center.accDescOn": "Недоступно при открытой регистрации — она заменяет.",
   "center.accDescOff":
@@ -1243,6 +1657,34 @@ const ru: Dict = {
   "sec.avatarType": "Только картинки jpg, png или webp.",
 
   "center.tabAccess": "Доступ",
+
+  "center.smtpHost": "Хост",
+  "center.smtpPort": "Порт",
+  "center.smtpUser": "Пользователь",
+  "center.smtpPass": "Пароль",
+  "center.smtpFrom": "Отправитель",
+  "center.smtpAppUrl": "URL приложения",
+  "center.notSet": "(не задано)",
+  "center.noAuth": "(без auth)",
+  "center.tlsImplicit": "неявный TLS (465)",
+  "center.tlsStarttls": "STARTTLS (587)",
+  "center.showPass": "Показать пароль SMTP",
+  "center.hidePass": "Скрыть пароль SMTP",
+  "center.hiddenPass": "пароль скрыт",
+  "center.mailTestTitle": "Проверка связи",
+  "center.mailTestDesc":
+    "Проверьте соединение и отправьте тестовое письмо на свой адрес.",
+  "center.verifyConn": "Проверить соединение",
+  "center.verifying": "Проверяем…",
+  "center.sendTest": "Отправить тест",
+  "center.sendingMail": "Отправляем…",
+  "center.testToAria": "Адрес для теста",
+  "center.connOk": "Связь OK — SMTP доступен, auth принят.",
+  "center.verifyFailed": "Проверка не удалась",
+  "center.testSent": "Тест отправлен на {to}{tail}.",
+  "center.mailSendFailed": "Не отправилось",
+  "center.credsNote":
+    "Доступы живут в окружении сервера (см. docs/OPERATIONS.md), здесь только чтение. Email задаётся в профиле или при создании.",
 
   "access.status.pending": "Ожидает",
   "access.status.reviewing": "На проверке",
@@ -1558,7 +2000,7 @@ const it: Dict = {
   "center.locked": "Solo admin",
   "center.lockedSub": "Accedi come admin per aprire il Centro.",
   "center.regTitle": "Registrazione pubblica",
-  "center.regDesc": "Mostra Registrati al login. Off = solo account admin.",
+  "center.regDesc": "Mostra Registrati al login. Off = solo account admin. Attivarlo ritira la wishlist qui sotto.",
   "center.accTitle": "Richieste di accesso (lista)",
   "center.accDescOn":
     "Non disponibile con registrazione pubblica — la sostituisce.",
@@ -1643,6 +2085,34 @@ const it: Dict = {
   "sec.avatarType": "Solo immagini jpg, png o webp.",
 
   "center.tabAccess": "Accesso",
+
+  "center.smtpHost": "Host",
+  "center.smtpPort": "Porta",
+  "center.smtpUser": "Utente",
+  "center.smtpPass": "Password",
+  "center.smtpFrom": "Mittente",
+  "center.smtpAppUrl": "URL dell'app",
+  "center.notSet": "(non impostato)",
+  "center.noAuth": "(senza auth)",
+  "center.tlsImplicit": "TLS implicito (465)",
+  "center.tlsStarttls": "STARTTLS (587)",
+  "center.showPass": "Mostra password SMTP",
+  "center.hidePass": "Nascondi password SMTP",
+  "center.hiddenPass": "password nascosta",
+  "center.mailTestTitle": "Test di connessione",
+  "center.mailTestDesc":
+    "Verifica la connessione e invia una vera mail di test a un tuo indirizzo.",
+  "center.verifyConn": "Verifica connessione",
+  "center.verifying": "Verifica…",
+  "center.sendTest": "Invia mail di test",
+  "center.sendingMail": "Invio…",
+  "center.testToAria": "Email di test",
+  "center.connOk": "Connessione OK — host SMTP raggiungibile, auth accettata.",
+  "center.verifyFailed": "Verifica fallita",
+  "center.testSent": "Mail di test inviata a {to}{tail}.",
+  "center.mailSendFailed": "Invio fallito",
+  "center.credsNote":
+    "Le credenziali vivono sul server (vedi docs/OPERATIONS.md), qui sola lettura. L'email si imposta nel profilo o alla creazione.",
 
   "access.status.pending": "In attesa",
   "access.status.reviewing": "In revisione",
@@ -1953,7 +2423,7 @@ const pt: Dict = {
   "center.locked": "Só admins",
   "center.lockedSub": "Entra como admin para abrir o Centro.",
   "center.regTitle": "Registo público",
-  "center.regDesc": "Mostra Registar no login. Off = só contas do admin.",
+  "center.regDesc": "Mostra Registar no login. Off = só contas do admin. Ligar aposenta a lista abaixo.",
   "center.accTitle": "Pedidos de acesso (lista)",
   "center.accDescOn": "Indisponível com registo público — substitui.",
   "center.accDescOff": "Mostra Pedir acesso no login. Triagem na aba Acesso.",
@@ -2034,6 +2504,34 @@ const pt: Dict = {
   "sec.avatarType": "Só imagens jpg, png ou webp.",
 
   "center.tabAccess": "Acesso",
+
+  "center.smtpHost": "Servidor",
+  "center.smtpPort": "Porta",
+  "center.smtpUser": "Utilizador",
+  "center.smtpPass": "Palavra-passe",
+  "center.smtpFrom": "Remetente",
+  "center.smtpAppUrl": "URL da app",
+  "center.notSet": "(não definido)",
+  "center.noAuth": "(sem auth)",
+  "center.tlsImplicit": "TLS implícito (465)",
+  "center.tlsStarttls": "STARTTLS (587)",
+  "center.showPass": "Mostrar palavra-passe SMTP",
+  "center.hidePass": "Ocultar palavra-passe SMTP",
+  "center.hiddenPass": "palavra-passe oculta",
+  "center.mailTestTitle": "Teste de ligação",
+  "center.mailTestDesc":
+    "Verifica a ligação e envia um mail real para um endereço teu.",
+  "center.verifyConn": "Verificar ligação",
+  "center.verifying": "A verificar…",
+  "center.sendTest": "Enviar mail de teste",
+  "center.sendingMail": "A enviar…",
+  "center.testToAria": "Email de teste",
+  "center.connOk": "Ligação OK — SMTP acessível, auth aceite.",
+  "center.verifyFailed": "Verificação falhou",
+  "center.testSent": "Mail de teste enviado para {to}{tail}.",
+  "center.mailSendFailed": "Falha ao enviar",
+  "center.credsNote":
+    "Credenciais vivem no servidor (ver docs/OPERATIONS.md), só leitura aqui. Email define-se no perfil ou criação.",
 
   "access.status.pending": "Pendente",
   "access.status.reviewing": "Em revisão",

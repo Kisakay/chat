@@ -66,6 +66,8 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | POST | `/api/access/request` | public | reserve username+email with a motivation → ticket (`/review/:id`) |
 | GET/POST | `/api/access/ticket/:id` (+`/message`) | ticket bearer | follow + reply on an access request |
 | GET/PATCH/POST | `/api/admin/access…` | admin | wishlist triage: list, accept/refuse/review, reply |
+| GET | `/api/admin/mail` | admin | SMTP credentials viewer (password blurred by default in UI) |
+| POST | `/api/admin/mail/verify`, `/api/admin/mail/test` | admin | verify SMTP connectivity / send test mail `{to}` |
 | POST / DELETE | `/api/me/key/rotate`, `/api/me` | Bearer | rotate own key (sessions revoked) / delete own account |
 | GET/POST/DELETE | `/api/me/totp`, `/api/me/totp/setup`, `/api/me/totp/verify` | Bearer | TOTP two-factor status/setup/verify/disable |
 | POST | `/api/auth/totp` | challenge | second login step `{totpToken, code}` → session |

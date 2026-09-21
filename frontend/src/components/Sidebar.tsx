@@ -196,7 +196,7 @@ export function Sidebar({
         ) : (
         <>
         {convs.length === 0 && (
-          <p className="px-3 py-6 text-center text-sm opacity-50">No conversations yet.<br />Start a new chat above.</p>
+          <p className="px-3 py-6 text-center text-sm opacity-50">{t("sidebar.emptyA")}<br />{t("sidebar.emptyB")}</p>
         )}
         {convs.map((c) => (
           <div
@@ -243,7 +243,7 @@ export function Sidebar({
               )}
             </span>
             <button
-              aria-label="Conversation options"
+              aria-label={t("sidebar.convOptions")}
               onClick={(e) => openMenu(e, c)}
               className="rounded-full p-1 opacity-0 transition group-hover:opacity-60 hover:!opacity-100 hover:bg-stone-300/50 dark:hover:bg-zinc-700"
             >
@@ -261,32 +261,32 @@ export function Sidebar({
           y={menu.y}
           onClose={() => setMenu(null)}
           items={[
-            { icon: Pencil, label: "Rename", onClick: () => onRename(menu.conv) },
-            { icon: Tag, label: "Set topic", onClick: () => onTopic(menu.conv) },
-            { icon: Share2, label: "Share publicly", onClick: () => onShare(menu.conv) },
-            { icon: Trash2, label: "Delete", danger: true, onClick: () => onDelete(menu.conv) },
+            { icon: Pencil, label: t("sidebar.rename"), onClick: () => onRename(menu.conv) },
+            { icon: Tag, label: t("sidebar.topic"), onClick: () => onTopic(menu.conv) },
+            { icon: Share2, label: t("sidebar.share"), onClick: () => onShare(menu.conv) },
+            { icon: Trash2, label: t("sidebar.delete"), danger: true, onClick: () => onDelete(menu.conv) },
           ]}
         />
       )}
 
       <div className="space-y-2 rounded-2xl border border-stone-200/70 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
-        <button onClick={onOpenSettings} className="m-0.5 flex w-[calc(100%-4px)] items-center gap-2.5 rounded-xl p-1.5 text-left transition hover:bg-accent-600/10" title="Profile & settings">
+        <button onClick={onOpenSettings} className="m-0.5 flex w-[calc(100%-4px)] items-center gap-2.5 rounded-xl p-1.5 text-left transition hover:bg-accent-600/10" title={t("sidebar.settingsTip")}>
           <Avatar name={user.displayName} url={user.avatarUrl} size={34} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{user.displayName}</span>
-            <span className="block truncate text-xs opacity-60">@{user.username}{user.isAdmin ? " · admin" : ""}</span>
+            <span className="block truncate text-xs opacity-60">@{user.username}{user.isAdmin ? ` · ${t("sidebar.admin")}` : ""}</span>
           </span>
           <Settings size={16} className="opacity-50" />
         </button>
         <div className="flex gap-1.5">
           {user.isAdmin && (
-            <Button variant="secondary" size="sm" className="flex-1" onClick={onOpenAdmin} title="Open the Admin Center">
+            <Button variant="secondary" size="sm" className="flex-1" onClick={onOpenAdmin} title={t("sidebar.adminCenterTip")}>
               <LayoutDashboard size={15} />
-              Admin Center
+              {t("sidebar.adminCenter")}
             </Button>
           )}
           <Button variant="ghost" size="sm" className={user.isAdmin ? "" : "flex-1"} onClick={onLogout}>
-            Log out
+            {t("sidebar.logout")}
           </Button>
         </div>
       </div>

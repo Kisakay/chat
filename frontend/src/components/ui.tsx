@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Copy, Loader2, X, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn.ts";
-import { useT } from "../lib/i18n.ts";
+import { LANGS, setLang, useT, type LangId } from "../lib/i18n.ts";
 
 /* ---------- Button ---------- */
 
@@ -231,6 +231,21 @@ export function Picker({
         document.body,
       )}
     </div>
+  );
+}
+
+/* ---------- Language picker (framework-styled dropdown over LANGS) ---------- */
+
+export function LangPicker({ align = "right" }: { align?: "left" | "right" }) {
+  const { t, lang } = useT();
+  return (
+    <Picker
+      ariaLabel={t("settings.language")}
+      value={lang}
+      onChange={(v) => setLang(v as LangId)}
+      align={align}
+      options={LANGS.map((l) => ({ value: l.id, label: l.label }))}
+    />
   );
 }
 

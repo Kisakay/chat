@@ -2,25 +2,27 @@ import { useEffect, useState, type FC, type ReactNode } from "react";
 import { ArrowUpDown, Bot, ChevronLeft, ChevronRight, Download, Filter, HardDrive, KeyRound, Pencil, RefreshCw, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { api } from "../lib/api.ts";
 import type { DriverModel, User } from "../lib/types.ts";
+import { useT, type StringKey } from "../lib/i18n.ts";
 import { Avatar, Button, ConfirmDialog, CopyButton, Field, IconButton, Input, Modal, Picker, Spinner } from "./ui.tsx";
 
-/** Curated Ollama library catalog (admin downloads only). */
-const OLLAMA_CATALOG: { name: string; desc: string; sizes: string[] }[] = [
-  { name: "llama3.2", desc: "Meta's compact everyday model", sizes: ["1b", "3b"] },
-  { name: "llama3.1", desc: "Meta's general-purpose workhorse", sizes: ["8b", "70b"] },
-  { name: "qwen2.5", desc: "Alibaba's multilingual all-rounder", sizes: ["0.5b", "1.5b", "7b", "14b", "32b"] },
-  { name: "gemma2", desc: "Google's efficient open model", sizes: ["2b", "9b", "27b"] },
-  { name: "mistral", desc: "Mistral 7B — fast and capable", sizes: ["7b"] },
-  { name: "phi3", desc: "Microsoft's small research model", sizes: ["3.8b", "14b"] },
-  { name: "deepseek-r1", desc: "Reasoning model (chain-of-thought)", sizes: ["1.5b", "7b", "8b", "14b", "32b"] },
-  { name: "codellama", desc: "Code completion and chat", sizes: ["7b", "13b", "34b"] },
-  { name: "llava", desc: "Vision model (image understanding)", sizes: ["7b", "13b", "34b"] },
-  { name: "nomic-embed-text", desc: "Text embeddings", sizes: [] },
+/** Curated Ollama library catalog (admin downloads only). Descriptions resolve via i18n (`ollama.cat.*`). */
+const OLLAMA_CATALOG: { name: string; catKey: StringKey; sizes: string[] }[] = [
+  { name: "llama3.2", catKey: "ollama.cat.llama3_2", sizes: ["1b", "3b"] },
+  { name: "llama3.1", catKey: "ollama.cat.llama3_1", sizes: ["8b", "70b"] },
+  { name: "qwen2.5", catKey: "ollama.cat.qwen2_5", sizes: ["0.5b", "1.5b", "7b", "14b", "32b"] },
+  { name: "gemma2", catKey: "ollama.cat.gemma2", sizes: ["2b", "9b", "27b"] },
+  { name: "mistral", catKey: "ollama.cat.mistral", sizes: ["7b"] },
+  { name: "phi3", catKey: "ollama.cat.phi3", sizes: ["3.8b", "14b"] },
+  { name: "deepseek-r1", catKey: "ollama.cat.deepseek_r1", sizes: ["1.5b", "7b", "8b", "14b", "32b"] },
+  { name: "codellama", catKey: "ollama.cat.codellama", sizes: ["7b", "13b", "34b"] },
+  { name: "llava", catKey: "ollama.cat.llava", sizes: ["7b", "13b", "34b"] },
+  { name: "nomic-embed-text", catKey: "ollama.cat.nomic_embed_text", sizes: [] },
 ];
 
 /* ---------- Ollama model catalog (admin) ---------- */
 
 export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useT();
   const [installed, setInstalled] = useState<DriverModel[]>([]);
   const [pullName, setPullName] = useState("");
   const [pullStatus, setPullStatus] = useState("");

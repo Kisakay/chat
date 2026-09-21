@@ -5,8 +5,10 @@ import { AssistantAvatar, Avatar, FlowerMark, IconButton, Picker, type PickerGro
 import { Markdown } from "./Markdown.tsx";
 import { cn } from "../lib/cn.ts";
 import { useFeatures } from "../lib/features.ts";
+import { useT } from "../lib/i18n.ts";
 
 function MessageBubble({ msg, authorAvatar, authorName }: { msg: ChatMessage; authorAvatar?: string; authorName: string }) {
+  const { t } = useT();
   const isUser = msg.role === "user";
   return (
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
@@ -16,7 +18,7 @@ function MessageBubble({ msg, authorAvatar, authorName }: { msg: ChatMessage; au
       <div className={cn("min-w-0 max-w-[85%]", isUser && "flex flex-col items-end")}>
         <div className="mb-1 flex items-center gap-1.5 text-xs opacity-60">
           {isUser ? <UserIcon size={12} /> : <Bot size={12} />}
-          {isUser ? "You" : "KisAssistant"}
+          {isUser ? t("chat.you") : "KisAssistant"}
         </div>
         {isUser ? (
           <div className="whitespace-pre-wrap rounded-3xl rounded-tr-lg bg-accent-600 px-4 py-2.5 text-[15px] text-white dark:bg-accent-500 dark:text-zinc-950">
@@ -73,6 +75,7 @@ export function Chat({
 }) {
   const [draft, setDraft] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
+  const { t } = useT();
   const features = useFeatures();
   const boxRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -114,35 +117,35 @@ export function Chat({
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
       <header className="flex items-center gap-2 border-b border-stone-200/70 px-4 py-2.5 backdrop-blur dark:border-zinc-800">
-        <IconButton title="Open chats" onClick={onOpenNav} className="md:hidden">
+        <IconButton title={t("chat.openNav")} onClick={onOpenNav} className="md:hidden">
           <Menu size={18} />
         </IconButton>
         {sidebarCollapsed && (
           <span className="hidden md:inline">
-            <IconButton title="Expand sidebar" onClick={onExpandSidebar}>
+            <IconButton title={t("chat.expand")} onClick={onExpandSidebar}>
               <PanelLeftOpen size={18} />
             </IconButton>
           </span>
         )}
         <span className="hidden items-center gap-2 font-semibold sm:flex">
           <FlowerMark size={24} dynamic={false} />
-          {conv?.title || "New chat"}
+          {conv?.title || t("sidebar.newChat")}
         </span>
         {conv?.topic && (
           <span className="hidden rounded-full bg-stone-200/70 px-2.5 py-0.5 text-xs opacity-80 md:inline dark:bg-zinc-800">{conv.topic}</span>
         )}
         <div className="ml-auto flex items-center gap-2">
           <Picker
-            ariaLabel="Model"
+            ariaLabel={t("chat.modelAria")}
             icon={Cpu}
             value={model}
             onChange={onModelChange}
             groups={modelGroups}
-            placeholder={models.length === 0 ? "No models" : "Select model…"}
+            placeholder={models.length === 0 ? t("chat.noModels") : t("chat.selectModel")}
             disabled={models.length === 0}
           />
           {conv && (
-            <IconButton title="Share publicly" onClick={onShare}>
+            <IconButton title={t("sidebar.share")} onClick={onShare}>
               <Share2 size={17} />
             </IconButton>
           )}
@@ -154,8 +157,8 @@ export function Chat({
           {messages.length === 0 && !streaming && (
             <div className="py-16 text-center">
               <FlowerMark size={56} dynamic={false} className="mx-auto mb-4" />
-              <h2 className="text-2xl font-bold tracking-tight">How can I help, {user.displayName.split(" ")[0]}?</h2>
-              <p className="mt-1 text-sm opacity-60">Pick a model, then type below. Markdown is supported.</p>
+              <h2 className="text-2xl font-bold tracking-tight">{t("chat.greet", { name: user.displayName.split(" ")[0]! })}</h2>
+              <p className="mt-1 text-sm opacity-60">{t("chat.greetSub")}</p>
             </div>
           )}
           {messages.filter((m) => m.role !== "system").map((m, i) => (
@@ -173,7 +176,7 @@ export function Chat({
             </div>
           )}
           {sending && streaming === "" && (
-            <div className="flex items-center gap-2 opacity-60"><Spinner size={15} /><span className="text-sm">Thinking…</span></div>
+            <div className="flex items-center gap-2 opacity-60"><Spinner size={15} /><span className="text-sm">{t("chat.thinking")}</span></div>
           )}
         </div>
       </div>
@@ -189,7 +192,7 @@ export function Chat({
                 <span key={a.id} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-accent-600/30 bg-accent-600/10 py-1 pl-3 pr-1.5 text-xs font-medium dark:border-accent-500/30 dark:bg-accent-500/10">
                   {a.kind === "ocr" ? <ScanText size={13} /> : <FileText size={13} />}
                   <span className="max-w-40 truncate">{a.name}</span>
-                  <button onClick={() => onRemoveAttachment(a.id)} aria-label={`Remove ${a.name}`} className="rounded-full p-1 transition hover:bg-black/10 dark:hover:bg-white/10">
+                  <button onClick={() => onRemoveAttachment(a.id)} aria-label={t("chat.removeAttach", { name: a.name })} className="rounded-full p-1 transition hover:bg-black/10 dark:hover:bg-white/10">
                     <X size={13} />
                   </button>
                 </span>
@@ -211,8 +214,8 @@ export function Chat({
                     <ScanText size={16} />
                   </span>
                   <span>
-                    <span className="block text-sm font-medium">Transcribe image {ocrAvailable ? "" : "(unavailable)"}</span>
-                    <span className="block text-xs opacity-60">JPG, PNG, WEBP — OCR on the server, you review the text first</span>
+                    <span className="block text-sm font-medium">{t("chat.ocrOpt")} {ocrAvailable ? "" : t("chat.unavailable")}</span>
+                    <span className="block text-xs opacity-60">{t("chat.ocrHint")}</span>
                   </span>
                 </button>
                 <button
@@ -223,12 +226,12 @@ export function Chat({
                     <FileText size={16} />
                   </span>
                   <span>
-                    <span className="block text-sm font-medium">Attach text file</span>
-                    <span className="block text-xs opacity-60">TXT or Markdown, max 500KB</span>
+                    <span className="block text-sm font-medium">{t("chat.textOpt")}</span>
+                    <span className="block text-xs opacity-60">{t("chat.textHint")}</span>
                   </span>
                 </button>
                 <p className="px-3 pb-1.5 pt-2 text-xs opacity-60">
-                  Uploads go through platform tools only. Images are sent to the model as reviewed text — never as raw images.
+                  {t("chat.attachNote")}
                 </p>
               </div>
             </>
@@ -239,8 +242,8 @@ export function Chat({
             <button
               type="button"
               onClick={() => setAttachOpen((o) => !o)}
-              aria-label="Attach a file"
-              title="Attach a file"
+              aria-label={t("chat.attachTip")}
+              title={t("chat.attachTip")}
               className="grid h-10 w-10 shrink-0 -translate-y-[2px] place-items-center rounded-full transition hover:bg-stone-100 active:scale-95 dark:hover:bg-zinc-800"
             >
               <Paperclip size={17} className="opacity-70" />
@@ -259,14 +262,14 @@ export function Chat({
                 submit();
               }
             }}
-            placeholder="Message KisAssistant…"
+            placeholder={t("chat.placeholder")}
             className="max-h-50 flex-1 resize-none bg-transparent py-2.5 text-[15px] outline-none placeholder:text-stone-400 dark:placeholder:text-zinc-500"
             style={{ maxHeight: 200 }}
           />
           <button
             type="submit"
             disabled={(!draft.trim() && attachments.length === 0) || sending}
-            aria-label="Send"
+            aria-label={t("chat.send")}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600 text-white shadow transition hover:bg-accent-500 active:scale-95 disabled:opacity-40 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400"
           >
             <SendHorizontal size={17} />
@@ -275,7 +278,7 @@ export function Chat({
         <p className="py-2 text-center text-xs opacity-50">
           <a href="/wiki" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline-offset-2 hover:underline">
             <BookOpen size={12} />
-            Wiki & docs
+            {t("chat.wiki")}
           </a>
         </p>
       </div>

@@ -51,7 +51,8 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
 - `AdminCenter.tsx` — `/admin` route (admin gate + locked screen otherwise):
   tabbed hub (Accounts / Features / Mail) reusing `AdminPanel`, server
   feature `Switch`es (`registrationEnabled`, `ocrEnabled` via
-  `/api/admin/settings`), SMTP status card. Follows the platform theme.
+  `/api/admin/settings`), SMTP viewer (password blurred by default, eye toggle
+  to reveal) + connectivity tester (verify + send test mail). Follows the platform theme.
 - `SharePage.tsx` — public read-only view, fetches `/api/share/:id` unauthenticated
   (`{ title, topic, model, authorName, authorAvatarUrl, sharedAt, messages }`);
   user messages render the author's avatar via `Avatar` (URL or initials).

@@ -11,6 +11,7 @@ import { SharePage } from "./components/SharePage.tsx";
 import { ResetPage } from "./components/ResetPage.tsx";
 import { ReviewPage } from "./components/ReviewPage.tsx";
 import { ConfirmDialog, LoadingScreen } from "./components/ui.tsx";
+import { useT } from "./lib/i18n.ts";
 
 function shareIdFromPath(): string | null {
   const m = window.location.pathname.match(/^\/share\/([A-Za-z0-9_-]{6,64})\/?$/);
@@ -66,6 +67,7 @@ export function App() {
   const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [ocrAvailable, setOcrAvailable] = useState(false);
+  const { t } = useT();
 
   // Public routes: no auth needed. IDs are constant for the page lifetime.
   if (IS_ADMIN_PAGE) {
@@ -188,7 +190,8 @@ export function App() {
     const userMsg: ChatMessage = { role: "user", content: text };
     // Attachments travel as reviewed text blocks appended to the message.
     const blocks = attachments.map((a) =>
-      `[attached ${a.kind === "ocr" ? "image transcription" : "text file"}: ${a.name}]\n\`\`\`text\n${a.text}\n\`\`\``,
+      t("attach.tpl", { kind: t(a.kind === "ocr" ? "attach.kindOcr" : "attach.kindText"), name: a.name }) +
+      `\n\`\`\`text\n${a.text}\n\`\`\``,
     );
     if (blocks.length > 0) userMsg.content = [text, ...blocks].filter(Boolean).join("\n\n");
     const history = [...messages, userMsg];
@@ -211,7 +214,7 @@ export function App() {
       setStreaming("");
       await refreshConvs();
     } catch {
-      setMessages([...history, { role: "assistant", content: "**Error:** the model did not respond. Try again." }]);
+      setMessages([...history, { role: "assistant", content: t("attach.chatError") }]);
       setStreaming("");
     } finally {
       setSending(false);
@@ -223,11 +226,11 @@ export function App() {
     if (!user) return;
     setAttachError(null);
     if (kind === "ocr" && file.size > 5 * 1024 * 1024) {
-      setAttachError("Image too large (max 5MB).");
+      setAttachError(t("attach.tooBigImg"));
       return;
     }
     if (kind === "text" && file.size > 500 * 1024) {
-      setAttachError("Text file too large (max 500KB).");
+      setAttachError(t("attach.tooBigText"));
       return;
     }
     setFilePreview({ name: file.name, kind, text: "", truncated: false });
@@ -250,7 +253,7 @@ export function App() {
       }
     } catch (e) {
       setFilePreview(null);
-      setAttachError(e instanceof Error ? e.message : "Upload failed");
+      setAttachError(e instanceof Error ? e.message : t("attach.uploadFailed"));
     } finally {
       setPreviewBusy(false);
     }
@@ -342,8 +345,8 @@ export function App() {
       <ConfirmDialog
         open={deleteConv !== null}
         onClose={() => setDeleteConv(null)}
-        title="Delete conversation?"
-        message={`"${deleteConv?.title}" and all its messages will be permanently removed.`}
+        title={t("app.deleteConvTitle")}
+        message={t("app.deleteConvMsg", { title: deleteConv?.title ?? "" })}
         onConfirm={() => deleteConv && removeConv(deleteConv)}
       />
       <SettingsModal
