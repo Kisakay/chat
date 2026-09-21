@@ -146,6 +146,13 @@ export const api = {
   unshare: (id: string) => req<{ ok: boolean }>(`/api/conversations/${id}/share`, { method: "DELETE" }),
   publicShare: (publicId: string) => req<SharedChat>(`/api/share/${publicId}`, {}, false),
 
+  /** Archived chats (hidden from the sidebar, managed in settings). */
+  archivedConvs: () => req<{ conversations: Conversation[] }>("/api/conversations/archived"),
+  archiveConv: (id: string) =>
+    req<{ conversation: Conversation }>(`/api/conversations/${id}/archive`, { method: "POST" }),
+  unarchiveConv: (id: string) =>
+    req<{ conversation: Conversation }>(`/api/conversations/${id}/unarchive`, { method: "POST" }),
+
   models: (opts: { refresh?: boolean } = {}) =>
     req<{ models: DriverModel[] }>(`/api/models${opts.refresh ? "?refresh=1" : ""}`),
 

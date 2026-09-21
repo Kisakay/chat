@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  Archive,
   LayoutDashboard,
   MessageSquarePlus,
   MoreVertical,
@@ -35,6 +36,7 @@ export function Sidebar({
   onRename,
   onTopic,
   onShare,
+  onArchive,
   onDelete,
   onOpenSettings,
   onOpenAdmin,
@@ -52,6 +54,7 @@ export function Sidebar({
   onRename: (conv: Conversation) => void;
   onTopic: (conv: Conversation) => void;
   onShare: (conv: Conversation) => void;
+  onArchive: (conv: Conversation) => void;
   onDelete: (conv: Conversation) => void;
   onOpenSettings: () => void;
   onOpenAdmin: () => void;
@@ -264,6 +267,7 @@ export function Sidebar({
             { icon: Pencil, label: t("sidebar.rename"), onClick: () => onRename(menu.conv) },
             { icon: Tag, label: t("sidebar.topic"), onClick: () => onTopic(menu.conv) },
             { icon: Share2, label: t("sidebar.share"), onClick: () => onShare(menu.conv) },
+            { icon: Archive, label: t("sidebar.archive"), onClick: () => onArchive(menu.conv) },
             { icon: Trash2, label: t("sidebar.delete"), danger: true, onClick: () => onDelete(menu.conv) },
           ]}
         />

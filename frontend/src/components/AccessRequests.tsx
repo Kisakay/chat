@@ -120,6 +120,7 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const { t } = useT();
   const [freshKey, setFreshKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -138,7 +139,7 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
       if (res.key) setFreshKey(res.key);
       onChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed");
+      setError(err instanceof Error ? err.message : t("access.updateFailed"));
     } finally {
       setBusy(false);
     }
@@ -156,7 +157,7 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
       setDraft("");
       onChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Send failed");
+      setError(err instanceof Error ? err.message : t("access.sendFailed"));
     } finally {
       setBusy(false);
     }
@@ -166,7 +167,7 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
     <div className="mt-2 space-y-3 rounded-3xl border border-stone-200/70 bg-stone-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
       {freshKey && (
         <div className="rounded-2xl border border-accent-500/40 bg-accent-50 p-3 dark:bg-accent-950/30">
-          <p className="mb-2 flex items-center gap-2 text-sm font-medium"><CheckCircle2 size={15} /> Account created — key shown once, copy it now:</p>
+          <p className="mb-2 flex items-center gap-2 text-sm font-medium"><CheckCircle2 size={15} /> {t("access.accountCreated")}</p>
           <div className="flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">{freshKey}</code>
             <CopyButton text={freshKey} />
@@ -184,7 +185,7 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
                 : "rounded-tl-lg bg-white dark:bg-zinc-800",
             )}>
               <p className="mb-0.5 text-[11px] font-medium opacity-70">
-                {m.author === "admin" ? "You (admin)" : `@${request.username}`} · {new Date(m.created_at).toLocaleString()}
+                {m.author === "admin" ? t("access.youAdmin") : `@${request.username}`} · {new Date(m.created_at).toLocaleString()}
               </p>
               <p className="whitespace-pre-wrap">{m.body}</p>
             </div>
@@ -197,14 +198,14 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
           rows={2}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Reply (emailed to the requester)…"
-          aria-label="Reply to requester"
+          placeholder={t("access.replyPh")}
+          aria-label={t("access.replyAria")}
           className="max-h-32 flex-1 resize-none rounded-2xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-500"
         />
         <button
           type="submit"
           disabled={!draft.trim() || busy}
-          aria-label="Send reply"
+          aria-label={t("chat.send")}
           className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600 text-white shadow transition hover:bg-accent-500 active:scale-95 disabled:opacity-40 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400"
         >
           {busy ? <Spinner size={15} /> : <SendHorizontal size={15} />}
@@ -214,28 +215,28 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
       {!closed ? (
         <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-stone-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
           <div className="min-w-48 flex-1">
-            <Field label="Reason (emailed with the decision)">
-              <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional reason…" maxLength={500} />
+            <Field label={t("access.reasonLabel")}>
+              <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("access.reasonPh")} maxLength={500} />
             </Field>
           </div>
           <div className="flex gap-2">
             {request.status === "pending" && (
               <Button size="sm" variant="secondary" disabled={busy} onClick={() => setStatus("reviewing")}>
-                <Search size={14} /> Reviewing
+                <Search size={14} /> {t("access.btnReviewing")}
               </Button>
             )}
             <Button size="sm" disabled={busy} onClick={() => setStatus("accepted")}>
-              <CheckCircle2 size={14} /> Accept
+              <CheckCircle2 size={14} /> {t("access.btnAccept")}
             </Button>
             <Button size="sm" variant="secondary" disabled={busy} onClick={() => setStatus("refused")} className="!text-red-600 dark:!text-red-400">
-              <XCircle size={14} /> Refuse
+              <XCircle size={14} /> {t("access.btnRefuse")}
             </Button>
           </div>
         </div>
       ) : (
         <p className="flex items-center gap-2 text-xs opacity-60">
-          <Clock size={13} /> Ticket closed ({STATUS_STYLE[request.status].label.toLowerCase()}).
-          {request.reason && <> Reason: <em>{request.reason}</em></>}
+          <Clock size={13} /> {t("access.closedNote", { status: t(`access.status.${request.status}` as StringKey).toLowerCase() })}
+          {request.reason && <> {t("access.reasonWord")}: <em>{request.reason}</em></>}
         </p>
       )}
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

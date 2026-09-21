@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Bot, Cpu, FileText, Menu, PanelLeftOpen, Paperclip, ScanText, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
+import { Archive, ArchiveRestore, BookOpen, Bot, Cpu, FileText, Menu, PanelLeftOpen, Paperclip, ScanText, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
 import type { Attachment, ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
 import { AssistantAvatar, Avatar, FlowerMark, IconButton, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
@@ -45,6 +45,8 @@ export function Chat({
   onModelChange,
   onSend,
   onShare,
+  onUnarchive,
+  readOnly,
   sidebarCollapsed,
   onExpandSidebar,
   onOpenNav,
@@ -64,6 +66,9 @@ export function Chat({
   onModelChange: (m: string) => void;
   onSend: (text: string) => void;
   onShare: () => void;
+  /** Archived chats render read-only; the banner offers to unarchive. */
+  readOnly?: boolean;
+  onUnarchive?: () => void;
   sidebarCollapsed: boolean;
   onExpandSidebar: () => void;
   onOpenNav: () => void;
@@ -107,6 +112,7 @@ export function Chat({
 
   function submit(e?: React.FormEvent) {
     e?.preventDefault();
+    if (readOnly) return;
     const text = draft.trim();
     if (!text || sending) return;
     setDraft("");
