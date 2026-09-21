@@ -1815,7 +1815,7 @@ export function t(
   let s: string = dicts[current][key] ?? dicts.en[key] ?? key;
   if (vars) {
     for (const [k, v] of Object.entries(vars))
-      s = s.replaceAll(`{${k}}`, String(v));
+      s = s.split(`{${k}}`).join(String(v));
   }
   return s;
 }
