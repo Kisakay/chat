@@ -124,5 +124,9 @@ Models are addressed as `"driver:model"` (split on the first `:`).
   **visible** `[data-copy-message]` button as end-of-response (toolbars exist
   hidden in the DOM during streaming — visibility is the real signal).
   Navigation uses domcontentloaded + retries (chatgpt.com stalls sometimes).
-  POC — ToS-risky, off unless `PUPPETEER_ENABLED=true`. Smoke test:
+  POC — ToS-risky, off unless `PUPPETEER_ENABLED=true`. Headless validated
+  (`PUPPETEER_HEADLESS=true`, see `scripts/poc-chatgpt.ts --headless`); on
+  NixOS use `services.kisassistant.enableBrowserDriver` for a headless
+  Firefox in the service, or wrap it all in a declarative `containers.*`
+  (see `docs/NIXOS-HOSTING.md`). Smoke test:
   `bun scripts/poc-chatgpt.ts` (headed, `--probe` for a state report).

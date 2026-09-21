@@ -39,7 +39,7 @@ if (!Number.isFinite(responseTimeoutS) || responseTimeoutS <= 0) {
 
 const engine = new ChatGPTBrowserEngine({
   executablePath,
-  headless: false,
+  headless: flag("--headless"),
   loginTimeoutMs: 600_000,
   responseTimeoutMs: responseTimeoutS * 1000,
 });
@@ -63,7 +63,7 @@ try {
     step(info.composer ? `composer ready: ${info.composer}` : "composer NOT found — login wall or challenge page");
   } else {
     const message = option("--message") ?? DEFAULT_MESSAGE;
-    step(`launching Firefox (${executablePath}) — temporary profile, deleted on exit`);
+    step(`launching Firefox (${executablePath}${flag("--headless") ? ", headless" : ""}) — temporary profile, deleted on exit`);
     let streamed = "";
     const final = await engine.send(message, {
       onLoginHint: () => step("login required: log in inside the Firefox window (waiting up to 10 min)"),

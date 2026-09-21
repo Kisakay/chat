@@ -53,19 +53,36 @@
             cp -r ../public/. $out/
           '';
         };
+        # Backend runtime deps from bun.lock (fixed-output, has network).
+        # Gives the package its node_modules (nodemailer, puppeteer-core, …).
+        # If the build fails with a hash mismatch, paste the "got: sha256-…"
+        # value from the error into `outputHash` of `backendDeps` below.
+        backendDeps = pkgs.stdenv.mkDerivation {
+          pname = "kisassistant-backend-bun-deps";
+          inherit version;
+          src = ./.;
+          nativeBuildInputs = [ pkgs.bun ];
+          buildPhase = ''
+            export HOME=$TMPDIR
+            export BUN_INSTALL_CACHE_DIR=$TMPDIR/bun-cache
+            bun install --frozen-lockfile --ignore-scripts
+          '';
+          installPhase = ''
+            cp -r node_modules $out
+          '';
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
+          outputHash = "sha256-gQmtcFBDcGeMGIZf1VaMG6mlxJ6r08e9iHelS7wvYZ8=";
+        };
       in pkgs.stdenv.mkDerivation {
         pname = "kisassistant";
         inherit version;
         src = ./.;
-        nativeBuildInputs = [ pkgs.bun ];
-        buildPhase = ''
-          export HOME=$TMPDIR
-          # Backend has zero runtime deps; install only for @types/bun (typecheck).
-          bun install --frozen-lockfile 2>/dev/null || bun install --no-save || true
-        '';
         installPhase = ''
           mkdir -p $out/share/kisassistant
           cp -r src package.json tsconfig.json .env.example $out/share/kisassistant/
+          cp -a ${backendDeps} $out/share/kisassistant/node_modules
+          chmod -R u+w $out/share/kisassistant/node_modules
           cp -r ${frontend} $out/share/kisassistant/public
           mkdir -p $out/bin
           cat > $out/bin/kisassistant <<EOF

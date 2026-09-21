@@ -44,6 +44,16 @@ in {
         - `null` (default): legacy behaviour — nginx is configured iff `domain` is set.
       '';
     };
+    enableBrowserDriver = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Enable the ChatGPT web driver (puppeteer-openai): headless Firefox
+        from the nix store runs inside the service and drives chatgpt.com.
+        Sets PUPPETEER_ENABLED/PUPPETEER_HEADLESS/PUPPETEER_EXECUTABLE
+        (still overridable via extraEnv).
+      '';
+    };
     extraEnv = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = {};
@@ -83,6 +93,10 @@ in {
         CDN_DIR = "${cfg.dataDir}/cdn";
         DRIVER_DEBUG = "false";
         OLLAMA_HOST = cfg.ollamaHost;
+      } // lib.optionalAttrs cfg.enableBrowserDriver {
+        PUPPETEER_ENABLED = "true";
+        PUPPETEER_HEADLESS = "true";
+        PUPPETEER_EXECUTABLE = "${pkgs.firefox}/bin/firefox";
       } // cfg.extraEnv;
       serviceConfig = {
         User = cfg.user;
@@ -93,8 +107,9 @@ in {
       } // lib.optionalAttrs (cfg.passwordFile != null) {
         LoadCredential = "app-password:${cfg.passwordFile}";
       };
-      # tesseract binary for the OCR platform tool (see TESSERACT_BIN).
-      path = [ pkgs.tesseract ];
+      # tesseract binary for the OCR platform tool (see TESSERACT_BIN);
+      # firefox for the ChatGPT web driver (enableBrowserDriver).
+      path = [ pkgs.tesseract ] ++ lib.optionals cfg.enableBrowserDriver [ pkgs.firefox ];
       script = ''
         ${lib.optionalString (cfg.passwordFile != null) ''
           export APP_PASSWORD="$(cat "$CREDENTIALS_DIRECTORY/app-password")"

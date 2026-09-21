@@ -90,17 +90,17 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   }
 
   return (
-    <div className="grid min-h-full place-items-center overflow-y-auto bg-gradient-to-br from-stone-100 via-stone-50 to-accent-100/60 p-6 dark:from-zinc-950 dark:via-zinc-950 dark:to-accent-950/40">
-      <div className="w-full max-w-sm">
-        <div className="rounded-[2rem] border border-white/60 bg-white/80 p-8 shadow-2xl shadow-accent-900/5 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
-          <div className="mb-2 flex flex-col items-center text-center">
-            <FlowerMark size={68} dynamic={false} className="mb-4 drop-shadow-lg" />
+    <div className="grid min-h-full place-items-center overflow-y-auto bg-gradient-to-br from-stone-100 via-stone-50 to-accent-100/60 p-4 dark:from-zinc-950 dark:via-zinc-950 dark:to-accent-950/40">
+      <div className="w-full max-w-md">
+        <div className="rounded-[2rem] border border-white/60 bg-white/80 px-6 py-6 shadow-2xl shadow-accent-900/5 backdrop-blur-xl sm:px-8 dark:border-zinc-700/60 dark:bg-zinc-900/80">
+          <div className="mb-1 flex flex-col items-center text-center">
+            <FlowerMark size={52} dynamic={false} className="mb-2 drop-shadow-lg" />
             <h1 className="text-2xl font-bold tracking-tight">{t("login.welcome")}</h1>
-            <p className="mt-1 text-sm opacity-60">{t("login.subtitle")}</p>
+            <p className="mt-0.5 text-sm opacity-60">{t("login.subtitle")}</p>
           </div>
 
           {totpToken ? (
-            <form onSubmit={submitTotp} className="mt-6 space-y-3">
+            <form onSubmit={submitTotp} className="mt-4 space-y-2.5">
               <p className="text-center text-sm opacity-70">
                 {t("login.totpIntro", { user: totpUsername })}
               </p>
@@ -135,7 +135,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
               </button>
             </form>
           ) : (
-          <form onSubmit={submit} className="mt-6 space-y-3">
+          <form onSubmit={submit} className="mt-4 space-y-2.5">
             <div className="relative">
               <User size={17} className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500" />
               <Input
@@ -173,7 +173,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             </Button>
           </form>
           )}
-          <div className="mt-4 flex items-center gap-3 text-xs opacity-40">
+          <div className="mt-3 flex items-center gap-3 text-xs opacity-40">
             <span className="h-px flex-1 bg-current" />
             {t("login.newHere")}
             <span className="h-px flex-1 bg-current" />
@@ -181,7 +181,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
           <Button
             variant="secondary"
             size="lg"
-            className="mt-3 w-full"
+            className="mt-2 w-full"
             disabled={!registrationOn}
             title={registrationOn ? t("login.regTipOn") : t("login.regTipOff")}
             onClick={() => navigate("/register")}
@@ -195,7 +195,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             <Button
               variant="secondary"
               size="lg"
-              className="mt-3 w-full"
+              className="mt-2 w-full"
               onClick={() => setRequestOpen(true)}
             >
               <MessageSquareText size={16} />
@@ -204,21 +204,21 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
           )}
           <AccessRequestModal open={requestOpen} onClose={() => setRequestOpen(false)} />
           {recoveryOn && (
-            <button onClick={() => setRecoverOpen(true)} className="mt-3 w-full text-center text-sm opacity-60 transition hover:opacity-100 hover:underline">
+            <button onClick={() => setRecoverOpen(true)} className="mt-2 w-full text-center text-sm opacity-60 transition hover:opacity-100 hover:underline">
               {t("login.forgot")}
             </button>
           )}
           <RecoverDialog open={recoverOpen} onClose={() => setRecoverOpen(false)} from={recoveryFrom} />
 
-          <div className="mt-4 flex justify-center">
+          <div className="mt-3 flex justify-center">
             <LangPicker />
           </div>
 
-          <ul className="mt-6 space-y-2 border-t border-stone-200/70 pt-5 dark:border-zinc-800">
+          <ul className="mt-4 grid grid-cols-1 gap-2 border-t border-stone-200/70 pt-4 sm:grid-cols-2 dark:border-zinc-800">
             {PERKS.map((p) => (
-              <li key={p.text} className="flex items-center gap-2.5 text-[13px] opacity-70">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
-                  <p.icon size={14} />
+              <li key={p.text} className="flex items-center gap-2 text-xs opacity-70">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
+                  <p.icon size={13} />
                 </span>
                 {p.text}
               </li>

@@ -129,6 +129,66 @@ tool (`POST /api/tools/ocr`, image attachments) works out of the box.
 > `services.kisassistant.extraEnv = { MISTRAL_ENABLED = "true"; };` plus a
 > drop-in containing the key.
 
+### ChatGPT web driver (`enableBrowserDriver`)
+
+The `puppeteer-openai` driver answers through the ChatGPT web UI: a headless
+Firefox from the nix store runs **inside the service** and drives
+`chatgpt.com` via puppeteer-core (WebDriver BiDi). Anonymous sessions work —
+no ChatGPT login needed — and every browser launch gets a throwaway profile
+(mkdtemp under `/tmp`, deleted on exit).
+
+```nix
+services.kisassistant = {
+  enable = true;
+  # …
+  enableBrowserDriver = true;   # adds firefox to the service PATH and sets
+};                              # PUPPETEER_ENABLED/HEADLESS/EXECUTABLE
+```
+
+Overridable through `extraEnv` (values win over the module defaults):
+`PUPPETEER_LOGIN_TIMEOUT_S` (default 300), `PUPPETEER_RESPONSE_TIMEOUT_S`
+(default 300). The browser only starts on the **first request** that uses the
+`puppeteer-openai:chatgpt` model — boot cost stays zero otherwise.
+
+**Full isolation: run the whole app in a declarative NixOS container.**
+The driver launches Firefox as a subprocess, so the browser must live in the
+same namespace as the backend — the cleanest isolation is an nspawn
+container wrapping the entire service:
+
+```nix
+containers.kisassistant = {
+  autoStart = true;
+  privateNetwork = true;
+  hostAddress = "10.99.0.1";
+  localAddress = "10.99.0.2";
+  config = { config, pkgs, ... }: {
+    imports = [ kisassistant.nixosModules.default ];
+    services.kisassistant = {
+      enable = true;
+      package = kisassistant.packages.x86_64-linux.default;
+      host = "0.0.0.0";
+      enableBrowserDriver = true;
+      passwordFile = "/var/lib/kisassistant-password";  # provision inside
+    };
+  };
+};
+
+# Host: nginx proxies to the container (enableNginx stays unset/false)
+services.nginx.virtualHosts."chat.kisakay.com" = {
+  forceSSL = true;
+  enableACME = true;
+  locations."/" = {
+    proxyPass = "http://10.99.0.2:3000";
+    extraConfig = "proxy_buffering off;";
+  };
+};
+```
+
+Headless mode needs no display server anywhere (validated on CI-less builds:
+cookie banner accepted, message sent, response streamed). If ChatGPT ever
+starts headless-shaming, fall back to `PUPPETEER_HEADLESS=false` inside the
+container plus an `Xvfb` service — same driver, virtual display.
+
 ## 5. TLS reverse proxy (`enableNginx`)
 
 The conventional switch is `enableNginx` — a tri-state:
@@ -228,4 +288,5 @@ After dependency bumps the first build may fail with a `bunDepsHash` mismatch
 | `ollamaHost` | str, `http://localhost:11434` | Ollama endpoint |
 | `domain` | null \| str | nginx vhost name, required when `enableNginx = true` |
 | `enableNginx` | null \| bool, `null` | `true`/`false` force the bundled reverse proxy on/off; `null` = nginx iff `domain` set (legacy) |
+| `enableBrowserDriver` | bool, `false` | headless Firefox in the service for the `puppeteer-openai` ChatGPT web driver (sets `PUPPETEER_ENABLED`/`PUPPETEER_HEADLESS`/`PUPPETEER_EXECUTABLE`, overridable via `extraEnv`) |
 | `extraEnv` | attrs of str, `{}` | extra environment (non-secret values only) |
