@@ -42,6 +42,18 @@ export interface Report {
   updated_at: number;
 }
 
+export interface ModelPolicyEntry {
+  enabled: boolean;
+  hourly: number;
+  daily: number;
+}
+
+export interface PolicyModel extends DriverModel {
+  enabled: boolean;
+  hourly: number;
+  daily: number;
+}
+
 const TOKEN_KEY = "kisassistant_token";
 
 export function getToken(): string | null {
@@ -139,6 +151,15 @@ export const api = {
     req<{ shadowbanned: boolean }>(`/api/admin/users/${id}/shadowban`, {
       method: "POST",
       body: JSON.stringify({ shadowbanned }),
+    }),
+
+  /** Admin: per-model access policy (kill-switch + rate limits). */
+  adminModelPolicy: (refresh = false) =>
+    req<{ models: PolicyModel[] }>(`/api/admin/model-policy${refresh ? "?refresh=1" : ""}`),
+  adminModelPolicyPatch: (model: string, patch: { enabled?: boolean; hourly?: number; daily?: number }) =>
+    req<{ model: PolicyModel }>(`/api/admin/model-policy`, {
+      method: "PATCH",
+      body: JSON.stringify({ model, ...patch }),
     }),
   adminPatch: (id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),

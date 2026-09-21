@@ -79,6 +79,14 @@ import {
   type ReportReason,
   type ReportStatus,
 } from "./reports.ts";
+import {
+  checkModelAccess,
+  getModelPolicy,
+  initModelUsageTables,
+  policyFor,
+  recordModelUse,
+  setModelPolicyEntry,
+} from "./modelPolicy.ts";
 import type { ConversationRow } from "./db.ts";
 import type { OllamaDriver } from "./drivers/ollama.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
@@ -109,6 +117,7 @@ const ollamaDriver = registry.get("ollama") as OllamaDriver;
 await tools.init();
 initAccessTables();
 initReportsTables();
+initModelUsageTables();
 initTotpTables();
 
 function json(data: unknown, status = 200): Response {
@@ -980,6 +989,43 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         }
       }
 
+      // --- admin: per-model access policy (kill-switch + rate limits) ---
+      if (path === "/api/admin/model-policy" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        if (/^(1|true|yes)$/i.test(url.searchParams.get("refresh") ?? "")) {
+          registry.invalidateModelsCache();
+        }
+        // Full list (policy never hides models from admins) merged with policy.
+        const models = await registry.listAllModelsCached();
+        const policy = getModelPolicy();
+        return json({
+          models: models.map((m) => ({ ...m, ...policyFor(policy, m.id) })),
+        });
+      }
+
+      if (path === "/api/admin/model-policy" && req.method === "PATCH") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const { ok, body } = await readJson(req);
+        if (!ok) return json({ error: "invalid JSON" }, 400);
+        const b = body as { model?: unknown; enabled?: unknown; hourly?: unknown; daily?: unknown };
+        if (typeof b.model !== "string" || b.model.length < 3 || b.model.length > 200 || !b.model.includes(":")) {
+          return json({ error: 'model must look like "driver:model"' }, 400);
+        }
+        if (b.enabled === undefined && b.hourly === undefined && b.daily === undefined) {
+          return json({ error: "nothing to update (enabled, hourly, daily)" }, 400);
+        }
+        try {
+          const entry = setModelPolicyEntry(b.model, {
+            enabled: b.enabled as boolean | undefined,
+            hourly: b.hourly as number | undefined,
+            daily: b.daily as number | undefined,
+          });
+          return json({ model: { id: b.model, ...entry } });
+        } catch {
+          return json({ error: "enabled must be boolean, hourly/daily integers 0-1000000" }, 400);
+        }
+      }
+
       // --- admin: access-request wishlist triage ---
       if (path === "/api/admin/access" && req.method === "GET") {
         if (!admin) return json({ error: "forbidden" }, 403);
@@ -1186,7 +1232,11 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           url.searchParams.get("refresh") ?? url.searchParams.get("force") ?? "",
         );
         const models = await registry.listAllModelsCached(wantRefresh && admin);
-        return json({ models });
+        if (admin) return json({ models });
+        // Users never see admin-disabled models (nor select them — /api/chat
+        // enforces the same policy server-side).
+        const policy = getModelPolicy();
+        return json({ models: models.filter((m) => policyFor(policy, m.id).enabled) });
       }
 
       // --- platform tools (uploads always go through tools) ---
@@ -1236,6 +1286,13 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           ({ driver, model } = registry.splitId(body.model));
         } catch (e) {
           return json({ error: (e as Error).message }, 400);
+        }
+        // Per-model access policy (kill-switch + per-user rate limits).
+        // Admins bypass; attempts count even when generation later fails.
+        if (!user.isAdmin) {
+          const access = checkModelAccess(user.id, body.model);
+          if (!access.ok) return json({ error: access.message }, access.code);
+          recordModelUse(user.id, body.model);
         }
         const messages = body.messages as ChatMessage[];
         // Optional persistence into a server-side conversation (must belong to the user).

@@ -634,8 +634,8 @@ function ArchivedSection({ onView, onChanged }: { onView: (c: Conversation) => v
   }
 
   return (
-    <div>
-      <p className="-mb-2 text-xs opacity-60">{t("archived.readonly")}</p>
+    <div className="space-y-3">
+      <p className="text-xs leading-relaxed opacity-60">{t("archived.readonly")}</p>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {(list ?? []).length === 0 ? (
         <p className="py-4 text-center text-sm opacity-50">{t("archived.empty")}</p>

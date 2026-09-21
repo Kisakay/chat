@@ -190,7 +190,6 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
   const [freshKey, setFreshKey] = useState<{ username: string; key: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [editTarget, setEditTarget] = useState<User | null>(null);
-  const [modelsOpen, setModelsOpen] = useState(false);
   // Listing: search + sort + filter + pagination (server-side).
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -309,9 +308,6 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
             <Button variant="secondary" size="sm" onClick={() => setShowCreate(true)}>
               <UserPlus size={15} /> {t("admin.newAccount")}
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => setModelsOpen(true)}>
-              <Bot size={15} /> {t("ollama.models")}
-            </Button>
           </div>
         ) : (
           <form onSubmit={create} className="mb-4 flex flex-wrap items-end gap-2 rounded-2xl border border-stone-200 p-3 dark:border-zinc-700">
@@ -415,7 +411,6 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
       />
 
       <EditUserDialog user={editTarget} onClose={() => setEditTarget(null)} onSaved={refresh} />
-      <OllamaModelsModal open={modelsOpen} onClose={() => setModelsOpen(false)} />
     </>
   );
 }

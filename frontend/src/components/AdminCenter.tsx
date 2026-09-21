@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Eye, EyeOff, Flag, Inbox, LayoutDashboard, Mail, Send, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
+import { ArrowLeft, Boxes, Eye, EyeOff, Flag, Inbox, LayoutDashboard, Mail, Send, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
 import { api, getToken } from "../lib/api.ts";
 import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import { AdminPanel } from "./AdminPanel.tsx";
 import { AccessRequestsPanel } from "./AccessRequests.tsx";
 import { ReportsPanel } from "./ReportsPanel.tsx";
+import { ModelsPanel } from "./ModelsPanel.tsx";
 import { Button, CopyButton, FlowerMark, Input, LoadingScreen, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 import { useT } from "../lib/i18n.ts";
 
-type Tab = "accounts" | "access" | "reports" | "features" | "mail";
+type Tab = "accounts" | "access" | "reports" | "models" | "features" | "mail";
 
 function applyTheme(theme: string) {
   const root = document.documentElement;
@@ -32,6 +33,7 @@ export function AdminCenter() {
     { id: "accounts", label: t("center.tabAccounts"), icon: Users },
     { id: "access", label: t("center.tabAccess"), icon: Inbox },
     { id: "reports", label: t("center.tabReports"), icon: Flag },
+    { id: "models", label: t("center.tabModels"), icon: Boxes },
     { id: "features", label: t("center.tabFeatures"), icon: SlidersHorizontal },
     { id: "mail", label: t("center.tabMail"), icon: Mail },
   ];
@@ -186,6 +188,12 @@ export function AdminCenter() {
         {tab === "reports" && (
           <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <ReportsPanel />
+          </section>
+        )}
+
+        {tab === "models" && (
+          <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <ModelsPanel />
           </section>
         )}
 
