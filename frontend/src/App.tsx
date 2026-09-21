@@ -25,6 +25,8 @@ import { SharePage } from "./components/SharePage.tsx";
 import { ResetPage } from "./components/ResetPage.tsx";
 import { ReviewPage } from "./components/ReviewPage.tsx";
 import { ConfirmDialog, LoadingScreen } from "./components/ui.tsx";
+import { Toasts } from "./components/Toasts.tsx";
+import { pushToast } from "./lib/toasts.ts";
 import { useT } from "./lib/i18n.ts";
 
 function shareIdFromPath(): string | null {
@@ -448,6 +450,7 @@ export function App() {
         setMessages([]);
       }
       await refreshConvs();
+      pushToast(t("toast.chatDeleted", { title: c.title }), { icon: "trash" });
     } catch {
       // ignore
     }
@@ -462,6 +465,7 @@ export function App() {
         setMessages([]);
       }
       await refreshConvs();
+      pushToast(t("toast.chatArchived", { title: c.title }), { icon: "archive" });
     } catch {
       // ignore
     }
@@ -486,6 +490,7 @@ export function App() {
     try {
       await api.unarchiveConv(archivedConv.id);
       const id = archivedConv.id;
+      pushToast(t("toast.chatUnarchived", { title: archivedConv.title }), { icon: "unarchive" });
       setArchivedConv(null);
       await refreshConvs(id);
     } catch {
@@ -589,7 +594,13 @@ export function App() {
         sending={sending}
         models={models}
         model={model}
-        onModelChange={setModel}
+        onModelChange={(id) => {
+          setModel(id);
+          pushToast(t("toast.modelChanged", { label: models.find((m) => m.id === id)?.label ?? id }), {
+            icon: "model",
+            tag: "model",
+          });
+        }}
         onSend={send}
         onShare={() => active && setShareConv(active)}
         readOnly={readOnly}
@@ -637,6 +648,9 @@ export function App() {
         user={settingsOpen ? user : null}
         onClose={() => setSettingsOpen(false)}
         onSaved={(u) => {
+          if (u.theme !== user?.theme) {
+            pushToast(t("toast.themeChanged"), { icon: "theme", tag: "theme" });
+          }
           setUser(u);
           applyTheme(u.theme);
         }}
@@ -649,6 +663,7 @@ export function App() {
         onArchivedChanged={handleArchivedChanged}
         onProvidersChanged={handleProvidersChanged}
       />
+      <Toasts />
     </div>
   );
 }

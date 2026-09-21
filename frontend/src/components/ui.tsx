@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Copy, Loader2, X, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn.ts";
@@ -483,13 +483,33 @@ export function Avatar({ name, url, size = 36 }: { name: string; url?: string; s
 /* ---------- Brand logo (single declaration — import anywhere) ---------- */
 
 /**
- * The KisAssistant flower mark. Petals follow the runtime accent color,
- * heart stays amber — same artwork as the loading screen and favicon.
+ * The KisAssistant flower mark: a soft five-petal blossom with a lighter
+ * inner ring, petals following the runtime accent color (gradients read
+ * the --ka-accent-* triplets), heart in amber radial with a highlight —
+ * same artwork as the loading screen and favicon. Petals are deliberately
+ * slightly uneven (sizes/angles) so it reads organic, not geometric.
  * `dynamic` controls the bloom animation: pass false for a static,
  * full-bloom mark (e.g. thread bars and headers).
  */
 export function FlowerMark({ size, className, dynamic = true }: { size?: number; className?: string; dynamic?: boolean }) {
-  const petals = [0, 60, 120, 180, 240, 300];
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
+  const petalId = `ka-petal-${uid}`;
+  const petalInId = `ka-petalin-${uid}`;
+  const coreId = `ka-core-${uid}`;
+  const outer = [
+    { r: 8, ry: 20 },
+    { r: 80, ry: 19 },
+    { r: 151, ry: 20.5 },
+    { r: 223, ry: 19.5 },
+    { r: 294, ry: 20 },
+  ];
+  const inner = [
+    { r: 44, ry: 12 },
+    { r: 116, ry: 11.5 },
+    { r: 188, ry: 12 },
+    { r: 259, ry: 11.5 },
+    { r: 331, ry: 12 },
+  ];
   return (
     <svg
       width={size}
@@ -499,19 +519,53 @@ export function FlowerMark({ size, className, dynamic = true }: { size?: number;
       role="img"
       aria-label="KisAssistant"
     >
-      {petals.map((r, i) => (
-        <g key={r} transform={`rotate(${r} 50 50)`}>
-          <ellipse
-            cx="50"
-            cy="25"
-            rx="13"
-            ry="21"
-            className={dynamic ? "flower-petal fill-accent-500" : "fill-accent-500"}
-            style={dynamic ? { animationDelay: `${i * 0.22}s` } : undefined}
-          />
-        </g>
+      <defs>
+        <linearGradient id={petalId} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="rgb(var(--ka-accent-600))" />
+          <stop offset="0.6" stopColor="rgb(var(--ka-accent-500))" />
+          <stop offset="1" stopColor="rgb(var(--ka-accent-300))" />
+        </linearGradient>
+        <linearGradient id={petalInId} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor="rgb(var(--ka-accent-400))" />
+          <stop offset="1" stopColor="rgb(var(--ka-accent-200))" />
+        </linearGradient>
+        <radialGradient id={coreId}>
+          <stop offset="0" stopColor="#fef3c7" />
+          <stop offset="0.5" stopColor="#fbbf24" />
+          <stop offset="1" stopColor="#d97706" />
+        </radialGradient>
+      </defs>
+      {outer.map((p, i) => (
+        <ellipse
+          key={p.r}
+          cx="50"
+          cy="27"
+          rx="13.5"
+          ry={p.ry}
+          fill={`url(#${petalId})`}
+          transform={`rotate(${p.r} 50 50)`}
+          className={dynamic ? "flower-petal" : undefined}
+          style={dynamic ? { animationDelay: `${i * 0.2}s` } : undefined}
+        />
       ))}
-      <circle cx="50" cy="50" r="10" className={dynamic ? "flower-core fill-amber-400" : "fill-amber-400"} />
+      {inner.map((p, i) => (
+        <ellipse
+          key={p.r}
+          cx="50"
+          cy="34"
+          rx="8"
+          ry={p.ry}
+          fill={`url(#${petalInId})`}
+          transform={`rotate(${p.r} 50 50)`}
+          className={dynamic ? "flower-petal-inner" : undefined}
+          style={dynamic ? { animationDelay: `${i * 0.2 + 0.6}s` } : undefined}
+        />
+      ))}
+      <g className={dynamic ? "flower-core" : undefined}>
+        <circle cx="50" cy="50" r="10.5" fill="#f59e0b" opacity="0.22" />
+        <circle cx="50" cy="50" r="8" fill={`url(#${coreId})`} />
+        <circle cx="47.5" cy="47" r="2.2" fill="#fffbeb" opacity="0.95" />
+      </g>
     </svg>
   );
 }
@@ -605,9 +659,13 @@ export function LoadingScreen() {
   return (
     <div className="loading-enter grid min-h-full place-items-center" role="status" aria-label="Loading KisAssistant">
       <div className="flex flex-col items-center gap-4 px-6 text-center">
-        <FlowerMark className="h-16 w-16 sm:h-20 sm:w-20" />
-        <p className="font-serif text-2xl font-bold tracking-tight">KisAssistant</p>
+        <span className="loader-halo">
+          <span className="loader-orbit" aria-hidden="true" />
+          <FlowerMark className="h-16 w-16 sm:h-20 sm:w-20" />
+        </span>
+        <p className="loader-title font-serif text-2xl font-bold tracking-tight">KisAssistant</p>
         <p className="loading-dots text-sm opacity-60">{t("loading.tagline")}</p>
+        <span className="loader-bar" aria-hidden="true"><span /></span>
       </div>
     </div>
   );

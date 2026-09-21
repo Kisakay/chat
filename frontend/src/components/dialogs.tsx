@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, Plug, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, X } from "lucide-react";
 import { api, type UserProvider } from "../lib/api.ts";
+import { pushToast } from "../lib/toasts.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
@@ -616,6 +617,7 @@ function ArchivedSection({ onView, onChanged }: { onView: (c: Conversation) => v
       await api.unarchiveConv(c.id);
       await refresh();
       onChanged();
+      pushToast(t("toast.chatUnarchived", { title: c.title }), { icon: "unarchive" });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveFailed"));
     } finally {
@@ -631,6 +633,7 @@ function ArchivedSection({ onView, onChanged }: { onView: (c: Conversation) => v
       setDeleteTarget(null);
       await refresh();
       onChanged(c.id);
+      pushToast(t("toast.chatDeleted", { title: c.title }), { icon: "trash" });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.deleteFailed"));
     } finally {
@@ -716,12 +719,14 @@ function AccentSection() {
     const next = { ...state, presetId };
     setState(next);
     applyAccent(next);
+    pushToast(t("toast.accentChanged"), { icon: "accent", tag: "accent" });
   }
 
   function pickCustom(hex: string) {
     const next = { presetId: "custom", customHex: hex };
     setState(next);
     previewAccent(hex);
+    pushToast(t("toast.accentChanged"), { icon: "accent", tag: "accent" });
   }
 
   return (
