@@ -109,7 +109,8 @@ Every assistant message carries three actions: **Copy**, **Search the web**
 (DuckDuckGo, new tab) and **Report**. Reporting opens a modal with a reason
 picker (`copyright`, `gore`, `falseinfo`, `bug`) plus optional details, and
 creates a row in the `reports` table with a content snapshot (survives later
-edits/deletion of the chat), the model, and the reporter.
+edits/deletion of the chat), the triggering user prompt, the model, and the
+reporter.
 
 - Reporter: capped at 20 open (`open` + `reviewing`) reports (429 beyond).
   Reporting the same message twice returns the existing report (409
