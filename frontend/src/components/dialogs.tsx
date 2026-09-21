@@ -805,25 +805,25 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
   return (
     <div className="space-y-5">
       <div>
-        <p className="mb-1 flex items-center gap-1.5 text-sm font-medium"><KeyRound size={14} className="opacity-60" /> Access key</p>
-        <p className="mb-2 text-xs opacity-60">Rotate your access key. Old sessions are revoked immediately — you'll log back in with the new key.</p>
-        <Button size="sm" variant="secondary" type="button" disabled={busy} onClick={rotate}>
-          {armingRotate ? "Click again to confirm rotation" : "Rotate my access key"}
+        <p className="mb-1 flex items-center gap-1.5 text-sm font-medium"><KeyRound size={14} className="opacity-60" /> {t("sec.accessKey")}</p>
+        <p className="mb-2 text-xs opacity-60">{t("sec.accessKeyHint")}</p>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={rotate}>
+          {armingRotate ? t("sec.rotateConfirm") : t("sec.rotate")}
         </Button>
       </div>
 
       <div>
-        <p className="mb-1 flex items-center gap-1.5 text-sm font-medium"><ShieldCheck size={14} className="opacity-60" /> Two-factor (TOTP)</p>
-        {totpOn === null && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> Checking…</p>}
+        <p className="mb-1 flex items-center gap-1.5 text-sm font-medium"><ShieldCheck size={14} className="opacity-60" /> {t("sec.totp")}</p>
+        {totpOn === null && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("sec.totpChecking")}</p>}
         {totpOn === false && !secret && (
           <>
-            <p className="mb-2 text-xs opacity-60">Add a 6-digit code from your authenticator app on top of your access key.</p>
-            <Button size="sm" variant="secondary" type="button" disabled={busy} onClick={startTotp}>Enable two-factor</Button>
+            <p className="mb-2 text-xs opacity-60">{t("sec.totpAddHint")}</p>
+            <Button size="sm" variant="secondary" disabled={busy} onClick={startTotp}>{t("sec.totpEnable")}</Button>
           </>
         )}
         {secret && (
           <div className="space-y-2 rounded-2xl border border-stone-200 p-3 dark:border-zinc-700">
-            <p className="text-xs opacity-70">Add this secret to your authenticator app (or open the otpauth link), then enter a code to confirm:</p>
+            <p className="text-xs opacity-70">{t("sec.totpSecretHint")}</p>
             <div className="flex items-center gap-2">
               <code className="min-w-0 flex-1 break-all rounded-xl bg-stone-100 px-3 py-2 font-mono text-sm dark:bg-zinc-800">{secret}</code>
               <CopyButton text={secret} />
@@ -834,30 +834,30 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="000000"
-                aria-label="Authenticator code"
+                aria-label={t("login.totpAria")}
                 inputMode="numeric"
                 className="text-center tracking-[0.4em]"
               />
-              <Button size="sm" type="button" disabled={busy || code.length !== 6} onClick={confirmTotp}>Confirm</Button>
+              <Button size="sm" disabled={busy || code.length !== 6} onClick={confirmTotp}>{t("sec.totpConfirm")}</Button>
             </div>
           </div>
         )}
         {totpOn === true && (
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-36 flex-1">
-              <Field label="Disable with a current code">
+              <Field label={t("sec.totpDisableLabel")}>
                 <Input
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="000000"
-                  aria-label="Current authenticator code"
+                  aria-label={t("login.totpAria")}
                   inputMode="numeric"
                   className="text-center tracking-[0.4em]"
                 />
               </Field>
             </div>
-            <Button size="sm" variant="secondary" type="button" disabled={busy || code.length !== 6} onClick={disableTotp} className="!text-red-600 dark:!text-red-400">
-              Disable 2FA
+            <Button size="sm" variant="secondary" disabled={busy || code.length !== 6} onClick={disableTotp} className="!text-red-600 dark:!text-red-400">
+              {t("sec.totpDisable")}
             </Button>
           </div>
         )}
@@ -866,31 +866,31 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
       <div className="flex items-center gap-3 rounded-2xl px-1 py-1 opacity-50">
         <Fingerprint size={16} />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium">Passkeys <span className="ml-1 text-xs opacity-60">(soon)</span></span>
-          <span className="block text-xs opacity-60">WebAuthn / platform authenticators — needs a server RP setup.</span>
+          <span className="block text-sm font-medium">{t("sec.passkeys")} <span className="ml-1 text-xs opacity-60">{t("feat.soon")}</span></span>
+          <span className="block text-xs opacity-60">{t("sec.passkeysHint")}</span>
         </span>
       </div>
 
       <div className="rounded-2xl border border-red-500/30 p-3">
         <p className="mb-1 flex items-center gap-1.5 text-sm font-medium text-red-600 dark:text-red-400">
-          <Trash2 size={14} /> Danger zone
+          <Trash2 size={14} /> {t("sec.danger")}
         </p>
-        <p className="mb-2 text-xs opacity-60">Permanently delete your account with all chats, shares and sessions. Cannot be undone.</p>
-        <Button size="sm" variant="secondary" type="button" disabled={busy} onClick={() => setConfirmDelete(true)} className="!text-red-600 dark:!text-red-400">
-          Delete my account
+        <p className="mb-2 text-xs opacity-60">{t("sec.dangerHint")}</p>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => setConfirmDelete(true)} className="!text-red-600 dark:!text-red-400">
+          {t("sec.deleteMe")}
         </Button>
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
-      <Modal open={rotatedKey !== null} onClose={() => {}} title="New access key" icon={KeyRound}>
+      <Modal open={rotatedKey !== null} onClose={() => {}} title={t("sec.newKeyTitle")} icon={KeyRound}>
         <div className="space-y-4">
-          <p className="text-sm opacity-80">Copy it now — it won't be shown again. Your old sessions are revoked.</p>
+          <p className="text-sm opacity-80">{t("sec.newKeyHint")}</p>
           <div className="flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-2xl bg-stone-100 px-3 py-2.5 font-mono text-sm dark:bg-zinc-800">{rotatedKey}</code>
             {rotatedKey && <CopyButton text={rotatedKey} />}
           </div>
-          <Button size="sm" className="w-full" onClick={() => onKeyRotated?.()}>Done — log me out</Button>
+          <Button size="sm" className="w-full" onClick={() => onKeyRotated?.()}>{t("sec.newKeyDone")}</Button>
         </div>
       </Modal>
 
@@ -898,9 +898,9 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
         onConfirm={removeAccount}
-        title="Delete your account?"
-        message="This permanently removes your account with all conversations, shares and sessions. This cannot be undone."
-        confirmLabel="Delete forever"
+        title={t("sec.deleteTitle")}
+        message={t("sec.deleteMsg")}
+        confirmLabel={t("sec.deleteForever")}
       />
     </div>
   );

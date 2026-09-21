@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { Conversation, User } from "../lib/types.ts";
 import { api } from "../lib/api.ts";
+import { useT } from "../lib/i18n.ts";
 import { Avatar, Button, ContextMenu, FlowerMark, IconButton } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 
@@ -58,6 +59,7 @@ export function Sidebar({
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }) {
+  const { t } = useT();
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<(Conversation & { snippet: string | null; snippetRole: string | null })[] | null>(null);
@@ -132,12 +134,12 @@ export function Sidebar({
         <div className="flex items-center gap-1">
           <Button variant="secondary" size="sm" className="flex-1" onClick={onNew}>
             <MessageSquarePlus size={16} />
-            New chat
+            {t("sidebar.newChat")}
           </Button>
-          <IconButton title="Collapse sidebar" onClick={onToggle} className="hidden md:inline-flex">
+          <IconButton title={t("sidebar.collapse")} onClick={onToggle} className="hidden md:inline-flex">
             <PanelLeftClose size={18} />
           </IconButton>
-          <IconButton title="Close chats" onClick={onCloseMobile} className="md:hidden">
+          <IconButton title={t("sidebar.closeDrawer")} onClick={onCloseMobile} className="md:hidden">
             <X size={18} />
           </IconButton>
         </div>
@@ -146,13 +148,13 @@ export function Sidebar({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search chats…"
-            aria-label="Search conversations"
+            placeholder={t("sidebar.searchPh")}
+            aria-label={t("sidebar.searchAria")}
             className="w-full rounded-2xl border border-stone-200/70 bg-stone-100 py-2 pl-9 pr-8 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 focus:bg-white dark:border-zinc-800 dark:bg-zinc-800/60 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900"
           />
           {query && (
             <button
-              aria-label="Clear search"
+              aria-label={t("sidebar.clearSearch")}
               onClick={() => setQuery("")}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 opacity-60 transition hover:opacity-100"
             >
@@ -164,9 +166,9 @@ export function Sidebar({
       <div className="flex-1 space-y-1 overflow-y-auto py-1">
         {results !== null ? (
           <>
-            {searching && <p className="px-3 py-4 text-center text-sm opacity-50">Searching…</p>}
+            {searching && <p className="px-3 py-4 text-center text-sm opacity-50">{t("sidebar.searching")}</p>}
             {!searching && results.length === 0 && (
-              <p className="px-3 py-6 text-center text-sm opacity-50">No match for “{query.trim()}”.</p>
+              <p className="px-3 py-6 text-center text-sm opacity-50">{t("sidebar.noMatch", { q: query.trim() })}</p>
             )}
             {results.map((c) => (
               <div
@@ -185,7 +187,7 @@ export function Sidebar({
                 <span className="block truncate">{c.title}</span>
                 {c.snippet && (
                   <span className="mt-0.5 block truncate text-xs opacity-60">
-                    {c.snippetRole === "user" ? "you: " : ""}{c.snippet}
+                    {c.snippetRole === "user" ? t("sidebar.youPrefix") : ""}{c.snippet}
                   </span>
                 )}
               </div>
