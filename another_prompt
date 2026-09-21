@@ -32,3 +32,8 @@ DRAG AND SNAP LIKE PHONES, SCROLLING FOR OPENGING/EXITING ETC..
 --- LOW PRIORITY
 Système de service mails aussi pour les comptes (optionel) pour recovery passwords, dans le page de login:
   - Recover password with emails. smtp server,
+
+  --- NEW NEW BUG:
+  when uploading new pfp, actually it uploading the file without click needing into save button.
+  the normal flow that i want is. uploading , updating the preview, cancel button: keep the current one, re-freshing the previw.
+  save -> saving and pushing the pfp to the api
