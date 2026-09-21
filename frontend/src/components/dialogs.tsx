@@ -1122,14 +1122,20 @@ function ProvidersSection({ onChanged }: { onChanged?: () => void }) {
                     ••••{st.last4}
                   </code>
                 )}
-                <a
-                  href={m.docs}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-auto shrink-0 text-xs text-accent-700 underline-offset-2 hover:underline dark:text-accent-400"
-                >
-                  {t("providers.getKey")}
-                </a>
+                {connected ? (
+                  <span className="ml-auto shrink-0 cursor-not-allowed text-xs opacity-40">
+                    {t("providers.getKey")}
+                  </span>
+                ) : (
+                  <a
+                    href={m.docs}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-auto shrink-0 text-xs text-accent-700 underline-offset-2 hover:underline dark:text-accent-400"
+                  >
+                    {t("providers.getKey")}
+                  </a>
+                )}
               </div>
               <div className="flex gap-2">
                 <Input

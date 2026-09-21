@@ -22,7 +22,7 @@ function AttachmentBlock({ header, body, tone }: { header: string; body: string;
   return (
     <span
       className={cn(
-        "mt-2 block overflow-hidden rounded-2xl text-left",
+        "mt-2 block max-w-full overflow-hidden rounded-2xl text-left",
         tone === "accent" ? "bg-black/25 dark:bg-black/30" : "bg-stone-200/70 dark:bg-zinc-800",
       )}
     >
@@ -42,7 +42,7 @@ function AttachmentBlock({ header, body, tone }: { header: string; body: string;
       {open && (
         <pre
           className={cn(
-            "max-h-72 overflow-auto whitespace-pre-wrap break-words border-t px-3 py-2 font-mono text-[12.5px] leading-relaxed",
+            "max-h-72 max-w-full overflow-auto whitespace-pre-wrap [overflow-wrap:anywhere] border-t px-3 py-2 font-mono text-[12.5px] leading-relaxed",
             tone === "accent" ? "border-white/10" : "border-stone-300/70 dark:border-zinc-700",
           )}
         >
