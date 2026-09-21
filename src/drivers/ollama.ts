@@ -11,7 +11,7 @@ export class OllamaDriver implements LLMDriver {
   readonly name = "ollama";
   readonly enabled: boolean;
 
-  constructor(private host: string = config.ollamaHost, enabled = config.ollamaEnabled) {
+  constructor(public readonly host: string = config.ollamaHost, enabled = config.ollamaEnabled) {
     this.host = host.replace(/\/$/, "");
     this.enabled = enabled;
   }

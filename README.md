@@ -9,8 +9,8 @@ accounts, server-side chats and public shares. No cookies — Bearer keys in
 Driver priority:
 
 ```
-1. ollama → 2. mistral API → 3. puppeteer-openai (stub, not implemented)
-→ 4. deepseek → 5. anthropic → 6. openai
+1. ollama → 2. mistral API → 3. glm API → 4. puppeteer-openai (stub, not implemented)
+→ 5. deepseek → 6. anthropic → 7. openai
 ```
 
 Docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (backend, drivers, DB) ·
@@ -51,12 +51,14 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | Method | Route | Auth | Notes |
 |---|---|---|---|
 | POST | `/api/auth/login` | rate-limited (5/10min/IP) | `{username, key}` → `{token, expiresAt, user}` |
+| POST | `/api/auth/register` | public, rate-limited | self-registration (403 when disabled by admin) → `{user, key}` |
 | GET | `/api/auth/verify` | Bearer | → `{ok, user}` |
 | POST | `/api/auth/logout` | Bearer | revokes token |
 | GET/PATCH | `/api/me` | Bearer | profile: displayName, avatarUrl, theme |
 | GET/POST | `/api/admin/users` | admin | create returns `{user, key}` (key shown once) |
 | PATCH/DELETE | `/api/admin/users/:id` | admin | edit profile / delete + cascade |
 | POST | `/api/admin/users/:id/regenerate` | admin | new key, old sessions revoked |
+| GET/PATCH | `/api/admin/settings` | admin | feature flags: registrationEnabled, ocrEnabled |
 | GET/POST | `/api/conversations` | Bearer | server-persisted chats (title, topic, model) |
 | GET/PATCH/DELETE | `/api/conversations/:id` | owner | incl. messages on GET |
 | POST/GET/DELETE | `/api/conversations/:id/share` | owner | public link `/share/:publicId` |
@@ -70,8 +72,9 @@ reply into that conversation (ownership enforced) and auto-titles new chats.
 ## Database (SQLite, Bun native)
 
 `$DATA_DIR/kisassistant.db` (WAL mode). Tables: `users` (id, username,
-display_name, avatar_url, theme, key_hash), `sessions` (hashed Bearer tokens),
-`conversations` (id, user, title, topic, model), `messages`, `shares`
+display_name, avatar_url, theme, email, key_hash), `sessions` (hashed Bearer tokens),
+`conversations` (id, user, title, topic, model), `messages`, `shares`,
+`resets` (recovery tokens), `settings` (feature flags)
 (conv ↔ public id). No migration system — schema is created idempotently at boot.
 
 ## Drivers (backend layout)

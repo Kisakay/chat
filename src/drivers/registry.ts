@@ -1,14 +1,14 @@
-import { AnthropicDriver, DeepSeekDriver, MistralDriver, OpenAIDriver } from "./apis.ts";
+import { AnthropicDriver, DeepSeekDriver, GlmDriver, MistralDriver, OpenAIDriver } from "./apis.ts";
 import { OllamaDriver } from "./ollama.ts";
 import { PuppeteerOpenAIDriver } from "./puppeteer.ts";
 import type { DriverModel, LLMDriver } from "./types.ts";
 
 /**
  * Global driver priority (per spec):
- *   1. ollama (local) -> 2. mistral -> 3. puppeteer-openai (stub)
- *   -> 4. deepseek -> 5. anthropic -> 6. openai
+ *   1. ollama (local) -> 2. mistral -> 3. glm -> 4. puppeteer-openai (stub)
+ *   -> 5. deepseek -> 6. anthropic -> 7. openai
  */
-const PRIORITY = ["ollama", "mistral", "puppeteer-openai", "deepseek", "anthropic", "openai"];
+const PRIORITY = ["ollama", "mistral", "glm", "puppeteer-openai", "deepseek", "anthropic", "openai"];
 
 export class DriverRegistry {
   private drivers: Map<string, LLMDriver>;
@@ -17,6 +17,7 @@ export class DriverRegistry {
     const all: LLMDriver[] = [
       new OllamaDriver(),
       new MistralDriver(),
+      new GlmDriver(),
       new PuppeteerOpenAIDriver(),
       new DeepSeekDriver(),
       new AnthropicDriver(),

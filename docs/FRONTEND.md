@@ -43,7 +43,12 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
   copy, unshare), `SettingsModal` (display name, avatar upload box with
   drag & drop, avatar URL, theme).
 - `AdminPanel.tsx` — No-KYC account management: create (key shown once),
-  regenerate (revokes sessions), edit, delete with confirm.
+  regenerate (revokes sessions), edit, delete with confirm. Renders bare
+  (no modal shell) when embedded in the Admin Center page.
+- `AdminCenter.tsx` — `/admin` route (admin gate + locked screen otherwise):
+  tabbed hub (Accounts / Features / Mail) reusing `AdminPanel`, server
+  feature `Switch`es (`registrationEnabled`, `ocrEnabled` via
+  `/api/admin/settings`), SMTP status card. Follows the platform theme.
 - `SharePage.tsx` — public read-only view, fetches `/api/share/:id` unauthenticated.
 - `Markdown.tsx` — `react-markdown` + GFM; code blocks get a language label and
   a copy button.

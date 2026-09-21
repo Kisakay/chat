@@ -6,7 +6,7 @@ import { Login } from "./components/Login.tsx";
 import { Sidebar } from "./components/Sidebar.tsx";
 import { Chat } from "./components/Chat.tsx";
 import { ConvEditDialog, FilePreviewModal, SettingsModal, ShareModal } from "./components/dialogs.tsx";
-import { AdminPanel } from "./components/AdminPanel.tsx";
+import { AdminCenter } from "./components/AdminCenter.tsx";
 import { SharePage } from "./components/SharePage.tsx";
 import { ResetPage } from "./components/ResetPage.tsx";
 import { ConfirmDialog } from "./components/ui.tsx";
@@ -19,6 +19,7 @@ function shareIdFromPath(): string | null {
 // Module-level: the path never changes without a full reload, so hook order stays stable.
 const SHARE_ID = typeof window !== "undefined" ? shareIdFromPath() : null;
 const RESET_TOKEN = typeof window !== "undefined" ? resetTokenFromPath() : null;
+const IS_ADMIN_PAGE = typeof window !== "undefined" && /^\/admin\/?$/.test(window.location.pathname);
 
 function resetTokenFromPath(): string | null {
   const m = window.location.pathname.match(/^\/reset\/([A-Za-z0-9_-]{6,80})\/?$/);
@@ -35,7 +36,7 @@ function applyTheme(theme: string) {
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(!SHARE_ID && !RESET_TOKEN && !!getToken());
+  const [checking, setChecking] = useState(!SHARE_ID && !RESET_TOKEN && !IS_ADMIN_PAGE && !!getToken());
   const [models, setModels] = useState<DriverModel[]>([]);
   const [model, setModel] = useState("");
   const [convs, setConvs] = useState<Conversation[]>([]);
@@ -49,7 +50,6 @@ export function App() {
   const [shareConv, setShareConv] = useState<Conversation | null>(null);
   const [deleteConv, setDeleteConv] = useState<Conversation | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [adminOpen, setAdminOpen] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
@@ -57,6 +57,9 @@ export function App() {
   const [ocrAvailable, setOcrAvailable] = useState(false);
 
   // Public routes: no auth needed. IDs are constant for the page lifetime.
+  if (IS_ADMIN_PAGE) {
+    return <AdminCenter />;
+  }
   if (RESET_TOKEN) {
     return <ResetPage token={RESET_TOKEN} />;
   }
@@ -277,7 +280,7 @@ export function App() {
         onShare={setShareConv}
         onDelete={setDeleteConv}
         onOpenSettings={() => { setSettingsOpen(true); setMobileNav(false); }}
-        onOpenAdmin={() => { setAdminOpen(true); setMobileNav(false); }}
+        onOpenAdmin={() => { window.location.href = "/admin"; }}
         onLogout={logout}
         mobileOpen={mobileNav}
         onCloseMobile={() => setMobileNav(false)}
@@ -332,7 +335,6 @@ export function App() {
           applyTheme(u.theme);
         }}
       />
-      <AdminPanel open={adminOpen} onClose={() => setAdminOpen(false)} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import {
+  LayoutDashboard,
   MessageSquarePlus,
   MoreVertical,
   PanelLeftClose,
@@ -8,7 +9,6 @@ import {
   Share2,
   Tag,
   Trash2,
-  Users,
   X,
 } from "lucide-react";
 import type { Conversation, User } from "../lib/types.ts";
@@ -199,9 +199,9 @@ export function Sidebar({
         </button>
         <div className="flex gap-1.5">
           {user.isAdmin && (
-            <Button variant="secondary" size="sm" className="flex-1" onClick={onOpenAdmin} title="Manage accounts">
-              <Users size={15} />
-              Accounts
+            <Button variant="secondary" size="sm" className="flex-1" onClick={onOpenAdmin} title="Open the Admin Center">
+              <LayoutDashboard size={15} />
+              Admin Center
             </Button>
           )}
           <Button variant="ghost" size="sm" className={user.isAdmin ? "" : "flex-1"} onClick={onLogout}>

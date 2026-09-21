@@ -42,6 +42,12 @@ export const config = {
   openaiApiKey: env("OPENAI_API_KEY", ""),
   openaiEnabled: envBool("OPENAI_ENABLED", false),
 
+  glmApiKey: env("GLM_API_KEY", ""),
+  glmEnabled: envBool("GLM_ENABLED", false),
+  // Zhipu has two platforms: international (api.z.ai, default) and
+  // mainland China (open.bigmodel.cn) — override for the latter.
+  glmBaseUrl: env("GLM_BASE_URL", "https://api.z.ai/api/paas/v4"),
+
   // Public docs wiki (served by the hosted git forge, e.g. Gitea wiki pages).
   // The app redirects GET /wiki there (302) so the target stays configurable.
   wikiUrl: env("WIKI_URL", "https://git.kisakay.com/k/chat/wiki"),

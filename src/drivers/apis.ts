@@ -52,3 +52,20 @@ export class OpenAIDriver extends ApiDriverBase {
     });
   }
 }
+
+/**
+ * GLM driver (Zhipu AI, OpenAI-compatible endpoint). Priority: after Mistral.
+ * Docs: https://docs.z.ai — international base is api.z.ai, mainland China
+ * uses https://open.bigmodel.cn/api/paas/v4 (via GLM_BASE_URL).
+ */
+export class GlmDriver extends ApiDriverBase {
+  readonly name = "glm";
+  constructor() {
+    super({
+      baseUrl: config.glmBaseUrl,
+      apiKey: config.glmApiKey,
+      enabled: config.glmEnabled,
+      defaultModels: ["glm-4.7", "glm-4.6", "glm-4.5-air", "glm-4.5-flash"],
+    });
+  }
+}

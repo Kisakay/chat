@@ -46,6 +46,7 @@ Created idempotently at boot in `getDb()` (no migration framework; keep it so).
 | `users` | `id, username UNIQUE, display_name, avatar_url, theme, email, key_hash, created_at`. The `admin` row is bootstrapped (its `key_hash` is unused — admin auth goes through `APP_PASSWORD`). |
 | `sessions` | `token_hash PK, user_id, created_at, expires_at`. Bearer tokens, 256-bit, hashed with sha256. Expired rows are purged lazily on access. |
 | `resets` | `token_hash PK, user_id, created_at, expires_at`. One-time key-recovery tokens (single use, consumed on POST). |
+| `settings` | `key PK, value, updated_at`. Admin-controlled feature flags (`registration_enabled` default off, `tools_ocr_enabled` default on). |
 | `conversations` | `id, user_id, title, topic, model, created_at, updated_at`. |
 | `messages` | `id AUTOINCREMENT, conv_id → conversations ON DELETE CASCADE, role, content, created_at`. |
 | `shares` | `conv_id PK → conversations ON DELETE CASCADE, public_id UNIQUE, created_at`. |
@@ -58,6 +59,10 @@ conversations → sessions → user) inside a transaction.
 - `POST /api/auth/login { username, key }`, sliding-window rate limit per IP
   (`RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MIN`, default 5 per 10 min) + 400 ms
   delay on failure. Success clears the IP counter and issues a fresh token.
+- `POST /api/auth/register { username, displayName?, email? }` — public
+  self-registration, guarded by the `registration_enabled` setting (403 when
+  off), same rate limit and validation as admin creation. Returns `{user, key}`
+  with the key shown once.
 - `admin` is authenticated against `APP_PASSWORD` (timing-safe); users against
   their `ka_…` access key (timing-safe against the stored hash).
 - Keys are generated with `crypto.randomBytes` (`ka_` + 24 bytes base64url) and
@@ -93,7 +98,7 @@ only ever sees reviewed text blocks, never raw files.
 
 ## Drivers`src/drivers/`: `LLMDriver` interface (`listModels`, `chat`, `chatStream`),
 `DriverRegistry` with global priority
-`ollama → mistral → puppeteer-openai (stub) → deepseek → anthropic → openai`.
+`ollama → mistral → glm → puppeteer-openai (stub) → deepseek → anthropic → openai`.
 Models are addressed as `"driver:model"` (split on the first `:`).
 
 - `OllamaDriver`: model discovery via `GET {OLLAMA_HOST}/api/tags`, chat via

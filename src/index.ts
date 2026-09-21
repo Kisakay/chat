@@ -42,6 +42,7 @@ import {
   updateUser,
 } from "./db.ts";
 import type { ChatMessage } from "./drivers/types.ts";
+import type { OllamaDriver } from "./drivers/ollama.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
 import { createHash, randomBytes } from "node:crypto";
 import { statSync } from "node:fs";

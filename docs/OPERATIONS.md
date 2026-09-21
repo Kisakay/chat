@@ -24,7 +24,8 @@ Copy `.env.example` to `.env`. Full list:
 | `RESET_TTL_MIN` | `60` | reset-link lifetime (single use) |
 | `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MIN` | `5` / `10` | login rate limit per IP |
 | `OLLAMA_HOST` / `OLLAMA_ENABLED` | `http://10.66.66.4:11434` / `true` | local-model driver |
-| `MISTRAL_*`, `DEEPSEEK_*`, `ANTHROPIC_*`, `OPENAI_*` | disabled | API drivers: set `*_ENABLED=true` **and** `*_API_KEY` |
+| `MISTRAL_*`, `GLM_*`, `DEEPSEEK_*`, `ANTHROPIC_*`, `OPENAI_*` | disabled | API drivers: set `*_ENABLED=true` **and** `*_API_KEY` |
+| `GLM_BASE_URL` | `https://api.z.ai/api/paas/v4` | Zhipu platform override (mainland China: `https://open.bigmodel.cn/api/paas/v4`) |
 
 ## Local development
 
@@ -50,6 +51,21 @@ unshare. See `AGENTS.md`.
    remote URL e.g. from `catbox.moe`) and theme in the profile settings.
 5. Rotate a compromised key with the regenerate button (old sessions die);
    delete removes the account with all its chats and shares.
+
+## Admin Center (`/admin`) & self-registration
+
+The sidebar **Admin Center** button (admin only) opens the `/admin` page with
+three tabs: **Accounts** (same manager as before, incl. the Ollama model
+catalog), **Features** (server-side switches), **Mail** (SMTP status).
+
+- `registration_enabled` (default off): when on, the login page shows a
+  working **Register** button — anyone can create an account (key shown once)
+  via `POST /api/auth/register`. When off, the button is greyed with the
+  tooltip *"Registration currently disabled on this platform"* and the
+  endpoint answers 403. Flipped live, no restart.
+- `tools_ocr_enabled` (default on): admin kill-switch for the OCR tool.
+- Flags live in the `settings` SQLite table, edited via
+  `GET/PATCH /api/admin/settings` (admin Bearer only).
 
 ## Key recovery via email (optional)
 

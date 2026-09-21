@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, KeyRound, ShieldCheck, User, Zap } from "lucide-react";
+import { ArrowRight, KeyRound, ShieldCheck, User, UserPlus, Zap } from "lucide-react";
 import { api, setToken } from "../lib/api.ts";
 import type { User as UserType } from "../lib/types.ts";
 import { Button, Input, Logo, Spinner } from "./ui.tsx";
-import { RecoverDialog } from "./dialogs.tsx";
+import { RecoverDialog, RegisterDialog } from "./dialogs.tsx";
 
 const PERKS = [
   { icon: ShieldCheck, text: "Private by design — no cookies, no tracking" },
@@ -18,11 +18,14 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [recoverOpen, setRecoverOpen] = useState(false);
   const [recoveryOn, setRecoveryOn] = useState(false);
   const [recoveryFrom, setRecoveryFrom] = useState<string | undefined>(undefined);
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [registrationOn, setRegistrationOn] = useState(false);
 
   useEffect(() => {
     api.methods().then((m) => {
       setRecoveryOn(m.recovery);
       setRecoveryFrom(m.from);
+      setRegistrationOn(m.registration);
     }).catch(() => {});
   }, []);
 
@@ -89,6 +92,27 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
               {busy ? <Spinner /> : (<>Unlock <ArrowRight size={17} /></>)}
             </Button>
           </form>
+          <div className="mt-4 flex items-center gap-3 text-xs opacity-40">
+            <span className="h-px flex-1 bg-current" />
+            New here?
+            <span className="h-px flex-1 bg-current" />
+          </div>
+          <Button
+            variant="secondary"
+            size="lg"
+            className="mt-3 w-full"
+            disabled={!registrationOn}
+            title={registrationOn ? "Create an account" : "Registration currently disabled on this platform"}
+            onClick={() => setRegisterOpen(true)}
+          >
+            <UserPlus size={16} />
+            Register
+          </Button>
+          <RegisterDialog
+            open={registerOpen}
+            onClose={() => setRegisterOpen(false)}
+            onDone={(u, k) => { setUsername(u); setKey(k); }}
+          />
           {recoveryOn && (
             <button onClick={() => setRecoverOpen(true)} className="mt-3 w-full text-center text-sm opacity-60 transition hover:opacity-100 hover:underline">
               Forgot your access key?

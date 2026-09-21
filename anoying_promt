@@ -9,3 +9,21 @@ or something original but in the actual theme and Adapative to phone
 make a better settings overview,with larger modal in screen . with categories, section for searching
 
 --- UPLOAD URL FOR PFP MUST BE A READ ONLY IN USER . NOW CAUSE OF THE OWN CDN. USER SHOULDNT SEE THAT VALUE /EDIT IT ANYMORe.
+
+--- UPDATE ABOUT REGISTRATION
+
+Another feature for rehistration.:
+A WishList. Like you reserv username, mail (needed)
+in AdminCenter, a specific category for wish access : accepting/refusing/review a request.
+Can refusing with a reason / accepting with reason / reviewing :
+    - make a /review page
+        the user want to being granted access can arguing about why him
+            - admin can see messages, responding, like a minimal ticket syste,
+            and so accepting reusing.
+    - the user is who want to earn access receive emails about the current status of the situation
+        Refusing -with reasons etc
+        Accepting - with/without reasons etc
+        mail or reviewing
+            each new message in the conversations makes a new mail forwarded by (like real ticket)
+                precise that theses mail arent the official way and need to be responded into the official site (chat.kisakay.com/review)
+        makes beautiful simple easy - by design HTML for each type of mail

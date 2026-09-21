@@ -85,6 +85,44 @@ export const api = {
 
   models: () => req<{ models: DriverModel[] }>("/api/models"),
 
+  /** Admin: stream an Ollama /api/pull as NDJSON progress events. */
+  ollamaPull: async (
+    name: string,
+    onProgress: (p: { status?: string; digest?: string; total?: number; completed?: number; error?: string }) => void,
+  ): Promise<void> => {
+    const res = await fetch("/api/admin/ollama/pull", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ name }),
+    });
+    if (res.status === 401) {
+      clearToken();
+      window.location.reload();
+      throw new ApiError(401, "Session expired.");
+    }
+    if (!res.ok || !res.body) {
+      const err = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new ApiError(res.status, err.error || `Pull failed (${res.status})`);
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop() ?? "";
+      for (const line of lines) {
+        const t = line.trim();
+        if (t) onProgress(JSON.parse(t));
+      }
+    }
+  },
+
+  /** Admin: delete a local Ollama model (frees disk on the Ollama host). */
+  ollamaDelete: (name: string) => req<{ ok: boolean }>(`/api/admin/ollama/models/${encodeURIComponent(name)}`, { method: "DELETE" }),
+
   tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[] }>("/api/tools"),
 
   /** Send an image to the platform OCR tool. Returns editable text (never the raw image). */

@@ -4,7 +4,7 @@ import { driverLog, fmtBytes, fmtMs } from "./log.ts";
 
 /**
  * Base class for OpenAI-compatible HTTP API drivers
- * (mistral / deepseek / openai / anthropic adapter).
+ * (mistral / glm / deepseek / openai / anthropic adapter).
  * Only enabled when an API key is configured. Phase 1: disabled stubs.
  */
 export abstract class ApiDriverBase implements LLMDriver {
