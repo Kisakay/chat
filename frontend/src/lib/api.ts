@@ -67,7 +67,7 @@ export const api = {
   verify: () => req<{ ok: boolean; user: User }>("/api/auth/verify"),
   logout: () => req<{ ok: boolean }>("/api/auth/logout", { method: "POST" }).catch(() => ({ ok: true as const })),
 
-  methods: () => req<{ recovery: boolean; from?: string; registration: boolean }>("/api/auth/methods", {}, false),
+  methods: () => req<{ recovery: boolean; from?: string; registration: boolean; accessRequest: boolean }>("/api/auth/methods", {}, false),
   register: (u: { username: string; displayName?: string; email?: string }) =>
     req<{ user: User; key: string }>("/api/auth/register", { method: "POST", body: JSON.stringify(u) }, false),
   recover: (username: string) =>
@@ -98,9 +98,9 @@ export const api = {
   adminPatch: (id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
 
-  adminGetSettings: () => req<{ settings: { registrationEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings"),
-  adminPatchSettings: (patch: { registrationEnabled?: boolean; ocrEnabled?: boolean }) =>
-    req<{ settings: { registrationEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
+  adminGetSettings: () => req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings"),
+  adminPatchSettings: (patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean }) =>
+    req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
 
   convs: () => req<{ conversations: Conversation[] }>("/api/conversations"),
   /** Search your old chats (titles, topics and message content). */

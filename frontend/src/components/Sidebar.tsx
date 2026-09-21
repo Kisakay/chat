@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Flower,
   LayoutDashboard,
   MessageSquarePlus,
   MoreVertical,
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 import type { Conversation, User } from "../lib/types.ts";
 import { api } from "../lib/api.ts";
-import { Avatar, Button, ContextMenu, IconButton } from "./ui.tsx";
+import { Avatar, Button, ContextMenu, FlowerMark, IconButton } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 
 interface MenuState {
@@ -127,9 +126,7 @@ export function Sidebar({
         )}
       >
         <div className="flex items-center gap-2 px-2 pb-1 pt-0.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-accent-600/10 text-accent-600 dark:text-accent-400">
-            <Flower size={20} />
-          </span>
+          <FlowerMark size={36} dynamic={false} />
           <span className="font-serif text-xl font-bold tracking-tight">KisAssistant</span>
         </div>
         <div className="flex items-center gap-1">

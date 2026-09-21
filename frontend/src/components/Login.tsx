@@ -22,12 +22,14 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [registerOpen, setRegisterOpen] = useState(false);
   const [registrationOn, setRegistrationOn] = useState(false);
   const [requestOpen, setRequestOpen] = useState(false);
+  const [requestOn, setRequestOn] = useState(false);
 
   useEffect(() => {
     api.methods().then((m) => {
       setRecoveryOn(m.recovery);
       setRecoveryFrom(m.from);
       setRegistrationOn(m.registration);
+      setRequestOn(m.accessRequest);
     }).catch(() => {});
   }, []);
 
@@ -115,9 +117,9 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             onClose={() => setRegisterOpen(false)}
             onDone={(u, k) => { setUsername(u); setKey(k); }}
           />
-          {/* Wishlist path: when open registration is off, visitors can still
-              reserve a username and plead their case; an admin triages it. */}
-          {!registrationOn && (
+          {/* Wishlist path: only when open registration is off AND the admin
+              enabled access requests. They are mutually exclusive server-side. */}
+          {!registrationOn && requestOn && (
             <Button
               variant="secondary"
               size="lg"

@@ -153,7 +153,7 @@ export function Chat({
         <div className="mx-auto w-full max-w-3xl space-y-5">
           {messages.length === 0 && !streaming && (
             <div className="py-16 text-center">
-              <FlowerMark size={56} className="mx-auto mb-4" />
+              <FlowerMark size={56} dynamic={false} className="mx-auto mb-4" />
               <h2 className="text-2xl font-bold tracking-tight">How can I help, {user.displayName.split(" ")[0]}?</h2>
               <p className="mt-1 text-sm opacity-60">Pick a model, then type below. Markdown is supported.</p>
             </div>

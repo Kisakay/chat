@@ -25,7 +25,7 @@ const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
 export function AdminCenter() {
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [tab, setTab] = useState<Tab>("accounts");
-  const [settings, setSettings] = useState<{ registrationEnabled: boolean; ocrEnabled: boolean } | null>(null);
+  const [settings, setSettings] = useState<{ registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean } | null>(null);
   const [mail, setMail] = useState<{ recovery: boolean; from?: string } | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -45,7 +45,7 @@ export function AdminCenter() {
       .catch(() => setAllowed(false));
   }, []);
 
-  async function toggle(patch: { registrationEnabled?: boolean; ocrEnabled?: boolean }) {
+  async function toggle(patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean }) {
     setSaving(true);
     setError("");
     try {
@@ -129,9 +129,28 @@ export function AdminCenter() {
             <div className="flex items-center gap-4 rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">Public registration</p>
-                <p className="text-sm opacity-60">Show the Register button on the login page. Off = admin-created accounts only.</p>
+                <p className="text-sm opacity-60">Show the Register button on the login page. Off = admin-created accounts only. Turning it on retires the wishlist below.</p>
               </div>
               <Switch label="Public registration" checked={settings?.registrationEnabled ?? false} onChange={(v) => toggle({ registrationEnabled: v })} />
+            </div>
+            <div className={cn(
+              "flex items-center gap-4 rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900",
+              settings?.registrationEnabled && "opacity-60",
+            )}>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Access requests (wishlist)</p>
+                <p className="text-sm opacity-60">
+                  {settings?.registrationEnabled
+                    ? "Unavailable while public registration is on — it replaces the wishlist."
+                    : "Show Request access on the login page. Visitors reserve a username and plead their case; you triage them in the Access tab."}
+                </p>
+              </div>
+              <Switch
+                label="Access requests"
+                checked={settings?.accessRequestEnabled ?? false}
+                disabled={settings?.registrationEnabled ?? false}
+                onChange={(v) => toggle({ accessRequestEnabled: v })}
+              />
             </div>
             <div className="flex items-center gap-4 rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
               <div className="min-w-0 flex-1">

@@ -301,7 +301,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
         )}
 
         {!showCreate ? (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-5 flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={() => setShowCreate(true)}>
               <UserPlus size={15} /> New account
             </Button>

@@ -318,6 +318,7 @@ const server = Bun.serve({
         recovery: mailEnabled(),
         from: mailEnabled() ? config.smtpFrom : undefined,
         registration: isRegistrationEnabled(),
+        accessRequest: getSetting("registration_request_enabled", "1") === "1",
       });
     }
 
@@ -407,6 +408,12 @@ const server = Bun.serve({
     if (path === "/api/access/request" && req.method === "POST") {
       const ip = clientIp(req, server);
       if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
+      // Wishlist is mutually exclusive with open registration: when anyone
+      // can register, there is nothing to request.
+      if (isRegistrationEnabled() || getSetting("registration_request_enabled", "1") !== "1") {
+        recordAttempt(ip);
+        return json({ error: "access requests are currently disabled on this platform" }, 403);
+      }
       const { ok, body } = await readJson(req);
       if (!ok) {
         recordAttempt(ip);
@@ -604,6 +611,7 @@ const server = Bun.serve({
         return json({
           settings: {
             registrationEnabled: isRegistrationEnabled(),
+            accessRequestEnabled: getSetting("registration_request_enabled", "1") === "1",
             ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
           },
         });
@@ -616,6 +624,17 @@ const server = Bun.serve({
         if (body.registrationEnabled !== undefined) {
           if (typeof body.registrationEnabled !== "boolean") return json({ error: "registrationEnabled must be boolean" }, 400);
           setSetting("registration_enabled", body.registrationEnabled ? "1" : "0");
+          // Opening registration retires the wishlist automatically.
+          if (body.registrationEnabled) setSetting("registration_request_enabled", "0");
+        }
+        if (body.accessRequestEnabled !== undefined) {
+          if (typeof body.accessRequestEnabled !== "boolean") return json({ error: "accessRequestEnabled must be boolean" }, 400);
+          // Mutually exclusive with open registration: the wishlist only
+          // makes sense when anyone-can-register is off.
+          if (body.accessRequestEnabled && (body.registrationEnabled ?? isRegistrationEnabled())) {
+            return json({ error: "disable public registration first — the wishlist replaces it" }, 409);
+          }
+          setSetting("registration_request_enabled", body.accessRequestEnabled ? "1" : "0");
         }
         if (body.ocrEnabled !== undefined) {
           if (typeof body.ocrEnabled !== "boolean") return json({ error: "ocrEnabled must be boolean" }, 400);
@@ -624,6 +643,7 @@ const server = Bun.serve({
         return json({
           settings: {
             registrationEnabled: isRegistrationEnabled(),
+            accessRequestEnabled: getSetting("registration_request_enabled", "1") === "1",
             ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
           },
         });

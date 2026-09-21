@@ -63,7 +63,11 @@ catalog), **Access** (access-request wishlist triage, see below),
   working **Register** button — anyone can create an account (key shown once)
   via `POST /api/auth/register`. When off, the button is greyed with the
   tooltip *"Registration currently disabled on this platform"* and the
-  endpoint answers 403. Flipped live, no restart.
+  endpoint answers 403. Flipped live, no restart. Turning it on retires the
+  access-request wishlist automatically.
+- `registration_request_enabled` (default on): shows **Request access** on the
+  login page (wishlist). Only switchable on while public registration is off —
+  the two are mutually exclusive (API answers 409 otherwise).
 - `tools_ocr_enabled` (default on): admin kill-switch for the OCR tool.
 - Flags live in the `settings` SQLite table, edited via
   `GET/PATCH /api/admin/settings` (admin Bearer only).

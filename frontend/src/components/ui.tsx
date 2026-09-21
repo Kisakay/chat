@@ -491,7 +491,7 @@ export function FlowerMark({ size, className, dynamic = true }: { size?: number;
   );
 }
 
-/** Assistant identity: flower mark on a soft circle (message avatars, headers). */
+/** Assistant identity: static flower mark on a soft circle (message avatars). */
 export function AssistantAvatar({ size = 32 }: { size?: number }) {
   return (
     <span
@@ -499,15 +499,15 @@ export function AssistantAvatar({ size = 32 }: { size?: number }) {
       style={{ width: size, height: size }}
       aria-label="KisAssistant"
     >
-      <FlowerMark size={Math.round(size * 0.78)} />
+      <FlowerMark size={Math.round(size * 0.78)} dynamic={false} />
     </span>
   );
 }
 
 /* ---------- Switch (feature toggle) ---------- */
 
-export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return <Toggle checked={checked} onChange={onChange} label={label} />;
+export function Switch({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
+  return <Toggle checked={checked} onChange={onChange} label={label} disabled={disabled} />;
 }
 
 /* ---------- Misc ---------- */
