@@ -58,6 +58,9 @@ function reviewIdFromPath(): string | null {
  *  actually plays even when the session restores instantly. */
 const MIN_SPLASH_MS = 1100;
 
+/** Max footer-arrow retries for the same failed model prompt. */
+const MAX_RETRIES = 3;
+
 function applyTheme(theme: string) {
   const root = document.documentElement;
   const dark =
@@ -272,9 +275,6 @@ export function App() {
       // fall back to local-only pending state
     }
   }
-
-  /** Max footer-arrow retries for the same failed prompt. */
-  const MAX_RETRIES = 3;
 
   /** Stream one assistant reply for an exact history; resolves its text. */
   async function streamReply(history: ChatMessage[], convId: string): Promise<string> {
