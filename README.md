@@ -1,0 +1,120 @@
+# KisAssistant (kisa's assistant)
+
+Private ChatGPT/Claude-like chat. React + Tailwind + lucide frontend (rounded,
+Signal-style, Inter font, light/dark/auto themes), Bun backend with
+class-oriented LLM **drivers** and a **SQLite** database (Bun native driver) for
+accounts, server-side chats and public shares. No cookies — Bearer keys in
+`localStorage`.
+
+Driver priority:
+
+```
+1. ollama → 2. mistral API → 3. puppeteer-openai (stub, not implemented)
+→ 4. deepseek → 5. anthropic → 6. openai
+```
+
+Docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (backend, drivers, DB) ·
+[`docs/FRONTEND.md`](docs/FRONTEND.md) (components, theming) ·
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md) (env, dev, accounts, NixOS).
+Agent instructions: [`AGENTS.md`](AGENTS.md).
+
+## Quick start
+
+Requirements: [Bun](https://bun.sh) ≥ 1.1, Node 20+ (frontend build), Ollama
+reachable at `OLLAMA_HOST` (default `http://10.66.66.4:11434`).
+
+```bash
+cp .env.example .env
+# edit .env → set APP_PASSWORD (openssl rand -base64 24), check OLLAMA_HOST
+
+bun install
+bun run --cwd frontend build   # builds React app into public/
+bun run dev                    # http://localhost:3000 (or `bun run start`)
+# frontend dev with proxy: bun run --cwd frontend dev  # http://localhost:5173
+```
+
+Log in as `admin` with the `APP_PASSWORD` key, then create No-KYC user accounts
+from the **Accounts** panel (each gets a one-time access key to hand over).
+
+## Accounts (No-KYC, admin-managed)
+
+- `admin` authenticates with `APP_PASSWORD` from `.env`.
+- Admin creates users (`username`, display name, avatar URL, theme) — the API
+  returns a `ka_…` access key **once**; keys are stored hashed (sha256).
+- Users log in with `{ username, key }`. Regenerating a key revokes old sessions.
+- Per-account: display name, avatar URL (host images e.g. on `catbox.moe` and
+  paste the link; empty = initials avatar), theme (`auto`/`light`/`dark`).
+
+## API
+
+| Method | Route | Auth | Notes |
+|---|---|---|---|
+| POST | `/api/auth/login` | rate-limited (5/10min/IP) | `{username, key}` → `{token, expiresAt, user}` |
+| GET | `/api/auth/verify` | Bearer | → `{ok, user}` |
+| POST | `/api/auth/logout` | Bearer | revokes token |
+| GET/PATCH | `/api/me` | Bearer | profile: displayName, avatarUrl, theme |
+| GET/POST | `/api/admin/users` | admin | create returns `{user, key}` (key shown once) |
+| PATCH/DELETE | `/api/admin/users/:id` | admin | edit profile / delete + cascade |
+| POST | `/api/admin/users/:id/regenerate` | admin | new key, old sessions revoked |
+| GET/POST | `/api/conversations` | Bearer | server-persisted chats (title, topic, model) |
+| GET/PATCH/DELETE | `/api/conversations/:id` | owner | incl. messages on GET |
+| POST/GET/DELETE | `/api/conversations/:id/share` | owner | public link `/share/:publicId` |
+| GET | `/api/share/:publicId` | **public** | read-only shared chat JSON |
+| GET | `/api/models` | Bearer | `[{id: "driver:model", …}]` across enabled drivers |
+| POST | `/api/chat` | Bearer | `{model, messages, conversationId?, stream?}` → JSON or SSE |
+
+`POST /api/chat` with `conversationId` persists the user message + assistant
+reply into that conversation (ownership enforced) and auto-titles new chats.
+
+## Database (SQLite, Bun native)
+
+`$DATA_DIR/kisassistant.db` (WAL mode). Tables: `users` (id, username,
+display_name, avatar_url, theme, key_hash), `sessions` (hashed Bearer tokens),
+`conversations` (id, user, title, topic, model), `messages`, `shares`
+(conv ↔ public id). No migration system — schema is created idempotently at boot.
+
+## Drivers (backend layout)
+
+```
+src/drivers/types.ts     LLMDriver interface + DriverModel + errors
+src/drivers/ollama.ts    OllamaDriver (priority #1) — /api/tags discovery, NDJSON stream
+src/drivers/apiBase.ts   ApiDriverBase (OpenAI-compatible SSE) base class
+src/drivers/apis.ts      Mistral / DeepSeek / Anthropic / OpenAI drivers
+src/drivers/puppeteer.ts PuppeteerOpenAIDriver — stub (always disabled)
+src/drivers/registry.ts  DriverRegistry — priority order + "driver:model" routing
+src/db.ts                SQLite store (users, sessions, convs, messages, shares)
+src/auth.ts              login/sessions/rate-limit (admin key = APP_PASSWORD)
+```
+
+Enable an API driver later: `MISTRAL_ENABLED=true` + `MISTRAL_API_KEY=…`, restart.
+
+## NixOS hosting (chat.kisakay.com)
+
+Flake exposes `packages.<system>.default` (backend + prebuilt frontend) and
+`nixosModules.default`. The frontend is built offline via `buildNpmPackage`
+(`frontend/package-lock.json`); on first build, replace the placeholder
+`npmDepsHash` with the hash Nix suggests.
+
+```nix
+kisassistant.url = "http://git.kisakay.com/k/chat";  # adjust to real repo path
+
+imports = [ kisassistant.nixosModules.default ];
+services.kisassistant = {
+  enable = true;
+  package = kisassistant.packages.${pkgs.system}.default;
+  domain = "chat.kisakay.com";                        # nginx reverse proxy + ACME
+  passwordFile = "/run/secrets/kisassistant-password"; # agenix/sops-nix
+  ollamaHost = "http://10.66.66.4:11434";
+};
+```
+
+Nginx terminates TLS; the app listens on `127.0.0.1:3000`. SQLite lives in
+`/var/lib/kisassistant/data`.
+
+## Frontend
+
+`frontend/` — React 18 + Vite + Tailwind 3 + lucide-react + react-markdown/gfm,
+Inter Variable (self-hosted, no external requests). `bun run --cwd frontend build`
+outputs to `public/` (wiped first). Collapsible sidebar, right-click context menu
+(rename / topic / share / delete), share modals, confirm dialogs, admin accounts
+panel, profile settings, public read-only `/share/:id` page. English only.

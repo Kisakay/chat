@@ -1,0 +1,35 @@
+faire un mocking de ChatGPT juste avec mdp en hosted sur
+chat.kisakay.com
+Pas d 'api backend, soit utiliser Olama en LLM ou Pupeteer sur un chagpt.com par exemple.
+
+Cahier des charges: faire un site ultra minimlasite en HTMl/CSS/JS pur sans de ressource lourde à charger.
+ou bien sert toi d'un framework JS/TS mais choisis le en fonciton des recommendations
+
+ un site facile, Desktop Oriented first, avec mdp à la connection + gestion auth via clé.
+ évite cookies -> utilise une clé one time + rate limite sur auth
+
+  Donc faire un backend.
+  Choix du langage: golang ou rust ou bun.
+  Doit être facilement hébergable via un NixOS (soit module, ou flakes git)
+  Le git est un git custom gitea. git.kisakay.com <- remote HTTP
+
+le site doit être simple, gestion thème blanc + noir(automatiquement) only english
+le site doit imiter l'interface de chatgpt/ claude
+
+le nom du truc seras :"KisAssistant" (kisa 's assistant)
+le backend doit gérer les modèles de manière intéressante (logique orienté classe comme des drivers)
+ Exemple: driver openai
+    -> Gesiton du driver via un crawler (telle que pupeteer + scraping backend sur le site.)
+                Exemple: modèle openai -> backend utilise un browser headless pour use openai pour hooké le prompt
+        - Driver Ollama avec modèle disponible:
+            Utilisation par exemple de Ollama définis via le backend; montre les modèles disponible, Utilisation de ceux-si...
+        - Api OpenAI/Anthropic/Deepseek
+            Tu peux les implémenters, surtout dans ces priorités:
+        DeepSeek -> Anthropic -> OpenAI. Tu feras ces drivers à la fin.
+        autre exemple: Modèle gratuit: Mistral
+        une des priorités des drivers:
+            Mistral
+    priorités des drivers global:
+    llm Local via ollama -> Api mistral -> driver openai (pupeteer) ->Api (avec leur priorités distinct)
+le site web doit gérer le markdown des input/output. (utilise des plugins react par exemple)
+Si tu as une question, hésite ABSOLUMENT pas à demander

@@ -1,0 +1,29 @@
+{
+  "name": "kisassistant",
+  "version": "0.2.0",
+  "description": "KisAssistant — private ChatGPT-like assistant (Bun backend, React frontend, SQLite)",
+  "author": "kisakay",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "http://git.kisakay.com/k/chat"
+  },
+  "homepage": "https://chat.kisakay.com",
+  "type": "module",
+  "engines": {
+    "bun": ">=1.1"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "dev:frontend": "bun --cwd frontend dev",
+    "dev:all": "bun --cwd frontend dev & bun run --watch src/index.ts & wait",
+    "start": "bun run src/index.ts",
+    "build:frontend": "bun --cwd frontend build",
+    "typecheck": "tsc --noEmit",
+    "typecheck:frontend": "bun --cwd frontend tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

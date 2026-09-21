@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-stone-100 text-stone-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+}
+
+/* slim scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(0 0 0 / 0.2) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(0 0 0 / 0.2);
+  border-radius: 999px;
+}
+
+/* markdown content */
+.md p:first-child { margin-top: 0; }
+.md p:last-child { margin-bottom: 0; }
+.md pre {
+  @apply relative overflow-x-auto rounded-2xl border border-stone-200 bg-stone-900 p-4 text-[13.5px] leading-relaxed text-stone-100 dark:border-zinc-700;
+}
+.md pre code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: none !important;
+  padding: 0 !important;
+}
+.md :not(pre) > code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  @apply rounded-md bg-stone-200/70 px-1.5 py-0.5 text-[13px] dark:bg-zinc-800;
+}
+.md table {
+  @apply w-full border-collapse overflow-hidden rounded-xl text-sm;
+}
+.md th, .md td {
+  @apply border border-stone-200 px-3 py-1.5 dark:border-zinc-700;
+}
+.md th {
+  @apply bg-stone-200/50 dark:bg-zinc-800;
+}
+.md a {
+  @apply text-emerald-600 underline dark:text-emerald-400;
+}
+.md ul { @apply list-disc pl-5; }
+.md ol { @apply list-decimal pl-5; }
+.md blockquote {
+  @apply border-l-4 border-emerald-500/50 pl-3 italic opacity-80;
+}
+
+.typing-cursor::after {
+  content: "▍";
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}

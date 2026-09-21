@@ -1,0 +1,22 @@
+Changement frontend à faire:
+faire du joli front-end css rounded comme un peu signal:
+police système override par une font belle 
+les systèmes de Chat à gauche: Collapsable , joli contextual menu pour delete chat / share it pubicly
+(tu vas faire une page /share que les chat système partager pourront être vu publiquement)
+Des îcones joli avec lucide.dev
+Tu peux revoir le frotnend pour faire un framework joli.
+Les bouttons native HTML5/CSS/JS:
+  Vraiment moche, les boutons bleu sont pas ebau, utilise un framework HTML telle que
+  - Svelte avec SHADCDN
+  - ou bien React Lucide avec tailwindCSS +
+Tu vas revoir le style globale,
+  SYSTÈME DE COMPTE CROSS-OVER AVEC APSSWORD DANS LE .ENV
+FAIRE UN SYSTÈME DE SUBSTAINBILITY.
+  AVEC UNE BASE DE DONNÉES .
+    -> Utilise le driver sqlite de bun native.
+  à garder en db permantente:
+    - Les chats avec leur ids, leur thémathiqeu
+   - Les username, displayName, les comptes
+   - les thèmes des comptes, leur avatar héberger sur un cdn distant (catbox.moe par exemple)
+     Faire un système de compte No-KYC avec des clées gérer par le  compte admin qui as sa clé dans le .env
+     Modal à intégrer dans le lucide dev, les selcteur de choix,dialog box, bouton, confirm etc doit être handle par un beau frontend qui est hooké par le framework
