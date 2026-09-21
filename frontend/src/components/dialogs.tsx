@@ -580,10 +580,10 @@ export function SettingsModal({
 /* ---------- Settings pane (unified glass card for every category) ---------- */
 
 function SettingsPane({ children }: { children: React.ReactNode }) {
-  // Single unified surface for every settings section: flat matte card, no
-  // blur, no gradient — identical gloss on profile, appearance and features.
+  // Single unified surface for every settings section: flat matte card with
+  // one soft shadow — identical gloss on profile, appearance and features.
   return (
-    <section className="space-y-4 rounded-3xl border border-stone-200/70 bg-stone-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+    <section className="space-y-4 rounded-3xl border border-stone-200/70 bg-stone-50 p-4 shadow-sm shadow-stone-900/5 dark:border-zinc-800 dark:bg-zinc-800/60 dark:shadow-black/20">
       {children}
     </section>
   );
