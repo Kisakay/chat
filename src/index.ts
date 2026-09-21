@@ -1270,7 +1270,9 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         const wantRefresh = /^(1|true|yes)$/i.test(
           url.searchParams.get("refresh") ?? url.searchParams.get("force") ?? "",
         );
-        const models = await registry.listAllModelsCached(wantRefresh && admin);
+        // Copy: the cached array is shared across users and must never be
+        // mutated by the per-user merge below.
+        const models = [...(await registry.listAllModelsCached(wantRefresh && admin))];
         // Personal providers (BYOK): merge the caller's own-key models.
         // Same ids as the global drivers, so already-listed ones are skipped
         // and the model picker groups them with their driver.
