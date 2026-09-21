@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   MessageSquarePlus,
   MoreVertical,
@@ -9,6 +9,7 @@ import {
   Tag,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import type { Conversation, User } from "../lib/types.ts";
 import { Avatar, Button, ContextMenu, IconButton } from "./ui.tsx";
@@ -35,6 +36,8 @@ export function Sidebar({
   onOpenSettings,
   onOpenAdmin,
   onLogout,
+  mobileOpen,
+  onCloseMobile,
 }: {
   user: User;
   convs: Conversation[];
@@ -50,8 +53,11 @@ export function Sidebar({
   onOpenSettings: () => void;
   onOpenAdmin: () => void;
   onLogout: () => void;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
 }) {
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const touchX = useRef<number | null>(null);
 
   function openMenu(e: React.MouseEvent, conv: Conversation) {
     e.preventDefault();
@@ -59,19 +65,41 @@ export function Sidebar({
     setMenu({ x: e.clientX, y: e.clientY, conv });
   }
 
-  if (collapsed) return null;
+  if (collapsed && !mobileOpen) return null;
 
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col gap-2 border-r border-stone-200/70 bg-white/70 p-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/70">
-      <div className="flex items-center gap-1">
-        <Button variant="secondary" size="sm" className="flex-1" onClick={onNew}>
-          <MessageSquarePlus size={16} />
-          New chat
-        </Button>
-        <IconButton title="Collapse sidebar" onClick={onToggle}>
-          <PanelLeftClose size={18} />
-        </IconButton>
-      </div>
+    <>
+      {mobileOpen && (
+        <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={onCloseMobile} aria-hidden="true" />
+      )}
+      <aside
+        onTouchStart={(e) => { touchX.current = e.touches[0]!.clientX; }}
+        onTouchEnd={(e) => {
+          if (touchX.current === null) return;
+          const dx = e.changedTouches[0]!.clientX - touchX.current;
+          touchX.current = null;
+          if (dx < -60) onCloseMobile(); // swipe left closes the drawer
+        }}
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex h-full w-72 shrink-0 flex-col gap-2 border-r border-stone-200 bg-white p-3 shadow-2xl transition-transform duration-200",
+          "md:static md:z-auto md:shadow-none dark:border-zinc-800 dark:bg-zinc-900 md:dark:bg-zinc-900/70 md:bg-white/70 md:backdrop-blur",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "md:translate-x-0",
+          collapsed && "md:hidden",
+        )}
+      >
+        <div className="flex items-center gap-1">
+          <Button variant="secondary" size="sm" className="flex-1" onClick={onNew}>
+            <MessageSquarePlus size={16} />
+            New chat
+          </Button>
+          <IconButton title="Collapse sidebar" onClick={onToggle} className="hidden md:inline-flex">
+            <PanelLeftClose size={18} />
+          </IconButton>
+          <IconButton title="Close chats" onClick={onCloseMobile} className="md:hidden">
+            <X size={18} />
+          </IconButton>
+        </div>
 
       <div className="flex-1 space-y-1 overflow-y-auto py-1">
         {convs.length === 0 && (
@@ -147,6 +175,7 @@ export function Sidebar({
           </Button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

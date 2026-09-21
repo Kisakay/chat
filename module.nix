@@ -48,6 +48,7 @@ in {
         PORT = toString cfg.port;
         HOST = cfg.host;
         DATA_DIR = "${cfg.dataDir}/data";
+        CDN_DIR = "${cfg.dataDir}/cdn";
         OLLAMA_HOST = cfg.ollamaHost;
       } // cfg.extraEnv;
       serviceConfig = {

@@ -44,6 +44,11 @@ export const config = {
 
   // Per-driver debug logging to stdout ([driver:name] lines).
   driverDebug: envBool("DRIVER_DEBUG", true),
+
+  // Local file CDN (avatars today, more namespaces tomorrow).
+  // Dev default is a folder next to the codebase; NixOS module points it
+  // under the service state dir.
+  cdnDir: env("CDN_DIR", "./cdn"),
 };
 
 export function assertConfig(): void {

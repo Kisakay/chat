@@ -10,6 +10,7 @@ Copy `.env.example` to `.env`. Full list:
 | `APP_PASSWORD` | *(required)* | **admin** access key — generate with `openssl rand -base64 24` |
 | `SESSION_TTL_HOURS` | `720` | Bearer session lifetime (30 days) |
 | `DATA_DIR` | `./data` | holds `kisassistant.db` (SQLite) |
+| `CDN_DIR` | `./cdn` | local file CDN storage (avatars; NixOS: under state dir) |
 | `WIKI_URL` | `https://git.kisakay.com/k/chat/wiki` | remote docs wiki — `GET /wiki` redirects (302) there |
 | `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MIN` | `5` / `10` | login rate limit per IP |
 | `OLLAMA_HOST` / `OLLAMA_ENABLED` | `http://10.66.66.4:11434` / `true` | local-model driver |
@@ -35,10 +36,24 @@ unshare. See `AGENTS.md`.
 1. Log in as `admin` with the `APP_PASSWORD` key.
 2. Open **Accounts** → *New account* → username (+ display name).
 3. Copy the one-time `ka_…` key and hand it to the owner (chat, QR code, …).
-4. Users set their display name, avatar URL (upload e.g. to `catbox.moe`, paste
-   the direct link) and theme in the profile settings.
+4. Users set their display name, avatar (upload box in profile settings, or a
+   remote URL e.g. from `catbox.moe`) and theme in the profile settings.
 5. Rotate a compromised key with the regenerate button (old sessions die);
    delete removes the account with all its chats and shares.
+
+## Local file CDN (avatars)
+
+`PUT /cdn/<ns>/<key>` (Bearer) / `GET /cdn/<ns>/<key>.<ext>` (public), e.g.
+`/cdn/avatar/<account-id>.png`. Namespaces live in `CDN_NAMESPACES`
+(`src/cdn.ts`) — add one to extend (future usage).
+
+- Allowed types **only** `jpg`/`png`/`webp`, verified by **magic bytes**, never
+  by extension (client filename is ignored; the stored extension comes from
+  detection). Everything else → `415`, unknown namespace/ext → `404`.
+- `avatar` rules: 5 MB max (`413` above), **5 uploads max per 2 h per account**
+  (`429` + `Retry-After`), ownership enforced (own id, or admin).
+- Served with fixed `Content-Type`, `nosniff`, `Cache-Control: public,
+  max-age=3600`. No listing, no traversal (strict charsets + SPA fallback).
 
 ## NixOS deployment (`chat.kisakay.com`)
 

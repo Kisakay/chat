@@ -73,6 +73,23 @@ export const api = {
 
   models: () => req<{ models: DriverModel[] }>("/api/models"),
 
+  /** Avatar upload to the local CDN. Returns the public /cdn/… URL. */
+  uploadAvatar: async (userId: string, file: File): Promise<{ url: string }> => {
+    const res = await fetch(`/cdn/avatar/${userId}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+    if (res.status === 401) {
+      clearToken();
+      window.location.reload();
+      throw new ApiError(401, "Session expired.");
+    }
+    const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
+    if (!res.ok) throw new ApiError(res.status, data.error || `Upload failed (${res.status})`);
+    return { url: data.url! };
+  },
+
   /** Streaming chat. Calls onToken per token; resolves with the full text. */
   chatStream: async (
     args: { model: string; messages: ChatMessage[]; conversationId?: string },

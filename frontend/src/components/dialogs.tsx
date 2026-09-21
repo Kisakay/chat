@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { Globe, Link2, Pencil, Settings2, Tag, Unplug } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Globe, ImagePlus, Link2, Pencil, Settings2, Tag, Unplug } from "lucide-react";
 import { api } from "../lib/api.ts";
+import { cn } from "../lib/cn.ts";
 import type { Conversation, User } from "../lib/types.ts";
 import { Avatar, Button, CopyButton, Field, Input, Modal, Picker, Spinner } from "./ui.tsx";
 
@@ -130,6 +131,10 @@ export function SettingsModal({
   const [theme, setTheme] = useState("auto");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -137,8 +142,31 @@ export function SettingsModal({
       setAvatarUrl(user.avatarUrl);
       setTheme(user.theme);
       setError("");
+      setUploadError("");
     }
   }, [user]);
+
+  async function uploadFile(f: File) {
+    if (!user) return;
+    if (f.size > 5 * 1024 * 1024) {
+      setUploadError("File too large (max 5MB).");
+      return;
+    }
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type)) {
+      setUploadError("Only jpg, png or webp images are accepted.");
+      return;
+    }
+    setUploading(true);
+    setUploadError("");
+    try {
+      const res = await api.uploadAvatar(user.id, f);
+      setAvatarUrl(res.url); // applied when you press Save
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -161,7 +189,54 @@ export function SettingsModal({
       <form onSubmit={save} className="space-y-4">
         <div className="flex items-center gap-3">
           <Avatar name={displayName || "?"} url={avatarUrl || undefined} size={52} />
-          <p className="text-sm opacity-60">@{user?.username}</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{displayName || "…"}</p>
+            <p className="truncate text-xs opacity-60">@{user?.username}</p>
+          </div>
+        </div>
+        <div>
+          <span className="mb-1.5 block text-sm font-medium opacity-80">Avatar upload</span>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Upload avatar"
+            onClick={() => fileRef.current?.click()}
+            onKeyDown={(e) => e.key === "Enter" && fileRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files?.[0];
+              if (f) uploadFile(f);
+            }}
+            className={cn(
+              "flex cursor-pointer items-center gap-3 rounded-3xl border-2 border-dashed px-4 py-3.5 transition",
+              dragOver
+                ? "border-emerald-500 bg-emerald-500/10"
+                : "border-stone-200 hover:border-emerald-500/60 hover:bg-stone-50 dark:border-zinc-700 dark:hover:bg-zinc-800/60",
+            )}
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+              {uploading ? <Spinner size={17} /> : <ImagePlus size={17} />}
+            </span>
+            <span className="min-w-0 flex-1 text-sm">
+              <span className="block font-medium">{uploading ? "Uploading…" : dragOver ? "Drop it!" : "Drop an image or click to upload"}</span>
+              <span className="block text-xs opacity-60">jpg · png · webp — max 5MB — 5 changes per 2h</span>
+            </span>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadFile(f);
+              e.target.value = "";
+            }}
+          />
+          {uploadError && <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
         </div>
         <Field label="Display name">
           <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required />

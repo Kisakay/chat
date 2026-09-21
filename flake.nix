@@ -5,19 +5,47 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, nixpkgs }: {
+  outputs = { self, nixpkgs }:
+    let lib = nixpkgs.lib; in {
     nixosModules.default = import ./module.nix;
     packages.x86_64-linux.default =
       let
         pkgs = nixpkgs.legacyPackages.x86_64-linux;
-        # Frontend: built offline from the npm lockfile. If the build fails
-        # with a hash mismatch, replace npmDepsHash with the suggested one.
-        frontend = pkgs.buildNpmPackage {
-          pname = "kisassistant-frontend";
-          version = "0.2.0";
+        version = "0.2.0";
+
+        # Frontend: two-phase bun build.
+        # Phase 1 (fixed-output, has network): populate node_modules from
+        # frontend/bun.lock. If the build fails with a hash mismatch, paste
+        # the "got: sha256-…" value into bunDepsHash below.
+        bunDeps = pkgs.stdenv.mkDerivation {
+          pname = "kisassistant-frontend-bun-deps";
+          inherit version;
           src = ./frontend;
-          npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          npmBuildScript = "build";
+          nativeBuildInputs = [ pkgs.bun ];
+          buildPhase = ''
+            export HOME=$TMPDIR
+            export BUN_INSTALL_CACHE_DIR=$TMPDIR/bun-cache
+            bun install --frozen-lockfile --ignore-scripts
+          '';
+          installPhase = ''
+            cp -r node_modules $out
+          '';
+          outputHashAlgo = "sha256";
+          outputHashMode = "recursive";
+          outputHash = "sha256-0AhK5sK0FmqxTb1kedUDPH9aOiYKN7z1jWQVFsnb1hs=";
+        };
+
+        # Phase 2 (offline): vite build against the pre-fetched node_modules.
+        frontend = pkgs.stdenv.mkDerivation {
+          pname = "kisassistant-frontend";
+          inherit version;
+          src = ./frontend;
+          nativeBuildInputs = [ pkgs.bun ];
+          buildPhase = ''
+            export HOME=$TMPDIR
+            ln -s ${bunDeps} node_modules
+            bun run build
+          '';
           installPhase = ''
             mkdir -p $out
             cp -r dist/* $out/
@@ -25,7 +53,7 @@
         };
       in pkgs.stdenv.mkDerivation {
         pname = "kisassistant";
-        version = "0.2.0";
+        inherit version;
         src = ./.;
         nativeBuildInputs = [ pkgs.bun ];
         buildPhase = ''

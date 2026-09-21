@@ -63,9 +63,24 @@ conversations → sessions → user) inside a transaction.
   **returned once** at creation/regeneration. Regeneration also wipes the
   account's sessions.
 
-## Drivers
+## Local file CDN
 
-`src/drivers/`: `LLMDriver` interface (`listModels`, `chat`, `chatStream`),
+`src/cdn.ts` + routes in `index.ts`. Generic namespaced layout
+(`PUT /cdn/<ns>/<key>` authed, `GET /cdn/<ns>/<key>.<ext>` public) so future
+file kinds plug into `CDN_NAMESPACES` without new routes. Today only `avatar`
+exists: key = account id (`/cdn/avatar/<id>.png`), ownership enforced.
+
+- Type safety by **magic bytes** (JPEG `FF D8 FF`, PNG signature, `RIFF…WEBP`);
+  only `jpg`/`png`/`webp` are representable, the stored extension is always
+  detected, everything else is `415`. Route regex charsets make traversal
+  unmatchable (attempts fall through to the SPA fallback).
+- Per-namespace limits: `avatar` = 5 MB max (`413`), 5 uploads / 2 h /
+  account (`429` + `Retry-After`), counted on success. Re-upload replaces all
+  stored variants for the key.
+- Served with detected `Content-Type`, `X-Content-Type-Options: nosniff`,
+  `Cache-Control: public, max-age=3600`.
+
+## Drivers`src/drivers/`: `LLMDriver` interface (`listModels`, `chat`, `chatStream`),
 `DriverRegistry` with global priority
 `ollama → mistral → puppeteer-openai (stub) → deepseek → anthropic → openai`.
 Models are addressed as `"driver:model"` (split on the first `:`).

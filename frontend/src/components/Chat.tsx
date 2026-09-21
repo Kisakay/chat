@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Bot, Cpu, PanelLeftOpen, SendHorizontal, Share2, User as UserIcon } from "lucide-react";
+import { BookOpen, Bot, Cpu, Menu, PanelLeftOpen, SendHorizontal, Share2, User as UserIcon } from "lucide-react";
 import type { ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
 import { Avatar, IconButton, LOGO_URL, Logo, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
@@ -42,6 +42,7 @@ export function Chat({
   onShare,
   sidebarCollapsed,
   onExpandSidebar,
+  onOpenNav,
 }: {
   user: User;
   conv: Conversation | null;
@@ -55,6 +56,7 @@ export function Chat({
   onShare: () => void;
   sidebarCollapsed: boolean;
   onExpandSidebar: () => void;
+  onOpenNav: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const boxRef = useRef<HTMLDivElement>(null);
@@ -95,10 +97,15 @@ export function Chat({
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
       <header className="flex items-center gap-2 border-b border-stone-200/70 px-4 py-2.5 backdrop-blur dark:border-zinc-800">
+        <IconButton title="Open chats" onClick={onOpenNav} className="md:hidden">
+          <Menu size={18} />
+        </IconButton>
         {sidebarCollapsed && (
-          <IconButton title="Expand sidebar" onClick={onExpandSidebar}>
-            <PanelLeftOpen size={18} />
-          </IconButton>
+          <span className="hidden md:inline">
+            <IconButton title="Expand sidebar" onClick={onExpandSidebar}>
+              <PanelLeftOpen size={18} />
+            </IconButton>
+          </span>
         )}
         <span className="hidden items-center gap-2 font-semibold sm:flex">
           <Logo size={24} className="rounded-lg" />
@@ -154,7 +161,7 @@ export function Chat({
         </div>
       </div>
 
-      <div className="px-4 pb-2 sm:px-8">
+      <div className="px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-8">
         <form onSubmit={submit} className="mx-auto flex w-full max-w-3xl items-end gap-2 rounded-[1.75rem] border border-stone-200 bg-white p-2 pl-5 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
           <textarea
             ref={taRef}

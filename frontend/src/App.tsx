@@ -36,6 +36,7 @@ export function App() {
   const [streaming, setStreaming] = useState("");
   const [sending, setSending] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
   const [editConv, setEditConv] = useState<Conversation | null>(null);
   const [shareConv, setShareConv] = useState<Conversation | null>(null);
   const [deleteConv, setDeleteConv] = useState<Conversation | null>(null);
@@ -191,15 +192,17 @@ export function App() {
         activeId={activeId}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(true)}
-        onNew={newChat}
-        onSelect={setActiveId}
+        onNew={() => { newChat(); setMobileNav(false); }}
+        onSelect={(id) => { setActiveId(id); setMobileNav(false); }}
         onRename={setEditConv}
         onTopic={setEditConv}
         onShare={setShareConv}
         onDelete={setDeleteConv}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenAdmin={() => setAdminOpen(true)}
+        onOpenSettings={() => { setSettingsOpen(true); setMobileNav(false); }}
+        onOpenAdmin={() => { setAdminOpen(true); setMobileNav(false); }}
         onLogout={logout}
+        mobileOpen={mobileNav}
+        onCloseMobile={() => setMobileNav(false)}
       />
       <Chat
         user={user}
@@ -214,6 +217,7 @@ export function App() {
         onShare={() => active && setShareConv(active)}
         sidebarCollapsed={sidebarCollapsed}
         onExpandSidebar={() => setSidebarCollapsed(false)}
+        onOpenNav={() => setMobileNav(true)}
       />
 
       <ConvEditDialog

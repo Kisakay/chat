@@ -37,6 +37,18 @@ import {
 } from "./db.ts";
 import type { ChatMessage } from "./drivers/types.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
+import {
+  CDN_NAMESPACES,
+  cdnFile,
+  cdnMime,
+  detectImageType,
+  recordUpload,
+  uploadAllowed,
+  validExt,
+  validKey,
+  validNamespace,
+  writeCdnFile,
+} from "./cdn.ts";
 
 assertConfig();
 const registry = new DriverRegistry();
@@ -92,6 +104,8 @@ function validAvatar(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim();
   if (t.length > 2048) return null;
+  // Local CDN avatar (uploaded via PUT /cdn/…) or remote http(s) URL.
+  if (/^\/cdn\/[a-z0-9]{1,16}\/[A-Za-z0-9_-]{1,64}\.(jpg|png|webp)$/.test(t)) return t;
   if (!/^https?:\/\//i.test(t)) return null;
   return t;
 }
@@ -140,6 +154,66 @@ const server = Bun.serve({
     // --- public: /wiki redirects to the remote docs wiki (git forge) ---
     if ((path === "/wiki" || path === "/wiki/") && req.method === "GET") {
       return Response.redirect(config.wikiUrl, 302);
+    }
+
+    // --- public: local file CDN (avatars today, more namespaces tomorrow) ---
+    // GET /cdn/<ns>/<key>.<ext> — serves stored images, nothing else.
+    const cdnGet = path.match(/^\/cdn\/([a-z0-9]{1,16})\/([A-Za-z0-9_-]{1,64})\.([a-z0-9]{1,8})$/);
+    if (cdnGet && req.method === "GET") {
+      const [, ns, key, ext] = cdnGet as [string, string, string, string];
+      if (!validNamespace(ns) || !validKey(key) || !validExt(ext)) {
+        return new Response("not found", { status: 404 });
+      }
+      const f = await cdnFile(ns, key, ext);
+      if (!f.exists) return new Response("not found", { status: 404 });
+      return new Response(Bun.file(f.path), {
+        headers: {
+          "Content-Type": cdnMime(ext),
+          "Cache-Control": "public, max-age=3600",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+
+    // --- authed (non-/api/): CDN upload ---
+    // PUT /cdn/<ns>/<key> with the raw file bytes as body. The stored
+    // extension always comes from magic-byte detection, never the client.
+    const cdnPut = path.match(/^\/cdn\/([a-z0-9]{1,16})\/([A-Za-z0-9_-]{1,64})$/);
+    if (cdnPut && req.method === "PUT") {
+      const user = requireAuth(req);
+      if (!user) return json({ error: "unauthorized" }, 401);
+      const [, ns, key] = cdnPut as [string, string, string];
+      if (!validNamespace(ns) || !validKey(key)) return json({ error: "unknown namespace or key" }, 404);
+      const rules = CDN_NAMESPACES[ns]!;
+      // Avatar ownership: your own account id, unless admin.
+      if (ns === "avatar" && key !== user.id && !user.isAdmin) {
+        return json({ error: "forbidden" }, 403);
+      }
+      const declared = Number(req.headers.get("content-length") || "0");
+      const maxMb = (rules.maxBytes / (1024 * 1024)).toFixed(0);
+      if (declared > rules.maxBytes) return json({ error: `file too large (max ${maxMb}MB)` }, 413);
+      let buf: Uint8Array;
+      try {
+        buf = new Uint8Array(await req.arrayBuffer());
+      } catch {
+        return json({ error: "unreadable body" }, 400);
+      }
+      if (buf.length < 16) return json({ error: "empty file" }, 400);
+      if (buf.length > rules.maxBytes) return json({ error: `file too large (max ${maxMb}MB)` }, 413);
+      const ext = detectImageType(buf);
+      if (!ext) {
+        return json({ error: "unsupported file type: only jpg/png/webp images are accepted (verified by content, not extension)" }, 415);
+      }
+      const rl = uploadAllowed(user.id, ns);
+      if (!rl.ok) {
+        return new Response(
+          JSON.stringify({ error: `rate limited: ${rules.maxUploads} uploads per ${rules.windowMs / 3600_000}h`, retryAfterSec: rl.retryAfterSec }),
+          { status: 429, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Retry-After": String(rl.retryAfterSec) } },
+        );
+      }
+      const url = await writeCdnFile(ns, key, ext, buf);
+      recordUpload(user.id, ns);
+      return json({ url }, 201);
     }
 
     // --- auth: login (rate limited) ---

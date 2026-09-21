@@ -256,17 +256,45 @@ export function Modal({
     return () => window.removeEventListener("keydown", h);
   }, [open, onClose]);
 
+  // Bottom-sheet drag state (mobile): pull the handle down to dismiss.
+  const [dragY, setDragY] = useState(0);
+  const dragStart = useRef<number | null>(null);
+  useEffect(() => {
+    if (!open) {
+      setDragY(0);
+      dragStart.current = null;
+    }
+  }, [open ]);
+
   if (!open) return null;
   const Icon = icon;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
         className={cn(
-          "relative max-h-[85vh] w-full overflow-y-auto rounded-3xl border border-stone-200 bg-white p-6 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900",
-          wide ? "max-w-2xl" : "max-w-md",
+          "relative max-h-[92vh] w-full overflow-y-auto rounded-b-none rounded-t-[1.75rem] border border-stone-200 bg-white p-6 pt-3 shadow-2xl sm:max-h-[85vh] sm:rounded-3xl sm:pt-6 dark:border-zinc-700 dark:bg-zinc-900",
+          wide ? "sm:max-w-2xl" : "sm:max-w-md",
         )}
+        style={dragY > 0 ? { transform: `translateY(${dragY}px)` } : undefined}
       >
+        {/* drag handle — mobile only */}
+        <div
+          className="sticky top-0 z-10 -mx-6 px-6 pb-3 pt-1 sm:hidden"
+          onTouchStart={(e) => { dragStart.current = e.touches[0]!.clientY; }}
+          onTouchMove={(e) => {
+            if (dragStart.current === null) return;
+            const dy = e.touches[0]!.clientY - dragStart.current;
+            setDragY(dy > 0 ? dy : 0);
+          }}
+          onTouchEnd={() => {
+            if (dragY > 110) onClose(); // snap shut past threshold…
+            setDragY(0); // …otherwise snap back
+            dragStart.current = null;
+          }}
+        >
+          <div className="mx-auto h-1.5 w-12 rounded-full bg-stone-300 dark:bg-zinc-600" />
+        </div>
         <div className="mb-4 flex items-center gap-2.5">
           {Icon && (
             <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
@@ -339,11 +367,14 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
     return () => window.removeEventListener("keydown", h);
   }, [x, y, onClose]);
 
-  return (
+  // Rendered in a portal: the sidebar's backdrop-blur would otherwise turn
+  // into a containing block, breaking the fullscreen overlay and offsetting
+  // the menu (text showing through / misplaced over the composer).
+  return createPortal(
     <div className="fixed inset-0 z-50" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }}>
       <div
         ref={ref}
-        className="absolute w-52 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+        className="fixed z-50 w-52 overflow-hidden rounded-2xl border border-stone-200 bg-white p-1.5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
         style={{ left: pos.x, top: pos.y }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -363,7 +394,8 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
           </button>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
