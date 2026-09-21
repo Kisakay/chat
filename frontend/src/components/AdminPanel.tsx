@@ -54,20 +54,20 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
     if (pulling || !fullName.trim()) return;
     setPulling(true);
     setError("");
-    setPullStatus("Contacting Ollama…");
+    setPullStatus(t("ollama.contacting"));
     setPullPct(null);
     try {
       await api.ollamaPull(fullName.trim(), (p) => {
         if (p.error) { setError(p.error); return; }
-        setPullStatus(p.status || "Pulling…");
+        setPullStatus(p.status || t("ollama.pullingSt"));
         if (p.total && p.completed) setPullPct(Math.min(100, Math.round((p.completed / p.total) * 100)));
         else setPullPct(null);
       });
-      setPullStatus("Done");
+      setPullStatus(t("ollama.doneSt"));
       setPullPct(100);
       await refreshInstalled();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Pull failed");
+      setError(err instanceof Error ? err.message : t("ollama.pullFailed"));
     } finally {
       setPulling(false);
     }
@@ -78,15 +78,15 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
       await api.ollamaDelete(name);
       await refreshInstalled();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : t("admin.deleteFailed"));
     }
   }
 
   return (
     <>
-      <Modal open={open} onClose={pulling ? () => {} : onClose} title="Ollama models" icon={Bot}>
+      <Modal open={open} onClose={pulling ? () => {} : onClose} title={t("ollama.models")} icon={Bot}>
         <p className="mb-4 text-sm opacity-70">
-          Download models from the Ollama library to your Ollama host, or remove local ones. Admin only.
+          {t("ollama.desc")}
         </p>
         {error && <p className="mb-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400" role="alert">{error}</p>}
 
@@ -94,7 +94,7 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
           <div className="mb-4 rounded-2xl border border-accent-500/40 bg-accent-50 p-4 dark:bg-accent-950/30">
             <p className="mb-2 flex items-center gap-2 text-sm font-medium">
               <Download size={15} className="animate-bounce" />
-              Pulling {pullName}
+              {t("ollama.pulling", { name: pullName })}
             </p>
             <p className="mb-2 truncate text-xs opacity-70">{pullStatus}</p>
             {pullPct !== null && (
@@ -107,7 +107,7 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
 
         <div className="mb-4 flex flex-wrap items-end gap-2 rounded-2xl border border-stone-200 p-3 dark:border-zinc-700">
           <div className="min-w-52 flex-1">
-            <Field label="Custom model tag" hint="e.g. llama3.2:3b, or a full library name">
+            <Field label={t("ollama.customTag")} hint={t("ollama.customHint")}>
               <Input
                 value={pullName}
                 onChange={(e) => setPullName(e.target.value)}
@@ -118,18 +118,18 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
             </Field>
           </div>
           <Button size="sm" onClick={() => pull(pullName)} disabled={pulling || !pullName.trim()}>
-            {pulling ? <Spinner size={15} /> : <Download size={15} />} Pull
+            {pulling ? <Spinner size={15} /> : <Download size={15} />} {t("ollama.pull")}
           </Button>
         </div>
 
-        <p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><HardDrive size={14} /> Installed ({installed.length})</p>
+        <p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><HardDrive size={14} /> {t("ollama.installed", { n: installed.length })}</p>
         <ul className="mb-5 space-y-1.5">
-          {installed.length === 0 && <li className="text-sm opacity-50">No local Ollama models yet.</li>}
+          {installed.length === 0 && <li className="text-sm opacity-50">{t("ollama.noneYet")}</li>}
           {installed.map((m) => (
             <li key={m.id} className="flex items-center gap-3 rounded-2xl border border-stone-200/70 px-3.5 py-2 dark:border-zinc-800">
               <span className="min-w-0 flex-1 truncate text-sm font-medium">{m.label || m.id}</span>
               <button
-                title={`Delete ${m.label || m.id}`}
+                title={t("ollama.delTip", { name: m.label || m.id })}
                 onClick={() => setDeleteModel(m.label || m.id)}
                 className="rounded-full p-2 text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
               >
@@ -139,7 +139,7 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
           ))}
         </ul>
 
-        <p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><Download size={14} /> Catalog</p>
+        <p className="mb-2 flex items-center gap-1.5 text-sm font-medium"><Download size={14} /> {t("ollama.catalog")}</p>
         <ul className="space-y-1.5">
           {OLLAMA_CATALOG.map((m) => {
             const size = sizeOverrides[m.name] ?? (m.sizes.length > 0 ? m.sizes[0]! : "");
@@ -148,12 +148,12 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
               <li key={m.name} className="flex flex-wrap items-center gap-2 rounded-2xl border border-stone-200/70 px-3.5 py-2 dark:border-zinc-800">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{m.name}</span>
-                  <span className="block text-xs opacity-50">{m.desc}</span>
+                  <span className="block text-xs opacity-50">{t(m.catKey)}</span>
                 </span>
                 {m.sizes.length > 0 && (
                   <span className="w-24 shrink-0">
                     <Picker
-                      ariaLabel={`${m.name} size`}
+                      ariaLabel={t("ollama.sizeAria", { name: m.name })}
                       value={size}
                       onChange={(v) => setSizeOverrides((prev) => ({ ...prev, [m.name]: v }))}
                       align="right"
