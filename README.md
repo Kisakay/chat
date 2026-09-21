@@ -9,7 +9,7 @@ accounts, server-side chats and public shares. No cookies — Bearer keys in
 Driver priority:
 
 ```
-1. ollama → 2. mistral API → 3. glm API → 4. puppeteer-openai (ChatGPT web, POC)
+1. ollama → 2. mistral API → 3. glm API → 4. arcaic ×3 (arcaic-openai → arcaic-gemini → arcaic-qwen)
 → 5. deepseek → 6. anthropic → 7. openai
 ```
 
@@ -97,8 +97,8 @@ src/drivers/types.ts     LLMDriver interface + DriverModel + errors
 src/drivers/ollama.ts    OllamaDriver (priority #1) — /api/tags discovery, NDJSON stream
 src/drivers/apiBase.ts   ApiDriverBase (OpenAI-compatible SSE) base class
 src/drivers/apis.ts      Mistral / DeepSeek / Anthropic / OpenAI drivers
-src/drivers/browser.ts   ChatGPTBrowserEngine — throwaway Firefox profile (puppeteer-core/BiDi)
-src/drivers/puppeteer.ts PuppeteerOpenAIDriver — ChatGPT web POC (PUPPETEER_ENABLED, manual login)
+src/drivers/browser.ts   ArcaicBrowserEngine + site configs (openai/qwen/gemini) — throwaway Firefox profile
+src/drivers/arcaic.ts      ArcaicSubDriver ×3 — arcaic-openai / arcaic-gemini / arcaic-qwen (ARCAIC_ENABLED)
 src/drivers/registry.ts  DriverRegistry — priority order + "driver:model" routing
 src/db.ts                SQLite store (users, sessions, convs, messages, shares)
 src/auth.ts              login/sessions/rate-limit (admin key = APP_PASSWORD)

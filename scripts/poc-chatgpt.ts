@@ -1,17 +1,19 @@
 /**
- * POC — drive chatgpt.com inside a totally temporary Firefox profile
- * (puppeteer-core, WebDriver BiDi, headed). The profile is created in
- * /tmp at launch and deleted on exit; login is done manually in the
- * window when the script asks for it.
+ * POC — drive an Arcaic web-UI backend inside a totally temporary Firefox
+ * profile (puppeteer-core, WebDriver BiDi, headless by default). The profile
+ * is created in /tmp at launch and deleted on exit; login is done manually
+ * in the window (with --headed) when the script asks for it.
  *
  * Usage:
- *   bun scripts/poc-chatgpt.ts                          # send default test message
+ *   bun scripts/poc-chatgpt.ts                          # send default test message (openai site)
+ *   bun scripts/poc-chatgpt.ts --site qwen              # openai | qwen | gemini
  *   bun scripts/poc-chatgpt.ts --message "hello"        # custom message (\n supported)
  *   bun scripts/poc-chatgpt.ts --message $'l1\nl2'      # multi-line test
  *   bun scripts/poc-chatgpt.ts --probe                  # just open + report page state
+ *   bun scripts/poc-chatgpt.ts --headed                 # visible window (debug / manual login)
  *   bun scripts/poc-chatgpt.ts --timeout-s 600          # longer response timeout
  */
-import { ChatGPTBrowserEngine } from "../src/drivers/browser.ts";
+import { ArcaicBrowserEngine, SITES } from "../src/drivers/browser.ts";
 
 const DEFAULT_MESSAGE = "Hello! Answer with one short sentence so we know the pipeline works.";
 
@@ -24,10 +26,10 @@ function option(name: string): string | undefined {
   return i !== -1 && i + 1 < process.argv.length ? process.argv[i + 1] : undefined;
 }
 
-const exe = process.env.PUPPETEER_EXECUTABLE ?? "firefox";
+const exe = process.env.ARCAIC_EXECUTABLE ?? "firefox";
 const executablePath = exe.includes("/") ? exe : Bun.which(exe);
 if (!executablePath) {
-  console.error("firefox not found — set PUPPETEER_EXECUTABLE to the Firefox binary path");
+  console.error("firefox not found — set ARCAIC_EXECUTABLE to the Firefox binary path");
   process.exit(1);
 }
 
@@ -37,9 +39,16 @@ if (!Number.isFinite(responseTimeoutS) || responseTimeoutS <= 0) {
   process.exit(1);
 }
 
-const engine = new ChatGPTBrowserEngine({
+const siteKey = option("--site") ?? "openai";
+const site = SITES[siteKey];
+if (!site) {
+  console.error(`--site must be one of: ${Object.keys(SITES).join(" | ")}`);
+  process.exit(1);
+}
+
+const engine = new ArcaicBrowserEngine({
   executablePath,
-  headless: flag("--headless"),
+  headless: !flag("--headed"),
   loginTimeoutMs: 600_000,
   responseTimeoutMs: responseTimeoutS * 1000,
 });
@@ -57,15 +66,16 @@ const step = (msg: string) => console.log(`[${((Date.now() - t0) / 1000).toFixed
 
 try {
   if (flag("--probe")) {
-    step(`launching Firefox (${executablePath}) with a fresh throwaway profile`);
-    const info = await engine.probe();
+    step(`launching Firefox (${executablePath}) with a fresh throwaway profile [site=${site.key}]`);
+    const info = await engine.probe(site);
     console.log(JSON.stringify(info, null, 2));
     step(info.composer ? `composer ready: ${info.composer}` : "composer NOT found — login wall or challenge page");
   } else {
     const message = option("--message") ?? DEFAULT_MESSAGE;
-    step(`launching Firefox (${executablePath}${flag("--headless") ? ", headless" : ""}) — temporary profile, deleted on exit`);
+    step(`launching Firefox (${executablePath}${flag("--headed") ? ", headed" : ", headless"}) — temporary profile, deleted on exit [site=${site.key}]`);
     let streamed = "";
     const final = await engine.send(message, {
+      site,
       onLoginHint: () => step("login required: log in inside the Firefox window (waiting up to 10 min)"),
       onToken: (delta) => {
         streamed += delta;

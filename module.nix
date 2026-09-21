@@ -48,9 +48,9 @@ in {
       type = lib.types.bool;
       default = false;
       description = ''
-        Enable the ChatGPT web driver (puppeteer-openai): headless Firefox
-        from the nix store runs inside the service and drives chatgpt.com.
-        Sets PUPPETEER_ENABLED/PUPPETEER_HEADLESS/PUPPETEER_EXECUTABLE
+        Enable the Arcaic backend (headless Firefox from the nix store
+        running a web-UI session inside the service).
+        Sets ARCAIC_ENABLED/ARCAIC_HEADLESS/ARCAIC_EXECUTABLE
         (still overridable via extraEnv).
       '';
     };
@@ -94,9 +94,9 @@ in {
         DRIVER_DEBUG = "false";
         OLLAMA_HOST = cfg.ollamaHost;
       } // lib.optionalAttrs cfg.enableBrowserDriver {
-        PUPPETEER_ENABLED = "true";
-        PUPPETEER_HEADLESS = "true";
-        PUPPETEER_EXECUTABLE = "${pkgs.firefox}/bin/firefox";
+        ARCAIC_ENABLED = "true";
+        ARCAIC_HEADLESS = "true";
+        ARCAIC_EXECUTABLE = "${pkgs.firefox}/bin/firefox";
       } // cfg.extraEnv;
       serviceConfig = {
         User = cfg.user;
@@ -108,7 +108,7 @@ in {
         LoadCredential = "app-password:${cfg.passwordFile}";
       };
       # tesseract binary for the OCR platform tool (see TESSERACT_BIN);
-      # firefox for the ChatGPT web driver (enableBrowserDriver).
+      # firefox for the Arcaic backend (enableBrowserDriver).
       path = [ pkgs.tesseract ] ++ lib.optionals cfg.enableBrowserDriver [ pkgs.firefox ];
       script = ''
         ${lib.optionalString (cfg.passwordFile != null) ''

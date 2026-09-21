@@ -90,11 +90,12 @@ export function Chat({
   const modelGroups: PickerGroup[] = (() => {
     const byDriver = new Map<string, { value: string; label: string; hint: string }[]>();
     for (const m of models) {
-      const list = byDriver.get(m.driver) ?? [];
+      const group = m.group ?? m.driver;
+      const list = byDriver.get(group) ?? [];
       list.push({ value: m.id, label: m.label, hint: m.id });
-      byDriver.set(m.driver, list);
+      byDriver.set(group, list);
     }
-    return [...byDriver.entries()].map(([driver, options]) => ({ group: driver, options }));
+    return [...byDriver.entries()].map(([group, options]) => ({ group, options }));
   })();
 
   useEffect(() => {

@@ -1,21 +1,29 @@
 import { config } from "../config.ts";
 import { driverLog, fmtBytes, fmtMs } from "./log.ts";
-import { ChatGPTBrowserEngine } from "./browser.ts";
+import {
+  ArcaicBrowserEngine,
+  GEMINI_SITE,
+  OPENAI_SITE,
+  QWEN_SITE,
+  type BrowserSite,
+} from "./browser.ts";
 import type { ChatMessage, ChatOptions, DriverModel, LLMDriver } from "./types.ts";
 import { DriverDisabledError } from "./types.ts";
 
-const MODELS = ["chatgpt"];
-
-function resolveExecutable(): string {
-  const conf = config.puppeteerExecutable;
-  if (conf.includes("/")) return conf;
-  const found = Bun.which(conf);
-  if (!found) throw new Error(`browser executable "${conf}" not found in PATH — set PUPPETEER_EXECUTABLE`);
-  return found;
+export interface ArcaicSpec {
+  key: string;
+  label: string;
+  site: BrowserSite;
 }
 
+const SPECS: ArcaicSpec[] = [
+  { key: "arcaic-openai", label: "arcaic-openai", site: OPENAI_SITE },
+  { key: "arcaic-gemini", label: "arcaic-gemini", site: GEMINI_SITE },
+  { key: "arcaic-qwen", label: "arcaic-qwen", site: QWEN_SITE },
+];
+
 /**
- * Flatten a KisAssistant conversation into one prompt for the ChatGPT web
+ * Flatten a KisAssistant conversation into one prompt for the Arcaic web
  * composer: system text as a preamble, earlier turns as a transcript, and
  * the latest user message sent as-is.
  */
@@ -76,32 +84,34 @@ class AsyncTokenQueue implements AsyncIterable<string> {
 }
 
 /**
- * ChatGPT via the web UI: throwaway Firefox profile driven by
- * puppeteer-core (WebDriver BiDi). ToS-risky and fragile by nature —
- * disabled unless PUPPETEER_ENABLED=true. Login is manual for now: the
- * first request opens a window and waits for the composer to appear.
+ * One Arcaic sub-driver: a named web-UI backend (openai / gemini / qwen)
+ * sharing the throwaway-browser engine logic. Each sub-driver owns its
+ * engine — one browser + one temp profile per backend.
  */
-export class PuppeteerOpenAIDriver implements LLMDriver {
-  readonly name = "puppeteer-openai";
-  readonly enabled = config.puppeteerEnabled;
-  private engine: ChatGPTBrowserEngine | null = null;
+export class ArcaicSubDriver implements LLMDriver {
+  readonly name: string;
+  readonly enabled = config.arcaicEnabled;
+  private readonly spec: ArcaicSpec;
+  private engine: ArcaicBrowserEngine | null = null;
 
-  constructor() {
-    if (this.enabled) driverLog(this.name, "enabled (chatgpt.com via Firefox, throwaway profile, manual login)");
+  constructor(spec: ArcaicSpec) {
+    this.spec = spec;
+    this.name = spec.key;
+    if (this.enabled) driverLog(this.name, "enabled (web UI session, throwaway profile, headless)");
   }
 
   private ensureEnabled(): void {
     if (!this.enabled) throw new DriverDisabledError(this.name);
   }
 
-  private getEngine(): ChatGPTBrowserEngine {
+  private getEngine(): ArcaicBrowserEngine {
     this.ensureEnabled();
     if (!this.engine) {
-      this.engine = new ChatGPTBrowserEngine({
+      this.engine = new ArcaicBrowserEngine({
         executablePath: resolveExecutable(),
-        headless: config.puppeteerHeadless,
-        loginTimeoutMs: config.puppeteerLoginTimeoutS * 1000,
-        responseTimeoutMs: config.puppeteerResponseTimeoutS * 1000,
+        headless: config.arcaicHeadless,
+        loginTimeoutMs: config.arcaicLoginTimeoutS * 1000,
+        responseTimeoutMs: config.arcaicResponseTimeoutS * 1000,
       });
     }
     return this.engine;
@@ -109,16 +119,25 @@ export class PuppeteerOpenAIDriver implements LLMDriver {
 
   async listModels(): Promise<DriverModel[]> {
     this.ensureEnabled();
-    return MODELS.map((m) => ({ id: `${this.name}:${m}`, name: m, driver: this.name, label: "ChatGPT (web)" }));
+    return [
+      {
+        id: `${this.name}:chat`,
+        name: "chat",
+        driver: this.name,
+        label: this.spec.label,
+        group: "arcaic",
+      },
+    ];
   }
 
   async chat(messages: ChatMessage[], opts: ChatOptions): Promise<string> {
     this.ensureEnabled();
     const t0 = Date.now();
     const text = await this.getEngine().send(flattenMessages(messages), {
+      site: this.spec.site,
       signal: opts.signal,
       fresh: true,
-      onLoginHint: () => driverLog(this.name, "login required — complete it inside the browser window"),
+      onLoginHint: () => driverLog(this.name, "session not ready — waiting for it inside the browser window"),
     });
     driverLog(this.name, `chat model=${opts.model} done: ${fmtBytes(text.length)} in ${fmtMs(Date.now() - t0)}`);
     return text;
@@ -133,9 +152,10 @@ export class PuppeteerOpenAIDriver implements LLMDriver {
     let jobDone = false;
     const job = this.getEngine()
       .send(flattenMessages(messages), {
+        site: this.spec.site,
         signal: opts.signal,
         fresh: true,
-        onLoginHint: () => driverLog(this.name, "login required — complete it inside the browser window"),
+        onLoginHint: () => driverLog(this.name, "session not ready — waiting for it inside the browser window"),
         onToken: (tok) => {
           chars += tok.length;
           opts.onToken?.(tok);
@@ -160,4 +180,16 @@ export class PuppeteerOpenAIDriver implements LLMDriver {
     }
     driverLog(this.name, `chat model=${opts.model} done: ${fmtBytes(chars)} in ${fmtMs(Date.now() - t0)}`);
   }
+}
+
+export function createArcaicDrivers(): ArcaicSubDriver[] {
+  return SPECS.map((spec) => new ArcaicSubDriver(spec));
+}
+
+function resolveExecutable(): string {
+  const conf = config.arcaicExecutable;
+  if (conf.includes("/")) return conf;
+  const found = Bun.which(conf);
+  if (!found) throw new Error("Arcaic backend is not configured (browser executable missing) — contact the administrator");
+  return found;
 }

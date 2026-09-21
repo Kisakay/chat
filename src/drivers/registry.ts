@@ -1,14 +1,25 @@
 import { AnthropicDriver, DeepSeekDriver, GlmDriver, MistralDriver, OpenAIDriver } from "./apis.ts";
 import { OllamaDriver } from "./ollama.ts";
-import { PuppeteerOpenAIDriver } from "./puppeteer.ts";
+import { createArcaicDrivers } from "./arcaic.ts";
 import type { DriverModel, LLMDriver } from "./types.ts";
 
 /**
  * Global driver priority (per spec):
- *   1. ollama (local) -> 2. mistral -> 3. glm -> 4. puppeteer-openai (stub)
- *   -> 5. deepseek -> 6. anthropic -> 7. openai
+ *   1. ollama (local) -> 2. mistral -> 3. glm
+ *   -> 4. arcaic-openai -> 5. arcaic-gemini -> 6. arcaic-qwen
+ *   -> 7. deepseek -> 8. anthropic -> 9. openai
  */
-const PRIORITY = ["ollama", "mistral", "glm", "puppeteer-openai", "deepseek", "anthropic", "openai"];
+const PRIORITY = [
+  "ollama",
+  "mistral",
+  "glm",
+  "arcaic-openai",
+  "arcaic-gemini",
+  "arcaic-qwen",
+  "deepseek",
+  "anthropic",
+  "openai",
+];
 
 /** How long the user-facing model list stays in memory before re-hitting upstream. */
 export const MODEL_CACHE_TTL_MS = 60_000;
@@ -26,7 +37,7 @@ export class DriverRegistry {
       new OllamaDriver(),
       new MistralDriver(),
       new GlmDriver(),
-      new PuppeteerOpenAIDriver(),
+      ...createArcaicDrivers(),
       new DeepSeekDriver(),
       new AnthropicDriver(),
       new OpenAIDriver(),

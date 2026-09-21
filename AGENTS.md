@@ -26,7 +26,7 @@ src/config.ts         env parsing (PORT, HOST, APP_PASSWORD=admin key, OLLAMA_HO
 src/db.ts             SQLite store: users, sessions, conversations, messages, shares (+ admin row bootstrap)
 src/auth.ts           login(username,key), hashed Bearer sessions, sliding-window login rate limit
 src/static.ts         static file server + SPA fallback (covers /share/:id)
-src/drivers/          LLMDriver interface, OllamaDriver, ApiDriverBase, Mistral/DeepSeek/Anthropic/OpenAI, puppeteer stub, DriverRegistry
+src/drivers/          LLMDriver interface, OllamaDriver, ApiDriverBase, Mistral/DeepSeek/Anthropic/OpenAI, arcaic browser sub-drivers (arcaic-openai/gemini/qwen), DriverRegistry
 frontend/src/         App.tsx (routing+state), lib/api.ts (fetch wrapper), components/
 public/               BUILD OUTPUT (Vite). Never hand-edit; rebuild instead. Not committed (see .gitignore)
 flake.nix/module.nix NixOS packaging + service module
@@ -46,7 +46,7 @@ flake.nix/module.nix NixOS packaging + service module
 - Icons: lucide-react only. **Never use native `<select>`** — use the `Picker` component in `frontend/src/components/ui.tsx` (also `Button`, `Modal`, `ConfirmDialog`, `ContextMenu`, `Avatar`, `CopyButton` live there).
 - Backend responses: `json()` helper, `{ error }` shape on failure, correct HTTP codes (400/401/403/404/409/429/502).
 - DB: synchronous `bun:sqlite` queries, prepared statements, `PRAGMA journal_mode=WAL`. Schema is created idempotently at boot — keep it that way (no migration framework).
-- Drivers: new LLM backends implement `LLMDriver` and register in `DriverRegistry` priority order. The puppeteer scraper stays a stub (ToS risk).
+- Drivers: new LLM backends implement `LLMDriver` and register in `DriverRegistry` priority order. The arcaic browser driver is user-facing as "Arcaic-Technology" — never expose its scraping internals (no "puppeteer"/"crawler"/upstream-site names) in API responses, error strings, or UI labels.
 - Docs are in English. Update `docs/` + README when adding routes, tables, or env vars.
 
 ## NixOS

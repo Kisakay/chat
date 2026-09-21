@@ -129,26 +129,28 @@ tool (`POST /api/tools/ocr`, image attachments) works out of the box.
 > `services.kisassistant.extraEnv = { MISTRAL_ENABLED = "true"; };` plus a
 > drop-in containing the key.
 
-### ChatGPT web driver (`enableBrowserDriver`)
+### Arcaic backend (`enableBrowserDriver`)
 
-The `puppeteer-openai` driver answers through the ChatGPT web UI: a headless
-Firefox from the nix store runs **inside the service** and drives
-`chatgpt.com` via puppeteer-core (WebDriver BiDi). Anonymous sessions work —
-no ChatGPT login needed — and every browser launch gets a throwaway profile
-(mkdtemp under `/tmp`, deleted on exit).
+The `arcaic-*` sub-drivers (`arcaic-openai`, `arcaic-gemini`, `arcaic-qwen`)
+answer through web-UI sessions: a headless Firefox from the nix store runs
+**inside the service** and drives the sites via a browser-automation session
+(WebDriver BiDi). Anonymous sessions work — no login needed — and every
+browser launch gets a throwaway profile (mkdtemp under `/tmp`, deleted on
+exit).
 
 ```nix
 services.kisassistant = {
   enable = true;
   # …
   enableBrowserDriver = true;   # adds firefox to the service PATH and sets
-};                              # PUPPETEER_ENABLED/HEADLESS/EXECUTABLE
+};                              # ARCAIC_ENABLED/HEADLESS/EXECUTABLE
 ```
 
 Overridable through `extraEnv` (values win over the module defaults):
-`PUPPETEER_LOGIN_TIMEOUT_S` (default 300), `PUPPETEER_RESPONSE_TIMEOUT_S`
-(default 300). The browser only starts on the **first request** that uses the
-`puppeteer-openai:chatgpt` model — boot cost stays zero otherwise.
+`ARCAIC_LOGIN_TIMEOUT_S` (default 300), `ARCAIC_RESPONSE_TIMEOUT_S`
+(default 300). The browser only starts on the **first request** that uses one
+of the `arcaic-*:chat` models (`arcaic-openai`, `arcaic-gemini`,
+`arcaic-qwen`) — boot cost stays zero otherwise.
 
 **Full isolation: run the whole app in a declarative NixOS container.**
 The driver launches Firefox as a subprocess, so the browser must live in the
@@ -184,9 +186,9 @@ services.nginx.virtualHosts."chat.kisakay.com" = {
 };
 ```
 
-Headless mode needs no display server anywhere (validated on CI-less builds:
-cookie banner accepted, message sent, response streamed). If ChatGPT ever
-starts headless-shaming, fall back to `PUPPETEER_HEADLESS=false` inside the
+Headless mode needs no display server anywhere (validated: cookie banner
+accepted, message sent, response streamed). If the site ever starts
+headless-shaming, fall back to `ARCAIC_HEADLESS=false` inside the
 container plus an `Xvfb` service — same driver, virtual display.
 
 ## 5. TLS reverse proxy (`enableNginx`)
@@ -288,5 +290,5 @@ After dependency bumps the first build may fail with a `bunDepsHash` mismatch
 | `ollamaHost` | str, `http://localhost:11434` | Ollama endpoint |
 | `domain` | null \| str | nginx vhost name, required when `enableNginx = true` |
 | `enableNginx` | null \| bool, `null` | `true`/`false` force the bundled reverse proxy on/off; `null` = nginx iff `domain` set (legacy) |
-| `enableBrowserDriver` | bool, `false` | headless Firefox in the service for the `puppeteer-openai` ChatGPT web driver (sets `PUPPETEER_ENABLED`/`PUPPETEER_HEADLESS`/`PUPPETEER_EXECUTABLE`, overridable via `extraEnv`) |
+| `enableBrowserDriver` | bool, `false` | headless Firefox in the service for the `arcaic` driver ("Arcaic-Technology" model; sets `ARCAIC_ENABLED`/`ARCAIC_HEADLESS`/`ARCAIC_EXECUTABLE`, overridable via `extraEnv`) |
 | `extraEnv` | attrs of str, `{}` | extra environment (non-secret values only) |

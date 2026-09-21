@@ -11,6 +11,8 @@ export interface DriverModel {
   /** Driver name, e.g. "ollama" */
   driver: string;
   label: string;
+  /** Display category in the model picker (defaults to `driver`). */
+  group?: string;
 }
 
 export interface ChatOptions {

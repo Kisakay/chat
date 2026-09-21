@@ -48,13 +48,12 @@ export const config = {
   // mainland China (open.bigmodel.cn) — override for the latter.
   glmBaseUrl: env("GLM_BASE_URL", "https://api.z.ai/api/paas/v4"),
 
-  // ChatGPT web driver (puppeteer-core + Firefox, throwaway profile per
-  // process, manual login inside the window while it waits).
-  puppeteerEnabled: envBool("PUPPETEER_ENABLED", false),
-  puppeteerExecutable: env("PUPPETEER_EXECUTABLE", "firefox"),
-  puppeteerHeadless: envBool("PUPPETEER_HEADLESS", false),
-  puppeteerLoginTimeoutS: envInt("PUPPETEER_LOGIN_TIMEOUT_S", 300),
-  puppeteerResponseTimeoutS: envInt("PUPPETEER_RESPONSE_TIMEOUT_S", 300),
+  // Arcaic web-UI backend (headless browser, throwaway profile per process).
+  arcaicEnabled: envBool("ARCAIC_ENABLED", false),
+  arcaicExecutable: env("ARCAIC_EXECUTABLE", "firefox"),
+  arcaicHeadless: envBool("ARCAIC_HEADLESS", true),
+  arcaicLoginTimeoutS: envInt("ARCAIC_LOGIN_TIMEOUT_S", 300),
+  arcaicResponseTimeoutS: envInt("ARCAIC_RESPONSE_TIMEOUT_S", 300),
 
   // Public docs wiki (served by the hosted git forge, e.g. Gitea wiki pages).
   // The app redirects GET /wiki there (302) so the target stays configurable.

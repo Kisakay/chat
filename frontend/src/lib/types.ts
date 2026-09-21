@@ -30,6 +30,7 @@ export interface DriverModel {
   name: string;
   driver: string;
   label: string;
+  group?: string;
 }
 
 export interface Attachment {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Clock, Inbox, Search, SendHorizontal, Undo2, XCircle } from "lucide-react";
 import { api, type AccessMessage, type AccessRequest, type AccessStatus } from "../lib/api.ts";
 import { Button, CopyButton, Field, Input, Spinner } from "./ui.tsx";
@@ -23,8 +23,11 @@ export function AccessRequestsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { t } = useT();
+  const listBusy = useRef(false);
 
   async function refresh(select?: string) {
+    if (listBusy.current) return;
+    listBusy.current = true;
     try {
       const res = await api.adminAccessList();
       setRequests(res.requests);
@@ -32,12 +35,19 @@ export function AccessRequestsPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.loadFailed"));
     } finally {
+      listBusy.current = false;
       setLoading(false);
     }
   }
 
   useEffect(() => {
     refresh();
+    // Live list: new requests / replies pop without manual refresh.
+    const id = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 15000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const visible = requests.filter((r) => filter === "all" || r.status === filter);
@@ -122,12 +132,47 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
   const [error, setError] = useState("");
   const { t } = useT();
   const [freshKey, setFreshKey] = useState<string | null>(null);
+  // Latest callbacks / server state without restarting the poll loop.
+  const onChangedRef = useRef(onChanged);
+  onChangedRef.current = onChanged;
+  const known = useRef({ status: request.status, reason: request.reason });
 
   useEffect(() => {
     setReason(request.reason);
     setFreshKey(null);
-    api.adminAccessGet(request.id).then((res) => setMessages(res.messages)).catch(() => {});
-  }, [request.id, request.reason]);
+    known.current = { status: request.status, reason: request.reason };
+    let stopped = false;
+    let busy = false;
+    // Live thread: requester replies appear without manual refresh, and a
+    // status change made elsewhere syncs the list (badges, filters).
+    async function fetchOnce() {
+      if (busy || document.hidden) return;
+      busy = true;
+      try {
+        const res = await api.adminAccessGet(request.id);
+        if (stopped) return;
+        setMessages(res.messages);
+        if (
+          res.request.status !== known.current.status ||
+          res.request.reason !== known.current.reason
+        ) {
+          known.current = { status: res.request.status, reason: res.request.reason };
+          onChangedRef.current();
+        }
+      } catch {
+        // Transient failure: keep last state, retry next tick.
+      } finally {
+        busy = false;
+      }
+    }
+    fetchOnce();
+    const id = setInterval(fetchOnce, 5000);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request.id]);
 
   const closed = request.status === "accepted" || request.status === "refused";
 
@@ -137,6 +182,7 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
     try {
       const res = await api.adminAccessPatch(request.id, { status, reason: reason.trim() });
       if (res.key) setFreshKey(res.key);
+      known.current = { status: res.request.status, reason: res.request.reason };
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("access.updateFailed"));

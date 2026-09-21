@@ -35,6 +35,23 @@ export interface AccessMessage {
 
 export function initAccessTables(): void {
   const d = getDb();
+  const createRequests = `CREATE TABLE access_requests (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    reason TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`;
+  const createMessages = `CREATE TABLE access_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_id TEXT NOT NULL REFERENCES access_requests(id) ON DELETE CASCADE,
+    author TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  )`;
   d.query(`CREATE TABLE IF NOT EXISTS access_requests (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL,
@@ -45,6 +62,56 @@ export function initAccessTables(): void {
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   )`).run();
+  // Idempotent migration (must run BEFORE access_messages exists with an FK
+  // on access_requests — SQLite rewrites dependent FKs on DROP COLUMN and
+  // would otherwise poison access_messages with a dangling reference).
+  // Older builds created access_requests with a NOT NULL UNIQUE token_hash
+  // column (since removed — tickets are authed by their unguessable UUID).
+  // CREATE TABLE IF NOT EXISTS won't fix existing DBs, and inserts without
+  // token_hash then fail with SQLITE_CONSTRAINT_NOTNULL.
+  try {
+    const cols = d.query("PRAGMA table_info(access_requests)").all() as { name: string }[];
+    if (cols.some((c) => c.name === "token_hash")) {
+      try {
+        d.query("PRAGMA foreign_keys=OFF").run();
+        try {
+          d.query("ALTER TABLE access_requests DROP COLUMN token_hash").run();
+        } catch {
+          // SQLite builds without DROP COLUMN support: rebuild table.
+          d.query("ALTER TABLE access_requests RENAME TO access_requests_old").run();
+          d.query(createRequests).run();
+          d.query(`INSERT INTO access_requests (id, username, email, message, status, reason, created_at, updated_at)
+            SELECT id, username, email, message, status, reason, created_at, updated_at FROM access_requests_old`).run();
+          d.query("DROP TABLE access_requests_old").run();
+        }
+      } finally {
+        d.query("PRAGMA foreign_keys=ON").run();
+      }
+    }
+  } catch {
+    // Leave schema as-is; the insert error will surface normally.
+  }
+  // Repair: a previous boot migrated in the wrong order (messages table
+  // created before the DROP COLUMN), leaving access_messages with
+  // REFERENCES "access_requests_old". Rebuild it with the correct FK.
+  try {
+    const row = d.query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'access_messages'").get() as { sql: string } | null;
+    if (row?.sql?.includes("access_requests_old")) {
+      d.query("PRAGMA foreign_keys=OFF").run();
+      try {
+        d.query("DROP TABLE IF EXISTS access_messages_old").run();
+        d.query("ALTER TABLE access_messages RENAME TO access_messages_old").run();
+        d.query(createMessages).run();
+        d.query(`INSERT INTO access_messages (id, request_id, author, body, created_at)
+          SELECT id, request_id, author, body, created_at FROM access_messages_old`).run();
+        d.query("DROP TABLE access_messages_old").run();
+      } finally {
+        d.query("PRAGMA foreign_keys=ON").run();
+      }
+    }
+  } catch {
+    // Leave schema as-is; errors will surface on write.
+  }
   d.query(`CREATE TABLE IF NOT EXISTS access_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     request_id TEXT NOT NULL REFERENCES access_requests(id) ON DELETE CASCADE,

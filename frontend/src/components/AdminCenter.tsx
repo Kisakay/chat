@@ -23,6 +23,7 @@ export function AdminCenter() {
   const [settings, setSettings] = useState<{ registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean } | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [openAccessCount, setOpenAccessCount] = useState(0);
 
   const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
     { id: "accounts", label: t("center.tabAccounts"), icon: Users },
@@ -44,6 +45,32 @@ export function AdminCenter() {
       })
       .catch(() => setAllowed(false));
   }, []);
+
+  // Live badge on the Access tab: poll the open (pending + reviewing)
+  // request count so new demands pop without opening the tab.
+  useEffect(() => {
+    if (!allowed) return;
+    let stopped = false;
+    async function fetchCount() {
+      try {
+        const res = await api.adminAccessList();
+        if (stopped) return;
+        setOpenAccessCount(
+          res.requests.filter((r) => r.status === "pending" || r.status === "reviewing").length,
+        );
+      } catch {
+        // Transient failure: keep last count, retry next tick.
+      }
+    }
+    fetchCount();
+    const id = setInterval(() => {
+      if (!document.hidden) fetchCount();
+    }, 15000);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+    };
+  }, [allowed]);
 
   async function toggle(patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean }) {
     setSaving(true);
@@ -95,7 +122,7 @@ export function AdminCenter() {
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
+                  "relative flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
                   tab === t.id
                     ? "bg-white text-stone-900 shadow dark:bg-zinc-800 dark:text-zinc-100"
                     : "opacity-60 hover:opacity-100",
@@ -103,6 +130,15 @@ export function AdminCenter() {
               >
                 <t.icon size={15} />
                 {t.label}
+                {t.id === "access" && openAccessCount > 0 && (
+                  <span
+                    role="status"
+                    aria-label={`${t.label}: ${openAccessCount}`}
+                    className="absolute -right-0.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[11px] font-bold leading-5 text-white shadow"
+                  >
+                    {openAccessCount > 99 ? "99+" : openAccessCount}
+                  </span>
+                )}
               </button>
             ))}
           </div>

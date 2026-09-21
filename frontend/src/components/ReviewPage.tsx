@@ -83,7 +83,31 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
   }
 
   useEffect(() => {
+    let stopped = false;
     load();
+    // Live updates: short-poll the ticket so admin replies and the
+    // decision show up without a manual refresh. No WS infra on the
+    // backend — traffic here is tiny, polling is the clean fit.
+    let busy = false;
+    async function poll() {
+      if (stopped || busy || document.hidden) return;
+      busy = true;
+      try {
+        const res = await api.accessTicket(ticketId);
+        if (stopped) return;
+        setRequest(res.request);
+        setMessages(res.messages);
+      } catch {
+        // Transient failure: keep last known state, retry next tick.
+      } finally {
+        busy = false;
+      }
+    }
+    const id = setInterval(poll, 5000);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 
@@ -147,9 +171,18 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
               </p>
             )}
             {request.status === "accepted" && (
-              <p className="rounded-2xl bg-accent-500/10 px-4 py-2.5 text-center text-sm">
-                {t("review.acceptedHint")}
-              </p>
+              <>
+                <p className="rounded-2xl bg-accent-500/10 px-4 py-2.5 text-center text-sm">
+                  {t("review.acceptedHint")}
+                </p>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => (window.location.href = "/")}
+                >
+                  {t("common.backToLogin")}
+                </Button>
+              </>
             )}
 
             <div className="max-h-80 space-y-2.5 overflow-y-auto rounded-2xl border border-stone-200/70 p-3 dark:border-zinc-800">
