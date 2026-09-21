@@ -24,7 +24,7 @@ Copy `.env.example` to `.env`. Full list:
 | `RESET_TTL_MIN` | `60` | reset-link lifetime (single use) |
 | `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MIN` | `5` / `10` | login rate limit per IP |
 | `OLLAMA_HOST` / `OLLAMA_ENABLED` | `http://10.66.66.4:11434` / `true` | local-model driver |
-| `MISTRAL_*`, `GLM_*`, `DEEPSEEK_*`, `ANTHROPIC_*`, `OPENAI_*` | disabled | API drivers: set `*_ENABLED=true` **and** `*_API_KEY` |
+| `MISTRAL_*`, `GLM_*`, `DEEPSEEK_*`, `ANTHROPIC_*`, `OPENAI_*`, `GEMINI_*` | disabled | API drivers: set `*_ENABLED=true` **and** `*_API_KEY` |
 | `GLM_BASE_URL` | `https://api.z.ai/api/paas/v4` | Zhipu platform override (mainland China: `https://open.bigmodel.cn/api/paas/v4`) |
 
 ## Local development
@@ -88,6 +88,23 @@ an **Enabled** switch and **hourly / daily** per-user request caps
   toward limits even when generation later fails; over-limit answers 429.
 - Routes: `GET /api/admin/model-policy[?refresh=1]`,
   `PATCH /api/admin/model-policy` (`{model, enabled?, hourly?, daily?}`).
+
+## Personal providers (BYOK)
+
+Users can connect their own `OpenAI` / `Anthropic` / `DeepSeek` / `Gemini`
+API keys in **Settings → Providers** (per account, no admin involved).
+Connected providers add their models to that user's model menu at the top
+(no page refresh needed); usage is billed to the user's own provider
+account, and the admin model policy (kill-switch + rate limits) still
+applies.
+
+- Keys are stored server-side in `user_provider_keys` and **never returned**
+  to any client (`GET /api/me/providers` exposes presence + last 4 chars
+  only; never logged). A stored key greys out its field (Replace to rotate,
+  Remove to disconnect). Deleting the account wipes its keys.
+- Routes: `GET /api/me/providers`, `PUT /api/me/providers/:id`
+  (`{apiKey}`, 8–256 chars), `DELETE /api/me/providers/:id` (all Bearer,
+  owner-scoped).
 
 ## Access-request wishlist (registration approval queue)
 

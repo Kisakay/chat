@@ -114,6 +114,14 @@ Models are addressed as `"driver:model"` (split on the first `:`).
   (SSE) implementation; concrete drivers only set base URL, key, and fallback
   model list. A driver is enabled only when its `*_ENABLED` flag is set **and**
   its key is non-empty; failing drivers are skipped (not fatal) in listings.
+- Personal providers (BYOK, `src/userProviders.ts`): users attach their own
+  `openai` / `anthropic` / `deepseek` / `gemini` keys in settings
+  (`GET/PUT/DELETE /api/me/providers`, keys stored in `user_provider_keys`,
+  never returned — GET exposes presence + last4 only). `GET /api/models`
+  merges the caller's own-key models into their menu, and `POST /api/chat`
+  prefers the personal key for those four providers (also when the global
+  driver is disabled). The admin model policy still applies. Driver
+  constructors accept an `apiKeyOverride` for these per-user instances.
 - `ArcaicSubDriver` ×3 (`arcaic-openai`, `arcaic-gemini`, `arcaic-qwen`,
   one model each: `chat`) + `browser.ts` engine: web-UI sessions driven by a
   headless browser (WebDriver BiDi) with a **throwaway profile** (mkdtemp

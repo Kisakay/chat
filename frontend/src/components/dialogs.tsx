@@ -1019,6 +1019,9 @@ function ProvidersSection({ onChanged }: { onChanged?: () => void }) {
   const { t } = useT();
   const [list, setList] = useState<UserProvider[] | null>(null);
   const [keys, setKeys] = useState<Record<string, string>>({});
+  // Connected providers show a greyed-out (disabled) key field; "Replace"
+  // unlocks it for rotation.
+  const [editing, setEditing] = useState<Record<string, boolean>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -1050,6 +1053,7 @@ function ProvidersSection({ onChanged }: { onChanged?: () => void }) {
       const res = await api.setProvider(id, v);
       setList(res.providers);
       setKeys((k) => ({ ...k, [id]: "" }));
+      setEditing((e) => ({ ...e, [id]: false }));
       setNotice(t("providers.keySaved"));
       onChanged?.();
     } catch (err) {
@@ -1066,6 +1070,7 @@ function ProvidersSection({ onChanged }: { onChanged?: () => void }) {
     try {
       const res = await api.deleteProvider(id);
       setList(res.providers);
+      setEditing((e) => ({ ...e, [id]: false }));
       setNotice(t("providers.keyRemoved"));
       onChanged?.();
     } catch (err) {
@@ -1091,6 +1096,8 @@ function ProvidersSection({ onChanged }: { onChanged?: () => void }) {
           const st = byId.get(m.id);
           const connected = !!st?.hasKey;
           const busy = busyId === m.id;
+          // A stored key locks the field (greyed out) until "Replace".
+          const locked = connected && !editing[m.id];
           return (
             <li key={m.id} className="space-y-2.5 rounded-2xl border border-stone-200/70 p-3.5 dark:border-zinc-800">
               <div className="flex items-center gap-2.5">
@@ -1129,29 +1136,54 @@ function ProvidersSection({ onChanged }: { onChanged?: () => void }) {
                   type="password"
                   autoComplete="off"
                   spellCheck={false}
-                  value={keys[m.id] ?? ""}
+                  value={locked ? "" : (keys[m.id] ?? "")}
                   onChange={(e) => setKeys((k) => ({ ...k, [m.id]: e.target.value }))}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
+                    if (e.key === "Enter" && !locked) {
                       e.preventDefault();
                       save(m.id);
                     }
                   }}
-                  placeholder={connected ? `${t("providers.keyPh")} (${t("providers.connected").toLowerCase()})` : t("providers.keyPh")}
+                  placeholder={locked && st?.last4 ? `••••${st.last4}` : t("providers.keyPh")}
                   aria-label={`${m.label} API key`}
-                  disabled={busy}
+                  disabled={busy || locked}
+                  className="disabled:cursor-not-allowed disabled:bg-stone-100 disabled:opacity-60 dark:disabled:bg-zinc-800"
                 />
-                <Button
-                  size="sm"
-                  disabled={busy || !(keys[m.id] ?? "").trim()}
-                  onClick={() => save(m.id)}
-                  className="shrink-0"
-                >
-                  {busy ? <Spinner size={15} /> : t("providers.saveKey")}
-                </Button>
+                {!locked && (
+                  <Button
+                    size="sm"
+                    disabled={busy || !(keys[m.id] ?? "").trim()}
+                    onClick={() => save(m.id)}
+                    className="shrink-0"
+                  >
+                    {busy ? <Spinner size={15} /> : t("providers.saveKey")}
+                  </Button>
+                )}
               </div>
               {connected && (
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-1">
+                  {locked ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => setEditing((e) => ({ ...e, [m.id]: true }))}
+                    >
+                      <Pencil size={14} /> {t("providers.replaceKey")}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() => {
+                        setEditing((e) => ({ ...e, [m.id]: false }));
+                        setKeys((k) => ({ ...k, [m.id]: "" }));
+                      }}
+                    >
+                      {t("common.cancel")}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
