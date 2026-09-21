@@ -15,6 +15,10 @@ No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
 - `/register` — full-page self-registration (`RegisterPage.tsx`; key shown
   once, then hands username+key to `/login` via `sessionStorage`). No splash.
 - `/chat` — the platform itself (auth required; boots behind the splash).
+  Bare `/chat` is the empty composer (new chat, created lazily on first send).
+- `/chat/:id` — one conversation page (deep-linkable, back/forward supported).
+  Selecting a chat navigates there; unknown ids bounce back to `/chat`.
+  Archived chats are viewed read-only on bare `/chat` (no per-id URL).
 - `/` — redirects to `/chat` when logged in, `/login` otherwise (placeholder
   for a future landing page).
 - Public routes (unchanged): `/share/:publicId`, `/reset/:token`,

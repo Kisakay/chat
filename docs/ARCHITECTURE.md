@@ -8,7 +8,7 @@ frontend (same origin, no CORS). Persistence is SQLite via Bun's native
 browser ──► Bun.serve (src/index.ts)
               ├─ /api/* ──► auth gate ──► routes ──► db.ts ──► kisassistant.db
               │                              └─────► DriverRegistry ──► ollama / APIs
-              └─ /* ──► static files + SPA fallback (index.html, covers /share/:id)
+              └─ /* ──► static files + SPA fallback (index.html, covers /share/:id and /chat/:id)
 ```
 
 ## Request flow: chat
