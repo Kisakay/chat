@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bot, Globe, User as UserIcon } from "lucide-react";
+import { Bot, CloudOff, Globe, User as UserIcon } from "lucide-react";
 import { api } from "../lib/api.ts";
 import type { SharedChat } from "../lib/types.ts";
 import { AssistantAvatar, Avatar, FlowerMark } from "./ui.tsx";
