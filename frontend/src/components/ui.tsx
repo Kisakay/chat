@@ -118,10 +118,13 @@ export function Picker({
     const width = Math.min(Math.max(r.width, 208), 288);
     let left = align === "right" ? r.right - width : r.left;
     left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
-    const maxH = 288; // matches max-h-72
+    // Use the popover's real height (not the max-h-72 cap) so short lists
+    // (e.g. 3 theme options) stay glued under the button instead of flipping
+    // above with a visible gap.
+    const popH = Math.min(popRef.current?.offsetHeight || 288, 288);
     const below = r.bottom + 8;
-    const top = below + maxH > window.innerHeight && r.top - maxH - 8 > 8
-      ? Math.max(8, r.top - maxH - 8) // flip above when there is no room below
+    const top = below + popH > window.innerHeight && r.top - popH - 8 > 8
+      ? Math.max(8, r.top - popH - 8) // flip above when there is no room below
       : below;
     setPos({ top, left, width });
     return true;
