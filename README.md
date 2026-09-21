@@ -148,4 +148,5 @@ Nginx terminates TLS; the app listens on `127.0.0.1:3000` with
 Inter Variable (self-hosted, no external requests). `bun run --cwd frontend build`
 outputs to `public/` (wiped first). Collapsible sidebar, right-click context menu
 (rename / topic / share / delete), share modals, confirm dialogs, admin accounts
-panel, profile settings, public read-only `/share/:id` page. English only.
+panel, profile settings, public read-only `/share/:id` page, per-conversation
+URLs (`/chat/:id`, deep-linkable). English only.
