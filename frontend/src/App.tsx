@@ -102,6 +102,10 @@ export function App() {
   const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [ocrAvailable, setOcrAvailable] = useState(false);
+  // Model-error retry: which trailing message is the error bubble (if any),
+  // its conversation, and how many times this prompt was already retried.
+  const [failed, setFailed] = useState<{ index: number; convId: string } | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { t } = useT();
 
   // Public routes: no auth needed. IDs are constant for the page lifetime.
@@ -199,6 +203,8 @@ export function App() {
 
   // Load messages for active conversation
   useEffect(() => {
+    setFailed(null);
+    setRetryCount(0);
     if (!activeId) {
       setMessages([]);
       return;
@@ -248,6 +254,8 @@ export function App() {
     setChecking(false);
     setConvs([]);
     setMessages([]);
+    setFailed(null);
+    setRetryCount(0);
     setActiveId(null);
     setArchivedConv(null);
     setAttachments([]);
@@ -263,6 +271,27 @@ export function App() {
     } catch {
       // fall back to local-only pending state
     }
+  }
+
+  /** Max footer-arrow retries for the same failed prompt. */
+  const MAX_RETRIES = 3;
+
+  /** Stream one assistant reply for an exact history; resolves its text. */
+  async function streamReply(history: ChatMessage[], convId: string): Promise<string> {
+    // "Thinking" feature flag: decorate the outgoing payload only — the
+    // system message is never shown nor persisted client-side.
+    const outMessages = featureEnabled("thinking")
+      ? [
+          { role: "system", content: THINKING_SYSTEM_PROMPT } as ChatMessage,
+          ...history,
+        ]
+      : history;
+    let full = "";
+    await api.chatStream({ model, messages: outMessages, conversationId: convId }, (t) => {
+      full += t;
+      setStreaming(full);
+    });
+    return full;
   }
 
   async function send(text: string) {
@@ -291,25 +320,12 @@ export function App() {
     const history = [...messages, userMsg];
     setMessages(history);
     setAttachments([]);
+    setFailed(null);
+    setRetryCount(0);
     setSending(true);
     setStreaming("");
-    let full = "";
     try {
-      // "Thinking" feature flag: decorate the outgoing payload only — the
-      // system message is never shown nor persisted client-side.
-      const outMessages = featureEnabled("thinking")
-        ? [
-            { role: "system", content: THINKING_SYSTEM_PROMPT } as ChatMessage,
-            ...history,
-          ]
-        : history;
-      await api.chatStream(
-        { model, messages: outMessages, conversationId: convId! },
-        (t) => {
-          full += t;
-          setStreaming(full);
-        },
-      );
+      const full = await streamReply(history, convId!);
       setMessages([...history, { role: "assistant", content: full }]);
       setStreaming("");
       await refreshConvs();
@@ -318,6 +334,38 @@ export function App() {
         ...history,
         { role: "assistant", content: t("attach.chatError") },
       ]);
+      setFailed({ index: history.length, convId: convId! });
+      setStreaming("");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  /**
+   * Re-run the same prompt after a model error (footer retry arrow on the
+   * error bubble). The trailing error message is dropped and the untouched
+   * history is streamed again — at most MAX_RETRIES times per prompt.
+   */
+  async function retryFailed() {
+    if (sending || !failed || retryCount >= MAX_RETRIES || !model || archivedConv) return;
+    const history = messages.slice(0, failed.index);
+    const convId = failed.convId;
+    setMessages(history);
+    setFailed(null);
+    setRetryCount((c) => c + 1);
+    setSending(true);
+    setStreaming("");
+    try {
+      const full = await streamReply(history, convId);
+      setMessages([...history, { role: "assistant", content: full }]);
+      setRetryCount(0);
+      await refreshConvs();
+    } catch {
+      setMessages([
+        ...history,
+        { role: "assistant", content: t("attach.chatError") },
+      ]);
+      setFailed({ index: history.length, convId });
       setStreaming("");
     } finally {
       setSending(false);
