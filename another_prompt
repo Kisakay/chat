@@ -40,3 +40,5 @@ Système de service mails aussi pour les comptes (optionel) pour recovery passwo
 
 --- bugs:
 when disabling attachment sendability: the text "Message" placeholder nto the composer chat are too tigh to the left border, make a fallback padding when no attachment button
+
+make in the settigns: an sub category: changing key, admiting TOTP key/passkey for security

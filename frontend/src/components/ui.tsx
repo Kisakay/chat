@@ -268,7 +268,10 @@ export function Modal({
 
   if (!open) return null;
   const Icon = icon;
-  return (
+  // Portal to <body>: ancestors with backdrop-blur / transforms (e.g. the
+  // login card) become containing blocks for fixed elements and would trap
+  // the dialog inside them. Portaling keeps every modal viewport-centered.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div
@@ -308,7 +311,8 @@ export function Modal({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

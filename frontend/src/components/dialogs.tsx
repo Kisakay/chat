@@ -101,7 +101,7 @@ export function RecoverDialog({ open, onClose, from }: { open: boolean; onClose:
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Recover access key" icon={Mail}>
+    <Modal open={open} onClose={onClose} title="Recover access key" icon={Mail} wide>
       {sent ? (
         <div className="space-y-4">
           <p className="text-sm opacity-80">
