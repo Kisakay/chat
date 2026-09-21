@@ -35,15 +35,18 @@ read-only `SharePage` (no auth), everything else renders the authenticated app.
   **Never use a native `<select>`**; use `Picker` for model and theme choices.
 - `Login.tsx` — username + access-key card.
 - `Sidebar.tsx` — collapsible conversation list with per-item context menu
-  (right-click or `···`: Rename / Set topic / Share publicly / Delete), user
-  chip (opens settings), Accounts button (admin), logout.
+  (right-click or `···`: Rename / Set topic / Share publicly / Archive /
+  Delete), user chip (opens settings), Accounts button (admin), logout.
+  Archived chats leave the list (and search); they live in settings.
 - `Chat.tsx` — header (title, topic badge, driver-grouped model `Picker`,
   share button), message list (`Markdown` for assistant, emerald bubble for
   user), rounded composer with paperclip attach menu, attachment chips
-  (Enter to send, Shift+Enter for newline).
+  (Enter to send, Shift+Enter for newline). With `readOnly` (archived chat)
+  the composer and share button are replaced by an unarchive banner.
 - `dialogs.tsx` — `ConvEditDialog` (title + topic), `ShareModal` (public link,
   copy, unshare), `SettingsModal` (display name, avatar upload box with
-  drag & drop, avatar URL, theme).
+  drag & drop, avatar URL, theme, plus an "Archived chats" category to
+  view / unarchive / delete archived conversations).
 - `AdminPanel.tsx` — No-KYC account management: create (key shown once),
   regenerate (revokes sessions), edit, delete with confirm, plus server-side
   search / sort (newest, oldest, A–Z, Z–A) / email filter / pagination.

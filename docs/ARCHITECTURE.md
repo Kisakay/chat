@@ -22,9 +22,10 @@ browser ──► Bun.serve (src/index.ts)
    are auto-titled from it.
 4. Non-streaming → `driver.chat()` → JSON. Streaming → `driver.chatStream()`
    → SSE events `token` / `done` / `error`. The full reply is persisted after a
-   successful stream; on error the partial text is kept as-is (no internal
-   markers). Server logs each stream open/done/abort per driver when
-   `DRIVER_DEBUG=true`.
+  successful stream; on error the partial text is kept as-is (no internal
+  markers). Server logs each stream open/done/abort per driver when
+  `DRIVER_DEBUG=true`. `POST /api/chat` with an archived `conversationId`
+  is rejected (403) — archived chats are read-only.
 
 Streaming guarantees (ChatGPT-style, no buffering):
 
@@ -47,7 +48,7 @@ Created idempotently at boot in `getDb()` (no migration framework; keep it so).
 | `sessions` | `token_hash PK, user_id, created_at, expires_at`. Bearer tokens, 256-bit, hashed with sha256. Expired rows are purged lazily on access. |
 | `resets` | `token_hash PK, user_id, created_at, expires_at`. One-time key-recovery tokens (single use, consumed on POST). |
 | `settings` | `key PK, value, updated_at`. Admin-controlled feature flags (`registration_enabled` default off, `tools_ocr_enabled` default on). |
-| `conversations` | `id, user_id, title, topic, model, created_at, updated_at`. |
+| `conversations` | `id, user_id, title, topic, model, archived_at, created_at, updated_at`. `archived_at = 0` means live; otherwise a unix-ms archive timestamp (added idempotently via `ALTER TABLE`, like `users.email`). |
 | `messages` | `id AUTOINCREMENT, conv_id → conversations ON DELETE CASCADE, role, content, created_at`. |
 | `shares` | `conv_id PK → conversations ON DELETE CASCADE, public_id UNIQUE, created_at`. |
 

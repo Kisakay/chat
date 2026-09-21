@@ -38,6 +38,10 @@ const en = {
   "common.light": "Light",
   "common.dark": "Dark",
   "common.saveFailed": "Save failed",
+  "common.loadFailed": "Load failed",
+  "common.deleteFailed": "Delete failed",
+  "common.loadFailed": "Load failed",
+  "common.deleteFailed": "Delete failed",
   "common.backToLogin": "Back to login",
 
   "loading.tagline": "Preparing your chats",
@@ -83,6 +87,7 @@ const en = {
   "sidebar.adminCenter": "Admin Center",
   "sidebar.adminCenterTip": "Open the Admin Center",
   "sidebar.settingsTip": "Profile & settings",
+  "sidebar.logout": "Log out",
   "sidebar.archive": "Archive",
 
   "chat.expand": "Expand sidebar",
@@ -460,6 +465,16 @@ const en = {
 
   "archived.readonly": "This chat is archived and read-only.",
   "archived.unarchive": "Unarchive",
+  "archived.title": "Archived chats",
+  "archived.empty": "No archived chats.",
+  "archived.view": "View",
+  "archived.deleteTitle": "Delete this archived chat?",
+  "archived.deleteMsg": "It will be permanently removed, with all its messages.",
+  "archived.title": "Archived chats",
+  "archived.empty": "No archived conversations yet.",
+  "archived.view": "View",
+  "archived.deleteTitle": "Delete this archived chat?",
+  "archived.deleteMsg": "This permanently removes the conversation and all its messages.",
 } as const;
 
 export type StringKey = keyof typeof en;
@@ -485,6 +500,10 @@ const es: Dict = {
   "common.light": "Claro",
   "common.dark": "Oscuro",
   "common.saveFailed": "No se pudo guardar",
+  "common.loadFailed": "No se pudo cargar",
+  "common.deleteFailed": "No se pudo eliminar",
+  "common.loadFailed": "No se pudo cargar",
+  "common.deleteFailed": "No se pudo eliminar",
   "common.backToLogin": "Volver al inicio de sesión",
 
   "loading.tagline": "Preparando tus chats",
@@ -530,6 +549,7 @@ const es: Dict = {
   "sidebar.adminCenter": "Centro de admin",
   "sidebar.adminCenterTip": "Abrir el Centro de admin",
   "sidebar.settingsTip": "Perfil y ajustes",
+  "sidebar.logout": "Cerrar sesión",
   "sidebar.archive": "Archivar",
 
   "chat.expand": "Mostrar barra lateral",
@@ -902,6 +922,16 @@ const es: Dict = {
 
   "archived.readonly": "Este chat está archivado y es de solo lectura.",
   "archived.unarchive": "Desarchivar",
+  "archived.title": "Archivados",
+  "archived.empty": "Sin chats archivados.",
+  "archived.view": "Ver",
+  "archived.deleteTitle": "¿Eliminar este chat archivado?",
+  "archived.deleteMsg": "Se eliminará para siempre, con todos sus mensajes.",
+  "archived.title": "Chats archivados",
+  "archived.empty": "No hay conversaciones archivadas.",
+  "archived.view": "Ver",
+  "archived.deleteTitle": "¿Eliminar este chat archivado?",
+  "archived.deleteMsg": "Esto elimina permanentemente la conversación y todos sus mensajes.",
 };
 
 const fr: Dict = {
@@ -924,6 +954,10 @@ const fr: Dict = {
   "common.light": "Clair",
   "common.dark": "Sombre",
   "common.saveFailed": "Échec de l'enregistrement",
+  "common.loadFailed": "Chargement impossible",
+  "common.deleteFailed": "Suppression impossible",
+  "common.loadFailed": "Échec du chargement",
+  "common.deleteFailed": "Échec de la suppression",
   "common.backToLogin": "Retour à la connexion",
 
   "loading.tagline": "Préparation de vos chats",
@@ -969,6 +1003,7 @@ const fr: Dict = {
   "sidebar.adminCenter": "Centre admin",
   "sidebar.adminCenterTip": "Ouvrir le Centre admin",
   "sidebar.settingsTip": "Profil et réglages",
+  "sidebar.logout": "Déconnexion",
   "sidebar.archive": "Archiver",
 
   "chat.expand": "Afficher la barre latérale",
@@ -1341,6 +1376,16 @@ const fr: Dict = {
 
   "archived.readonly": "Ce chat est archivé en lecture seule.",
   "archived.unarchive": "Désarchiver",
+  "archived.title": "Archives",
+  "archived.empty": "Aucun chat archivé.",
+  "archived.view": "Voir",
+  "archived.deleteTitle": "Supprimer ce chat archivé ?",
+  "archived.deleteMsg": "Il sera définitivement supprimé, avec tous ses messages.",
+  "archived.title": "Conversations archivées",
+  "archived.empty": "Aucune conversation archivée.",
+  "archived.view": "Voir",
+  "archived.deleteTitle": "Supprimer cette conversation archivée ?",
+  "archived.deleteMsg": "Cela supprime définitivement la conversation et tous ses messages.",
 };
 
 const ru: Dict = {
@@ -1363,6 +1408,10 @@ const ru: Dict = {
   "common.light": "Светлая",
   "common.dark": "Тёмная",
   "common.saveFailed": "Не удалось сохранить",
+  "common.loadFailed": "Не загрузилось",
+  "common.deleteFailed": "Не удалилось",
+  "common.loadFailed": "Не удалось загрузить",
+  "common.deleteFailed": "Не удалось удалить",
   "common.backToLogin": "Назад ко входу",
 
   "loading.tagline": "Готовим ваши чаты",
@@ -1408,6 +1457,7 @@ const ru: Dict = {
   "sidebar.adminCenter": "Админ-центр",
   "sidebar.adminCenterTip": "Открыть Админ-центр",
   "sidebar.settingsTip": "Профиль и настройки",
+  "sidebar.logout": "Выйти",
   "sidebar.archive": "В архив",
 
   "chat.expand": "Показать панель",
@@ -1767,6 +1817,16 @@ const ru: Dict = {
 
   "archived.readonly": "Чат в архиве, только чтение.",
   "archived.unarchive": "Вернуть",
+  "archived.title": "Архив",
+  "archived.empty": "Архив пуст.",
+  "archived.view": "Открыть",
+  "archived.deleteTitle": "Удалить архивный чат?",
+  "archived.deleteMsg": "Будет удалён навсегда вместе с сообщениями.",
+  "archived.title": "Архив чатов",
+  "archived.empty": "Нет архивных чатов.",
+  "archived.view": "Открыть",
+  "archived.deleteTitle": "Удалить этот архивный чат?",
+  "archived.deleteMsg": "Это навсегда удалит разговор и все сообщения.",
 };
 
 const it: Dict = {
@@ -1789,6 +1849,10 @@ const it: Dict = {
   "common.light": "Chiaro",
   "common.dark": "Scuro",
   "common.saveFailed": "Salvataggio non riuscito",
+  "common.loadFailed": "Caricamento fallito",
+  "common.deleteFailed": "Eliminazione fallita",
+  "common.loadFailed": "Caricamento non riuscito",
+  "common.deleteFailed": "Eliminazione non riuscita",
   "common.backToLogin": "Torna al login",
 
   "loading.tagline": "Preparo le tue chat",
@@ -1834,6 +1898,7 @@ const it: Dict = {
   "sidebar.adminCenter": "Centro admin",
   "sidebar.adminCenterTip": "Apri il Centro admin",
   "sidebar.settingsTip": "Profilo e impostazioni",
+  "sidebar.logout": "Esci",
   "sidebar.archive": "Archivia",
 
   "chat.expand": "Mostra barra laterale",
@@ -2199,6 +2264,16 @@ const it: Dict = {
 
   "archived.readonly": "Questa chat è archiviata e in sola lettura.",
   "archived.unarchive": "Ripristina",
+  "archived.title": "Archiviate",
+  "archived.empty": "Nessuna chat archiviata.",
+  "archived.view": "Apri",
+  "archived.deleteTitle": "Eliminare questa chat archiviata?",
+  "archived.deleteMsg": "Sarà eliminata per sempre, con tutti i suoi messaggi.",
+  "archived.title": "Chat archiviate",
+  "archived.empty": "Nessuna conversazione archiviata.",
+  "archived.view": "Vedi",
+  "archived.deleteTitle": "Eliminare questa chat archiviata?",
+  "archived.deleteMsg": "Questo rimuove definitivamente la conversazione e tutti i suoi messaggi.",
 };
 
 const pt: Dict = {
@@ -2221,6 +2296,10 @@ const pt: Dict = {
   "common.light": "Claro",
   "common.dark": "Escuro",
   "common.saveFailed": "Falha ao guardar",
+  "common.loadFailed": "Falha ao carregar",
+  "common.deleteFailed": "Falha ao eliminar",
+  "common.loadFailed": "Falha ao carregar",
+  "common.deleteFailed": "Falha ao eliminar",
   "common.backToLogin": "Voltar ao login",
 
   "loading.tagline": "A preparar os teus chats",
@@ -2266,6 +2345,7 @@ const pt: Dict = {
   "sidebar.adminCenter": "Centro admin",
   "sidebar.adminCenterTip": "Abrir o Centro admin",
   "sidebar.settingsTip": "Perfil e definições",
+  "sidebar.logout": "Sair",
   "sidebar.archive": "Arquivar",
 
   "chat.expand": "Mostrar barra lateral",
@@ -2622,6 +2702,16 @@ const pt: Dict = {
 
   "archived.readonly": "Este chat está arquivado e é só de leitura.",
   "archived.unarchive": "Desarquivar",
+  "archived.title": "Arquivados",
+  "archived.empty": "Sem chats arquivados.",
+  "archived.view": "Abrir",
+  "archived.deleteTitle": "Eliminar este chat arquivado?",
+  "archived.deleteMsg": "Será eliminado para sempre, com todas as mensagens.",
+  "archived.title": "Conversas arquivadas",
+  "archived.empty": "Nenhuma conversa arquivada.",
+  "archived.view": "Ver",
+  "archived.deleteTitle": "Eliminar esta conversa arquivada?",
+  "archived.deleteMsg": "Isto remove permanentemente a conversa e todas as mensagens.",
 };
 
 const dicts: Record<LangId, Dict> = { en, es, fr, ru, it, pt };

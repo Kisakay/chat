@@ -73,6 +73,8 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | POST | `/api/auth/totp` | challenge | second login step `{totpToken, code}` → session |
 | GET/PATCH/DELETE | `/api/conversations/:id` | owner | incl. messages on GET |
 | POST/GET/DELETE | `/api/conversations/:id/share` | owner | public link `/share/:publicId` |
+| GET | `/api/conversations/archived` | Bearer | archived chats (hidden from sidebar + search) |
+| POST | `/api/conversations/:id/archive`, `/api/conversations/:id/unarchive` | owner | archive (read-only) / restore to the list |
 | GET | `/api/share/:publicId` | **public** | read-only shared chat JSON |
 | GET | `/api/models` | Bearer | `[{id: "driver:model", …}]` across enabled drivers |
 | POST | `/api/chat` | Bearer | `{model, messages, conversationId?, stream?}` → JSON or SSE |
@@ -84,7 +86,7 @@ reply into that conversation (ownership enforced) and auto-titles new chats.
 
 `$DATA_DIR/kisassistant.db` (WAL mode). Tables: `users` (id, username,
 display_name, avatar_url, theme, email, key_hash), `sessions` (hashed Bearer tokens),
-`conversations` (id, user, title, topic, model), `messages`, `shares`,
+`conversations` (id, user, title, topic, model, archived_at), `messages`, `shares`,
 `resets` (recovery tokens), `settings` (feature flags)
 (conv ↔ public id). No migration system — schema is created idempotently at boot.
 
