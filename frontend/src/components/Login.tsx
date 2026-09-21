@@ -54,7 +54,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
       <div className="w-full max-w-sm">
         <div className="rounded-[2rem] border border-white/60 bg-white/80 p-8 shadow-2xl shadow-accent-900/5 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
           <div className="mb-2 flex flex-col items-center text-center">
-            <FlowerMark size={68} className="mb-4 drop-shadow-lg" />
+            <FlowerMark size={68} dynamic={false} className="mb-4 drop-shadow-lg" />
             <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
             <p className="mt-1 text-sm opacity-60">Sign in to KisAssistant to continue</p>
           </div>

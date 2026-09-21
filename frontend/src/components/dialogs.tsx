@@ -635,7 +635,7 @@ function AccentSection() {
           style={{ background: state.presetId === "custom" ? state.customHex : undefined }}
           title="Custom color"
         >
-          <Sparkles size={14} className={cn("mix-blend-difference text-white", state.presetId === "custom" && "opacity-0")} />
+          <Sparkles size={14} className={cn("text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]", state.presetId === "custom" && "opacity-0")} />
           <input
             type="color"
             aria-label="Custom accent color"

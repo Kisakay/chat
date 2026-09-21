@@ -70,7 +70,7 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
   return (
     <div className="grid min-h-full place-items-center bg-gradient-to-br from-stone-100 via-stone-50 to-accent-100/60 p-4 dark:from-zinc-950 dark:via-zinc-950 dark:to-accent-950/40 sm:p-6">
       <div className="w-full max-w-xl rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-2xl backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80 sm:p-8">
-        <FlowerMark size={48} className="mx-auto mb-3" />
+        <FlowerMark size={48} dynamic={false} className="mx-auto mb-3" />
         <h1 className="text-center font-serif text-2xl font-bold tracking-tight">Access request</h1>
 
         {loading && <p className="mt-4 flex items-center justify-center gap-2 text-sm opacity-60"><Spinner size={15} /> Loading ticket…</p>}

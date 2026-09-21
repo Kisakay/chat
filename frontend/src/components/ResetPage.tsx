@@ -34,7 +34,7 @@ export function ResetPage({ token }: { token: string }) {
   return (
     <div className="grid min-h-full place-items-center bg-gradient-to-br from-stone-100 via-stone-50 to-accent-100/60 p-6 dark:from-zinc-950 dark:via-zinc-950 dark:to-accent-950/40">
       <div className="w-full max-w-sm rounded-[2rem] border border-white/60 bg-white/80 p-8 text-center shadow-2xl backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
-        <FlowerMark size={56} className="mx-auto mb-4" />
+        <FlowerMark size={56} dynamic={false} className="mx-auto mb-4" />
         {state.kind === "loading" && <p className="flex items-center justify-center gap-2 text-sm opacity-60"><Spinner size={15} /> Checking link…</p>}
         {state.kind === "invalid" && (
           <div className="space-y-3">
