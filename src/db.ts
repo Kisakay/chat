@@ -108,6 +108,11 @@ export function getDb(): Database {
       created_at INTEGER NOT NULL,
       expires_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS settings(
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `);
   // Email column added after the initial schema — keep idempotent.
   const cols = db.query("PRAGMA table_info(users)").all() as { name: string }[];
@@ -330,6 +335,29 @@ export function consumeReset(tokenHash: string): ResetRow | null {
 
 export function deleteUserResets(userId: string): void {
   getDb().query("DELETE FROM resets WHERE user_id = ?").run(userId);
+}
+
+// --- platform settings (admin-controlled feature flags) ---
+
+export function getSetting(key: string, fallback: string): string {
+  const r = getDb().query("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | null;
+  return r?.value ?? fallback;
+}
+
+export function setSetting(key: string, value: string): void {
+  getDb().query(
+    "INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+  ).run(key, value, Date.now());
+}
+
+/** Public self-registration switch (default off = admin-created accounts only). */
+export function isRegistrationEnabled(): boolean {
+  return getSetting("registration_enabled", "0") === "1";
+}
+
+/** Admin kill-switch for the OCR platform tool (default on). */
+export function isOcrToolEnabled(): boolean {
+  return getSetting("tools_ocr_enabled", "1") === "1";
 }
 
 // --- public shares ---

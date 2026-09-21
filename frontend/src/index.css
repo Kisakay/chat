@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Accent palette defaults (emerald). Overridden at runtime by lib/accent.ts
+   from the user's saved accent color / custom pick. Values are RGB triplets. */
+:root {
+  --ka-accent-50: 236 253 245;
+  --ka-accent-100: 209 250 229;
+  --ka-accent-200: 167 243 208;
+  --ka-accent-300: 110 231 183;
+  --ka-accent-400: 52 211 153;
+  --ka-accent-500: 16 185 129;
+  --ka-accent-600: 5 150 105;
+  --ka-accent-700: 4 120 87;
+  --ka-accent-800: 6 95 70;
+  --ka-accent-900: 6 78 59;
+}
+
 html, body, #root {
   height: 100%;
 }
@@ -59,12 +74,12 @@ body {
   @apply bg-stone-200/50 dark:bg-zinc-800;
 }
 .md a {
-  @apply text-emerald-600 underline dark:text-emerald-400;
+  @apply text-accent-600 underline dark:text-accent-400;
 }
 .md ul { @apply list-disc pl-5; }
 .md ol { @apply list-decimal pl-5; }
 .md blockquote {
-  @apply border-l-4 border-emerald-500/50 pl-3 italic opacity-80;
+  @apply border-l-4 border-accent-500/50 pl-3 italic opacity-80;
 }
 
 .typing-cursor::after {

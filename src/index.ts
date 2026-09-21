@@ -28,11 +28,14 @@ import {
   getMessages,
   getShareByConv,
   getShareByPublic,
+  getSetting,
   getUserById,
   getUserByUsername,
+  isRegistrationEnabled,
   listConversations,
   listUsers,
   peekReset,
+  setSetting,
   toPublicUser,
   touchConversation,
   updateConversation,
@@ -41,6 +44,7 @@ import {
 import type { ChatMessage } from "./drivers/types.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
 import { createHash, randomBytes } from "node:crypto";
+import { statSync } from "node:fs";
 import { mailEnabled, sendRecoveryEmail } from "./mail.ts";
 import {
   CDN_NAMESPACES,
@@ -61,6 +65,8 @@ import { tools } from "./tools/registry.ts";
 
 assertConfig();
 const registry = new DriverRegistry();
+// Ollama handles admin model pulls/deletes (host is loopback/LAN, no auth).
+const ollamaDriver = registry.get("ollama") as OllamaDriver;
 await tools.init();
 
 function json(data: unknown, status = 200): Response {
@@ -186,6 +192,28 @@ const server = Bun.serve({
       }
       const f = await cdnFile(ns, key, ext);
       if (!f.exists) return new Response("not found", { status: 404 });
+      if (ns === "avatar") {
+        // Same URL, new bytes after a re-upload: force revalidation (ETag)
+        // so the fresh picture shows immediately without a page refresh.
+        let etag = "";
+        try {
+          const st = statSync(f.path);
+          etag = `"${st.mtimeMs.toString(36)}-${st.size.toString(36)}"`;
+        } catch {
+          // stat failed — serve without ETag
+        }
+        if (etag && req.headers.get("if-none-match") === etag) {
+          return new Response(null, { status: 304 });
+        }
+        return new Response(Bun.file(f.path), {
+          headers: {
+            "Content-Type": cdnMime(ext),
+            "Cache-Control": "no-cache",
+            ...(etag ? { ETag: etag } : {}),
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
       return new Response(Bun.file(f.path), {
         headers: {
           "Content-Type": cdnMime(ext),
@@ -271,7 +299,50 @@ const server = Bun.serve({
 
     // --- key recovery via email (optional — needs SMTP configured) ---
     if (path === "/api/auth/methods" && req.method === "GET") {
-      return json({ recovery: mailEnabled(), from: mailEnabled() ? config.smtpFrom : undefined });
+      return json({
+        recovery: mailEnabled(),
+        from: mailEnabled() ? config.smtpFrom : undefined,
+        registration: isRegistrationEnabled(),
+      });
+    }
+
+    // --- public self-registration (admin can disable it on the fly) ---
+    if (path === "/api/auth/register" && req.method === "POST") {
+      const ip = clientIp(req, server);
+      if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
+      if (!isRegistrationEnabled()) {
+        recordAttempt(ip);
+        return json({ error: "registration is currently disabled on this platform" }, 403);
+      }
+      const { ok, body } = await readJson(req);
+      if (!ok) {
+        recordAttempt(ip);
+        return json({ error: "invalid JSON" }, 400);
+      }
+      const username = validUsername(body.username);
+      if (!username) {
+        recordAttempt(ip);
+        return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
+      }
+      if (getUserByUsername(username)) {
+        recordAttempt(ip);
+        return json({ error: "username taken" }, 409);
+      }
+      const displayName = body.displayName === undefined ? username : cleanStr(body.displayName, 60);
+      if (displayName === null) {
+        recordAttempt(ip);
+        return json({ error: "displayName: 1-60 chars" }, 400);
+      }
+      const email = body.email === undefined ? "" : validEmail(body.email);
+      if (email === null) {
+        recordAttempt(ip);
+        return json({ error: "invalid email address" }, 400);
+      }
+      const key = newAccessKey();
+      const created = createUser({ username, displayName, avatarUrl: "", theme: "auto", email, keyHash: hashSecret(key) });
+      clearAttempts(ip);
+      // Show the raw key exactly once.
+      return json({ user: toPublicUser(created), key }, 201);
     }
 
     if (path === "/api/auth/recover" && req.method === "POST") {
@@ -422,6 +493,128 @@ const server = Bun.serve({
           return json({ user: toPublicUser(updated!) });
         }
         return json({ error: "not found" }, 404);
+      }
+
+      // --- admin: platform settings (feature flags) ---
+      if (path === "/api/admin/settings" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        return json({
+          settings: {
+            registrationEnabled: isRegistrationEnabled(),
+            ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
+          },
+        });
+      }
+
+      if (path === "/api/admin/settings" && req.method === "PATCH") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const { ok, body } = await readJson(req);
+        if (!ok) return json({ error: "invalid JSON" }, 400);
+        if (body.registrationEnabled !== undefined) {
+          if (typeof body.registrationEnabled !== "boolean") return json({ error: "registrationEnabled must be boolean" }, 400);
+          setSetting("registration_enabled", body.registrationEnabled ? "1" : "0");
+        }
+        if (body.ocrEnabled !== undefined) {
+          if (typeof body.ocrEnabled !== "boolean") return json({ error: "ocrEnabled must be boolean" }, 400);
+          setSetting("tools_ocr_enabled", body.ocrEnabled ? "1" : "0");
+        }
+        return json({
+          settings: {
+            registrationEnabled: isRegistrationEnabled(),
+            ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
+          },
+        });
+      }
+
+      // --- admin: Ollama model management (pull from the library, delete) ---
+      // Pull streams Ollama's NDJSON progress straight to the admin client.
+      if (path === "/api/admin/ollama/pull" && req.method === "POST") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const { ok, body } = await readJson(req);
+        if (!ok) return json({ error: "invalid JSON" }, 400);
+        const name = typeof body.name === "string" ? body.name.trim() : "";
+        if (!/^[a-z0-9._:\/-]{1,100}$/i.test(name)) return json({ error: "invalid model name" }, 400);
+        if (!ollamaDriver.enabled) return json({ error: "ollama driver is disabled" }, 502);
+        const abortUpstream = new AbortController();
+        const onClientAbort = () => abortUpstream.abort();
+        req.signal.addEventListener("abort", onClientAbort);
+        let clientGone = false;
+        const stream = new ReadableStream({
+          async start(controller) {
+            const enc = new TextEncoder();
+            const send = (obj: unknown): boolean => {
+              if (clientGone || req.signal.aborted) return false;
+              try {
+                controller.enqueue(enc.encode(JSON.stringify(obj) + "\n"));
+                return true;
+              } catch {
+                clientGone = true;
+                return false;
+              }
+            };
+            try {
+              const res = await fetch(`${ollamaDriver.host}/api/pull`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ model: name, stream: true }),
+                signal: abortUpstream.signal,
+              });
+              if (!res.ok || !res.body) {
+                const errText = await res.text().catch(() => "");
+                send({ error: `ollama /api/pull failed: ${res.status}${errText ? ` — ${errText.slice(0, 200)}` : ""}` });
+                return;
+              }
+              // Passthrough of the NDJSON progress lines (status/digest/completed/total).
+              const dec = new TextDecoder();
+              let buf = "";
+              for await (const chunk of res.body) {
+                if (req.signal.aborted) break;
+                buf += dec.decode(chunk, { stream: true });
+                let nl: number;
+                while ((nl = buf.indexOf("\n")) >= 0) {
+                  const line = buf.slice(0, nl).trim();
+                  buf = buf.slice(nl + 1);
+                  if (line && !send(JSON.parse(line))) break;
+                }
+              }
+              send({ status: "done" });
+            } catch (e) {
+              if (!req.signal.aborted && !clientGone) send({ error: (e as Error).message });
+            } finally {
+              req.signal.removeEventListener("abort", onClientAbort);
+              abortUpstream.abort();
+              if (!clientGone) {
+                try { controller.close(); } catch { /* already closed */ }
+              }
+            }
+          },
+          cancel() {
+            clientGone = true;
+            abortUpstream.abort();
+          },
+        });
+        return new Response(stream, {
+          headers: { "Content-Type": "application/x-ndjson", "Cache-Control": "no-store", "X-Accel-Buffering": "no" },
+        });
+      }
+
+      // Admin-only model removal (frees disk on the Ollama host).
+      const ollamaDeleteMatch = path.match(/^\/api\/admin\/ollama\/models\/([a-z0-9._:\/-]{1,100})$/i);
+      if (ollamaDeleteMatch && req.method === "DELETE") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        if (!ollamaDriver.enabled) return json({ error: "ollama driver is disabled" }, 502);
+        try {
+          const res = await fetch(`${ollamaDriver.host}/api/delete`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: ollamaDeleteMatch[1] }),
+            signal: AbortSignal.timeout(15_000),
+          });
+          if (!res.ok) return json({ error: `ollama /api/delete failed: ${res.status}` }, 502);
+          return json({ ok: true });
+        } catch (e) {
+          return json({ error: (e as Error).message }, 502);
+        }
       }
 
       // --- conversations (server-persisted, per account) ---

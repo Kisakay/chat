@@ -32,7 +32,7 @@ export function ResetPage({ token }: { token: string }) {
   }
 
   return (
-    <div className="grid min-h-full place-items-center bg-gradient-to-br from-stone-100 via-stone-50 to-emerald-100/60 p-6 dark:from-zinc-950 dark:via-zinc-950 dark:to-emerald-950/40">
+    <div className="grid min-h-full place-items-center bg-gradient-to-br from-stone-100 via-stone-50 to-accent-100/60 p-6 dark:from-zinc-950 dark:via-zinc-950 dark:to-accent-950/40">
       <div className="w-full max-w-sm rounded-[2rem] border border-white/60 bg-white/80 p-8 text-center shadow-2xl backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
         <Logo size={56} className="mx-auto mb-4 rounded-[1.2rem] shadow-lg" />
         {state.kind === "loading" && <p className="flex items-center justify-center gap-2 text-sm opacity-60"><Spinner size={15} /> Checking link…</p>}
@@ -55,7 +55,7 @@ export function ResetPage({ token }: { token: string }) {
         {state.kind === "working" && <p className="flex items-center justify-center gap-2 text-sm opacity-60"><Spinner size={15} /> Issuing…</p>}
         {state.kind === "done" && (
           <div className="space-y-4">
-            <h1 className="flex items-center justify-center gap-2 text-xl font-bold"><Sparkles size={18} className="text-emerald-500" /> New key ready</h1>
+            <h1 className="flex items-center justify-center gap-2 text-xl font-bold"><Sparkles size={18} className="text-accent-500" /> New key ready</h1>
             <p className="text-sm opacity-70">Copy it now — it won't be shown again. Then log in with it.</p>
             <div className="flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-2xl bg-stone-100 px-3 py-2.5 text-sm dark:bg-zinc-800">{state.key}</code>

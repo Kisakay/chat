@@ -84,7 +84,7 @@ export function AdminPanel({ open, onClose }: { open: boolean; onClose: () => vo
         {error && <p className="mb-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">{error}</p>}
 
         {freshKey && (
-          <div className="mb-4 rounded-2xl border border-emerald-500/40 bg-emerald-50 p-4 dark:bg-emerald-950/30">
+          <div className="mb-4 rounded-2xl border border-accent-500/40 bg-accent-50 p-4 dark:bg-accent-950/30">
             <p className="mb-2 flex items-center gap-2 text-sm font-medium"><KeyRound size={15} /> Key for @{freshKey.username} — shown once, copy it now:</p>
             <div className="flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">{freshKey.key}</code>

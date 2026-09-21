@@ -46,7 +46,9 @@ export const api = {
   verify: () => req<{ ok: boolean; user: User }>("/api/auth/verify"),
   logout: () => req<{ ok: boolean }>("/api/auth/logout", { method: "POST" }).catch(() => ({ ok: true as const })),
 
-  methods: () => req<{ recovery: boolean; from?: string }>("/api/auth/methods", {}, false),
+  methods: () => req<{ recovery: boolean; from?: string; registration: boolean }>("/api/auth/methods", {}, false),
+  register: (u: { username: string; displayName?: string; email?: string }) =>
+    req<{ user: User; key: string }>("/api/auth/register", { method: "POST", body: JSON.stringify(u) }, false),
   recover: (username: string) =>
     req<{ ok: boolean }>("/api/auth/recover", { method: "POST", body: JSON.stringify({ username }) }, false),
   resetCheck: (token: string) => req<{ ok: boolean; username: string }>(`/api/auth/reset/${token}`, {}, false),
@@ -63,6 +65,10 @@ export const api = {
   adminRegenerate: (id: string) => req<{ key: string }>(`/api/admin/users/${id}/regenerate`, { method: "POST" }),
   adminPatch: (id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+
+  adminGetSettings: () => req<{ settings: { registrationEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings"),
+  adminPatchSettings: (patch: { registrationEnabled?: boolean; ocrEnabled?: boolean }) =>
+    req<{ settings: { registrationEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
 
   convs: () => req<{ conversations: Conversation[] }>("/api/conversations"),
   createConv: (c: { title?: string; topic?: string; model?: string }) =>

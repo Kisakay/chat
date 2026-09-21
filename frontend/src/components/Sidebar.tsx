@@ -150,7 +150,7 @@ export function Sidebar({
             className={cn(
               "group flex cursor-pointer select-none items-center gap-2 rounded-2xl px-3 py-2.5 text-sm transition [-webkit-touch-callout:none]",
               c.id === activeId
-                ? "bg-emerald-600/10 font-medium text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-100"
+                ? "bg-accent-600/10 font-medium text-accent-900 dark:bg-accent-500/10 dark:text-accent-100"
                 : "hover:bg-stone-200/50 dark:hover:bg-zinc-800/70",
             )}
           >

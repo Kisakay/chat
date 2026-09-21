@@ -43,9 +43,9 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   }
 
   return (
-    <div className="grid min-h-full place-items-center overflow-y-auto bg-gradient-to-br from-stone-100 via-stone-50 to-emerald-100/60 p-6 dark:from-zinc-950 dark:via-zinc-950 dark:to-emerald-950/40">
+    <div className="grid min-h-full place-items-center overflow-y-auto bg-gradient-to-br from-stone-100 via-stone-50 to-accent-100/60 p-6 dark:from-zinc-950 dark:via-zinc-950 dark:to-accent-950/40">
       <div className="w-full max-w-sm">
-        <div className="rounded-[2rem] border border-white/60 bg-white/80 p-8 shadow-2xl shadow-emerald-900/5 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
+        <div className="rounded-[2rem] border border-white/60 bg-white/80 p-8 shadow-2xl shadow-accent-900/5 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
           <div className="mb-2 flex flex-col items-center text-center">
             <Logo size={68} className="mb-4 rounded-[1.5rem] shadow-lg shadow-red-900/20" />
             <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
@@ -99,7 +99,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
           <ul className="mt-6 space-y-2 border-t border-stone-200/70 pt-5 dark:border-zinc-800">
             {PERKS.map((p) => (
               <li key={p.text} className="flex items-center gap-2.5 text-[13px] opacity-70">
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
                   <p.icon size={14} />
                 </span>
                 {p.text}

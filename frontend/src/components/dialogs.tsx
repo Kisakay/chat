@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Globe, FileText, ImagePlus, Link2, Mail, Pencil, ScanText, Settings2, Tag, Unplug } from "lucide-react";
+import { Globe, FileText, ImagePlus, Link2, Mail, Palette, Pencil, ScanText, Settings2, Sparkles, Tag, Unplug, UserPlus } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { cn } from "../lib/cn.ts";
+import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
+import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
 import type { Conversation, FilePreview, User } from "../lib/types.ts";
-import { Avatar, Button, CopyButton, Field, Input, Modal, Picker, Spinner } from "./ui.tsx";
+import { Avatar, bumpCdnVersion, Button, CopyButton, Field, Input, Modal, Picker, Spinner, Toggle } from "./ui.tsx";
 
 /* ---------- Rename + topic ---------- */
 
@@ -173,7 +175,7 @@ export function FilePreviewModal({
         </p>
       ) : (
         <div className="space-y-3">
-          <p className="rounded-2xl bg-emerald-600/10 px-4 py-2.5 text-sm opacity-90">
+          <p className="rounded-2xl bg-accent-600/10 px-4 py-2.5 text-sm opacity-90">
             {isOcr
               ? <>The image was transcribed to text on the server — <strong>the model receives this text, never the image</strong>. Fix any reading mistakes below, then attach.</>
               : <>The file was uploaded through platform tools. <strong>Its text content is attached to your message.</strong> Edit below if needed, then attach.</>}
@@ -185,7 +187,7 @@ export function FilePreviewModal({
             rows={10}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full resize-y rounded-2xl border border-stone-200 bg-stone-50 p-4 font-mono text-[13px] leading-relaxed outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-800"
+            className="w-full resize-y rounded-2xl border border-stone-200 bg-stone-50 p-4 font-mono text-[13px] leading-relaxed outline-none focus:border-accent-500 dark:border-zinc-700 dark:bg-zinc-800"
           />
           <div className="flex items-center justify-between">
             <span className="text-xs opacity-60">{preview?.name} · {text.length.toLocaleString()} chars</span>
@@ -195,6 +197,90 @@ export function FilePreviewModal({
             </div>
           </div>
         </div>
+      )}
+    </Modal>
+  );
+}
+
+/* ---------- Self-registration ---------- */
+
+export function RegisterDialog({
+  open,
+  onClose,
+  onDone,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onDone: (username: string, key: string) => void;
+}) {
+  const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [key, setKey] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setUsername("");
+      setDisplayName("");
+      setEmail("");
+      setKey(null);
+      setError("");
+    }
+  }, [open ]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.register({
+        username: username.trim().toLowerCase(),
+        displayName: displayName.trim() || undefined,
+        email: email.trim() || undefined,
+      });
+      setKey(res.key);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Create an account" icon={UserPlus}>
+      {key ? (
+        <div className="space-y-4">
+          <p className="text-sm opacity-80">
+            Welcome, <strong>@{username.trim().toLowerCase()}</strong>! Your access key — copy it now, it won't be shown again:
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-2xl bg-stone-100 px-3 py-2.5 text-sm dark:bg-zinc-800">{key}</code>
+            <CopyButton text={key} />
+          </div>
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => { onDone(username.trim().toLowerCase(), key); onClose(); }}>Copy & continue to login</Button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          <Field label="Username">
+            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="alice" maxLength={32} required />
+          </Field>
+          <Field label="Display name">
+            <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Alice" maxLength={60} />
+          </Field>
+          <Field label="Email (optional, for key recovery)">
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" />
+          </Field>
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" size="sm" type="button" onClick={onClose}>Cancel</Button>
+            <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : "Register"}</Button>
+          </div>
+        </form>
       )}
     </Modal>
   );
@@ -296,6 +382,9 @@ export function SettingsModal({
     try {
       const res = await api.uploadAvatar(user.id, f);
       setAvatarUrl(res.url); // applied when you press Save
+      // Same URL path every upload -> bump the CDN version so every <Avatar>
+      // preview (this modal, sidebar, chat bubbles) re-fetches immediately.
+      bumpCdnVersion();
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -348,11 +437,11 @@ export function SettingsModal({
             className={cn(
               "flex cursor-pointer items-center gap-3 rounded-3xl border-2 border-dashed px-4 py-3.5 transition",
               dragOver
-                ? "border-emerald-500 bg-emerald-500/10"
-                : "border-stone-200 hover:border-emerald-500/60 hover:bg-stone-50 dark:border-zinc-700 dark:hover:bg-zinc-800/60",
+                ? "border-accent-500 bg-accent-500/10"
+                : "border-stone-200 hover:border-accent-500/60 hover:bg-stone-50 dark:border-zinc-700 dark:hover:bg-zinc-800/60",
             )}
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
               {uploading ? <Spinner size={17} /> : <ImagePlus size={17} />}
             </span>
             <span className="min-w-0 flex-1 text-sm">
@@ -395,6 +484,8 @@ export function SettingsModal({
             ]}
           />
         </Field>
+        <AccentSection />
+        <FeaturesSection />
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex justify-end gap-2">
           <Button variant="secondary" size="sm" type="button" onClick={onClose}>Cancel</Button>
@@ -402,5 +493,111 @@ export function SettingsModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+/* ---------- Accent color (settings) ---------- */
+
+function AccentSection() {
+  const [state, setState] = useState<AccentState>(() => currentAccent());
+
+  function pick(presetId: string) {
+    const next = { ...state, presetId };
+    setState(next);
+    applyAccent(next);
+  }
+
+  function pickCustom(hex: string) {
+    const next = { presetId: "custom", customHex: hex };
+    setState(next);
+    previewAccent(hex);
+  }
+
+  return (
+    <div>
+      <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium opacity-80">
+        <Palette size={14} />
+        Accent color
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        {ACCENT_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            title={p.label}
+            aria-label={`Accent: ${p.label}`}
+            onClick={() => pick(p.id)}
+            className={cn(
+              "h-8 w-8 rounded-full border-2 transition active:scale-90",
+              state.presetId === p.id
+                ? "border-stone-900 dark:border-white"
+                : "border-transparent hover:scale-110",
+            )}
+            style={{ backgroundColor: p.base }}
+          />
+        ))}
+        <label
+          className={cn(
+            "relative grid h-8 w-8 cursor-pointer place-items-center overflow-hidden rounded-full border-2 transition active:scale-90",
+            state.presetId === "custom"
+              ? "border-stone-900 dark:border-white"
+              : "border-transparent hover:scale-110",
+          )}
+          style={{ background: state.presetId === "custom" ? state.customHex : undefined }}
+          title="Custom color"
+        >
+          <Sparkles size={14} className={cn("mix-blend-difference text-white", state.presetId === "custom" && "opacity-0")} />
+          <input
+            type="color"
+            aria-label="Custom accent color"
+            value={state.presetId === "custom" ? state.customHex : "#10b981"}
+            onChange={(e) => pickCustom(e.target.value)}
+            onBlur={() => applyAccent(state)} // persist the last previewed value
+            className="absolute inset-0 cursor-pointer opacity-0"
+          />
+        </label>
+      </div>
+      <p className="mt-1.5 text-xs opacity-60">Applied instantly, saved on this device.</p>
+    </div>
+  );
+}
+
+/* ---------- Features (settings) ---------- */
+
+function FeaturesSection() {
+  const flags = useFeatures();
+  return (
+    <div>
+      <span className="mb-1.5 flex items-center gap-1.5 text-sm font-medium opacity-80">
+        <Sparkles size={14} />
+        Features
+      </span>
+      <div className="space-y-1">
+        {FEATURES.map((f) => (
+          <label
+            key={f.key}
+            className={cn(
+              "flex items-center gap-3 rounded-2xl px-3 py-2 transition",
+              f.ready ? "cursor-pointer hover:bg-stone-100 dark:hover:bg-zinc-800" : "opacity-50",
+            )}
+          >
+            <Toggle
+              checked={!!flags[f.key]}
+              disabled={!f.ready}
+              label={f.label}
+              onChange={(v) => setFeature(f.key, v)}
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium">
+                {f.label}
+                {!f.ready && <span className="ml-1.5 text-xs opacity-60">(soon)</span>}
+              </span>
+              <span className="block text-xs opacity-60">{f.hint}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <p className="mt-1.5 text-xs opacity-60">Applied instantly, saved on this device.</p>
+    </div>
   );
 }

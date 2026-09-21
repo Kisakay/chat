@@ -4,6 +4,7 @@ import type { Attachment, ChatMessage, Conversation, DriverModel, User } from ".
 import { Avatar, IconButton, LOGO_URL, Logo, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
 import { cn } from "../lib/cn.ts";
+import { useFeatures } from "../lib/features.ts";
 
 function MessageBubble({ msg, authorAvatar, authorName }: { msg: ChatMessage; authorAvatar?: string; authorName: string }) {
   const isUser = msg.role === "user";
@@ -16,7 +17,7 @@ function MessageBubble({ msg, authorAvatar, authorName }: { msg: ChatMessage; au
           {isUser ? "You" : "KisAssistant"}
         </div>
         {isUser ? (
-          <div className="whitespace-pre-wrap rounded-3xl rounded-tr-lg bg-emerald-600 px-4 py-2.5 text-[15px] text-white dark:bg-emerald-500 dark:text-zinc-950">
+          <div className="whitespace-pre-wrap rounded-3xl rounded-tr-lg bg-accent-600 px-4 py-2.5 text-[15px] text-white dark:bg-accent-500 dark:text-zinc-950">
             {msg.content}
           </div>
         ) : (
@@ -70,6 +71,7 @@ export function Chat({
 }) {
   const [draft, setDraft] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
+  const features = useFeatures();
   const boxRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -182,7 +184,7 @@ export function Chat({
           {attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {attachments.map((a) => (
-                <span key={a.id} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-emerald-600/30 bg-emerald-600/10 py-1 pl-3 pr-1.5 text-xs font-medium dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                <span key={a.id} className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-accent-600/30 bg-accent-600/10 py-1 pl-3 pr-1.5 text-xs font-medium dark:border-accent-500/30 dark:bg-accent-500/10">
                   {a.kind === "ocr" ? <ScanText size={13} /> : <FileText size={13} />}
                   <span className="max-w-40 truncate">{a.name}</span>
                   <button onClick={() => onRemoveAttachment(a.id)} aria-label={`Remove ${a.name}`} className="rounded-full p-1 transition hover:bg-black/10 dark:hover:bg-white/10">
@@ -203,7 +205,7 @@ export function Chat({
                   disabled={!ocrAvailable}
                   className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-stone-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
                     <ScanText size={16} />
                   </span>
                   <span>
@@ -215,7 +217,7 @@ export function Chat({
                   onClick={() => { setAttachOpen(false); txtRef.current?.click(); }}
                   className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-stone-100 dark:hover:bg-zinc-800"
                 >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
                     <FileText size={16} />
                   </span>
                   <span>
@@ -231,15 +233,17 @@ export function Chat({
           )}
         </div>
         <form onSubmit={submit} className="mx-auto flex w-full max-w-3xl items-end gap-2 rounded-[1.75rem] border border-stone-200 bg-white p-2 pl-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-          <button
-            type="button"
-            onClick={() => setAttachOpen((o) => !o)}
-            aria-label="Attach a file"
-            title="Attach a file"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-stone-100 active:scale-95 dark:hover:bg-zinc-800"
-          >
-            <Paperclip size={17} className="opacity-70" />
-          </button>
+          {features.attachments && (
+            <button
+              type="button"
+              onClick={() => setAttachOpen((o) => !o)}
+              aria-label="Attach a file"
+              title="Attach a file"
+              className="grid h-10 w-10 shrink-0 -translate-y-[2px] place-items-center rounded-full transition hover:bg-stone-100 active:scale-95 dark:hover:bg-zinc-800"
+            >
+              <Paperclip size={17} className="opacity-70" />
+            </button>
+          )}
           <input ref={imgRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile("ocr", f); e.target.value = ""; }} />
           <input ref={txtRef} type="file" accept=".txt,.md,text/plain,text/markdown" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile("text", f); e.target.value = ""; }} />
           <textarea
@@ -261,7 +265,7 @@ export function Chat({
             type="submit"
             disabled={(!draft.trim() && attachments.length === 0) || sending}
             aria-label="Send"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-600 text-white shadow transition hover:bg-emerald-500 active:scale-95 disabled:opacity-40 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600 text-white shadow transition hover:bg-accent-500 active:scale-95 disabled:opacity-40 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400"
           >
             <SendHorizontal size={17} />
           </button>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, clearToken, getToken } from "./lib/api.ts";
+import { featureEnabled, THINKING_SYSTEM_PROMPT } from "./lib/features.ts";
 import type { Attachment, ChatMessage, Conversation, DriverModel, FilePreview, User } from "./lib/types.ts";
 import { Login } from "./components/Login.tsx";
 import { Sidebar } from "./components/Sidebar.tsx";
@@ -175,7 +176,12 @@ export function App() {
     setStreaming("");
     let full = "";
     try {
-      await api.chatStream({ model, messages: history, conversationId: convId! }, (t) => {
+      // "Thinking" feature flag: decorate the outgoing payload only — the
+      // system message is never shown nor persisted client-side.
+      const outMessages = featureEnabled("thinking")
+        ? [{ role: "system", content: THINKING_SYSTEM_PROMPT } as ChatMessage, ...history]
+        : history;
+      await api.chatStream({ model, messages: outMessages, conversationId: convId! }, (t) => {
         full += t;
         setStreaming(full);
       });

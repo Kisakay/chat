@@ -1,4 +1,5 @@
 import { config } from "../config.ts";
+import { isOcrToolEnabled } from "../db.ts";
 import { driverLog, fmtMs } from "../drivers/log.ts";
 import type { PlatformTool } from "./types.ts";
 
@@ -62,12 +63,15 @@ export class OcrTool implements PlatformTool {
   }
 
   isAvailable(): boolean {
-    return this.available ?? false;
+    return (this.available ?? false) && isOcrToolEnabled();
   }
 
   unavailableReason(): string | null {
-    if (this.isAvailable()) return null;
-    return `tesseract binary not found (looked for "${tessBin()}"). Install tesseract or set TESSERACT_BIN.`;
+    if (!(this.available ?? false)) {
+      return `tesseract binary not found (looked for "${tessBin()}"). Install tesseract or set TESSERACT_BIN.`;
+    }
+    if (!isOcrToolEnabled()) return "OCR is disabled by the administrator (Admin Center → Features).";
+    return null;
   }
 
   async transcribe(image: Uint8Array): Promise<{ text: string; truncated: boolean }> {

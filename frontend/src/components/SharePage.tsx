@@ -29,7 +29,7 @@ export function SharePage({ publicId }: { publicId: string }) {
               </p>
             )}
           </div>
-          <a href="/" className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950">
+          <a href="/" className="rounded-full bg-accent-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-500 dark:bg-accent-500 dark:text-zinc-950">
             Open KisAssistant
           </a>
         </div>

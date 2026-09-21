@@ -19,8 +19,8 @@ export function Button({ variant = "primary", size = "md", className, ...props }
         size === "md" && "px-5 py-2.5 text-sm",
         size === "lg" && "px-6 py-3 text-base",
         size === "icon" && "h-9 w-9",
-        variant === "primary" && "bg-emerald-600 text-white shadow-sm hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-zinc-950",
-        variant === "gradient" && "bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-600/25 hover:from-emerald-500 hover:to-teal-400 dark:from-emerald-500 dark:to-teal-400 dark:text-zinc-950",
+        variant === "primary" && "bg-accent-600 text-white shadow-sm hover:bg-accent-500 dark:bg-accent-500 dark:hover:bg-accent-400 dark:text-zinc-950",
+        variant === "gradient" && "bg-gradient-to-r from-accent-600 to-teal-500 text-white shadow-lg shadow-accent-600/25 hover:from-accent-500 hover:to-teal-400 dark:from-accent-500 dark:to-teal-400 dark:text-zinc-950",
         variant === "secondary" && "border border-stone-200 bg-white hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800",
         variant === "ghost" && "hover:bg-stone-200/60 dark:hover:bg-zinc-800",
         variant === "danger" && "bg-red-600 text-white hover:bg-red-500",
@@ -53,10 +53,10 @@ export function Input({ variant = "default", className, ...props }: React.InputH
       className={cn(
         "w-full text-sm outline-none transition placeholder:text-stone-400 dark:placeholder:text-zinc-500",
         variant === "default" &&
-          "rounded-2xl border border-stone-200 bg-white px-4 py-2.5 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-900",
+          "rounded-2xl border border-stone-200 bg-white px-4 py-2.5 focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 dark:border-zinc-700 dark:bg-zinc-900",
         // soft: onboarding-style pill field, blends into rounded cards
         variant === "soft" &&
-          "rounded-full border border-transparent bg-stone-100 px-5 py-3 focus:border-emerald-500/60 focus:bg-white focus:ring-4 focus:ring-emerald-500/15 dark:bg-zinc-800/80 dark:focus:bg-zinc-900",
+          "rounded-full border border-transparent bg-stone-100 px-5 py-3 focus:border-accent-500/60 focus:bg-white focus:ring-4 focus:ring-accent-500/15 dark:bg-zinc-800/80 dark:focus:bg-zinc-900",
         className,
       )}
       {...props}
@@ -170,12 +170,12 @@ export function Picker({
         onClick={() => setOpen((o) => !o)}
         className={cn(
           "flex max-w-56 items-center gap-2 rounded-full border border-stone-200 bg-white py-2 pl-3.5 pr-3 text-sm font-medium shadow-sm transition",
-          "hover:border-emerald-500/60 hover:shadow disabled:cursor-not-allowed disabled:opacity-50",
+          "hover:border-accent-500/60 hover:shadow disabled:cursor-not-allowed disabled:opacity-50",
           "dark:border-zinc-700 dark:bg-zinc-900",
-          open && "border-emerald-500 ring-2 ring-emerald-500/20",
+          open && "border-accent-500 ring-2 ring-accent-500/20",
         )}
       >
-        {Icon && <Icon size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />}
+        {Icon && <Icon size={15} className="shrink-0 text-accent-600 dark:text-accent-400" />}
         <span className="truncate">{selected?.label ?? placeholder}</span>
         <ChevronDown size={15} className={cn("shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </button>
@@ -208,7 +208,7 @@ export function Picker({
                       className={cn(
                         "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition",
                         active
-                          ? "bg-emerald-600/10 font-medium text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-100"
+                          ? "bg-accent-600/10 font-medium text-accent-900 dark:bg-accent-500/10 dark:text-accent-100"
                           : "hover:bg-stone-100 dark:hover:bg-zinc-800",
                       )}
                     >
@@ -216,7 +216,7 @@ export function Picker({
                         <span className="block truncate">{o.label}</span>
                         {o.hint && <span className="block truncate text-xs opacity-50">{o.hint}</span>}
                       </span>
-                      {active && <Check size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />}
+                      {active && <Check size={15} className="shrink-0 text-accent-600 dark:text-accent-400" />}
                     </button>
                   );
                 })}
@@ -297,7 +297,7 @@ export function Modal({
         </div>
         <div className="mb-4 flex items-center gap-2.5">
           {Icon && (
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
               <Icon size={18} />
             </span>
           )}
@@ -401,8 +401,36 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
 
 /* ---------- Avatar ---------- */
 
+// Uploaded avatars reuse the same /cdn/avatar/<userId> path, so the <img> URL
+// never changes and browsers keep serving the stale cached file. A global
+// version counter (bumped after each successful upload) cache-busts every
+// /cdn/ URL rendered by <Avatar>, refreshing previews app-wide instantly.
+let cdnVersion = 0;
+const cdnVersionListeners = new Set<() => void>();
+
+/** Call after a successful CDN upload so every <Avatar> re-fetches the file. */
+export function bumpCdnVersion(): void {
+  cdnVersion++;
+  cdnVersionListeners.forEach((l) => l());
+}
+
+function useCdnVersion(): number {
+  const [v, setV] = useState(cdnVersion);
+  useEffect(() => {
+    const l = () => setV(cdnVersion);
+    cdnVersionListeners.add(l);
+    return () => { cdnVersionListeners.delete(l); };
+  }, []);
+  return v;
+}
+
+function withCdnVersion(url: string, v: number): string {
+  if (!url.startsWith("/cdn/")) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}v=${v}`;
+}
+
 const GRADIENTS = [
-  "from-emerald-500 to-teal-600",
+  "from-accent-500 to-teal-600",
   "from-violet-500 to-purple-600",
   "from-amber-500 to-orange-600",
   "from-sky-500 to-cyan-600",
@@ -410,8 +438,9 @@ const GRADIENTS = [
 ];
 
 export function Avatar({ name, url, size = 36 }: { name: string; url?: string; size?: number }) {
+  const cdnV = useCdnVersion();
   if (url) {
-    return <img src={url} alt={name} width={size} height={size} className="rounded-full object-cover" style={{ width: size, height: size }} />;
+    return <img src={withCdnVersion(url, cdnV)} alt={name} width={size} height={size} className="rounded-full object-cover" style={{ width: size, height: size }} />;
   }
   const initial = (name.trim()[0] || "?").toUpperCase();
   const g = GRADIENTS[(name.charCodeAt(0) || 0) % GRADIENTS.length];
@@ -443,10 +472,72 @@ export function Logo({ size = 36, className }: { size?: number; className?: stri
   );
 }
 
+/* ---------- Switch (feature toggle) ---------- */
+
+export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative h-6 w-11 shrink-0 rounded-full transition",
+        checked ? "bg-emerald-600 dark:bg-emerald-500" : "bg-stone-300 dark:bg-zinc-700",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+          checked ? "left-[1.375rem]" : "left-0.5",
+        )}
+      />
+    </button>
+  );
+}
+
 /* ---------- Misc ---------- */
 
 export function Spinner({ size = 18 }: { size?: number }) {
   return <Loader2 size={size} className="animate-spin" />;
+}
+
+/** Accessible on/off switch (emerald→accent colored when on). */
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  disabled = false,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative h-6 w-11 shrink-0 rounded-full border transition disabled:opacity-40",
+        checked
+          ? "border-transparent bg-accent-600 dark:bg-accent-500"
+          : "border-stone-300 bg-stone-200 dark:border-zinc-600 dark:bg-zinc-700",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all dark:bg-zinc-100",
+          checked ? "left-[1.4rem]" : "left-0.5",
+        )}
+      />
+    </button>
+  );
 }
 
 export function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
@@ -461,7 +552,7 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
       }}
       className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium transition hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
     >
-      {done ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+      {done ? <Check size={13} className="text-accent-500" /> : <Copy size={13} />}
       {done ? "Copied" : label}
     </button>
   );
