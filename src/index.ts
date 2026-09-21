@@ -114,6 +114,10 @@ async function readJson(req: Request): Promise<{ ok: boolean; body: Record<strin
 const server = Bun.serve({
   port: config.port,
   hostname: config.host,
+  // SSE chat streams can legitimately go silent for a while (cold model load,
+  // slow/thinking models). Bun's default 10s idle timeout would kill them
+  // mid-generation — disable it (0). Nginx in front has its own timeouts.
+  idleTimeout: 0,
   async fetch(req, server) {
     const url = new URL(req.url);
     const path = url.pathname;

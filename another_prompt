@@ -1,3 +1,4 @@
+--- VERY HIGH PRIORITY
 fait en sorte de pouvoir upload un avatar (Servir un cdn en local via fichier upload sur le serveur dans un dossier à côté de la codebase)
 
 cdn comme sa
@@ -21,3 +22,13 @@ Rate-limit per change / per account de:
 file length maxi: 5MB
 
 SYSTEM DE CHANGEMENT DE MDP:
+Donc avoir une upload box, propre, adapative etc
+
+---- MEDIUM PRIORITY
+ADAPTATION MOBILE:
+GÉRER LES MODALS, LES BOXES, LES BOARDING, LES CHAT BOXES AUSSI POUR PETIT ÉCRAN, ADAPTER LEUR WEBVIEW PORTAGE, DIALOG BOX, CONFIRMATON, TRAY CHANNELS SIDE LIST... 
+DRAG AND SNAP LIKE PHONES, SCROLLING FOR OPENGING/EXITING ETC..
+
+--- LOW PRIORITY
+Système de service mails aussi pour les comptes (optionel) pour recovery passwords, dans le page de login:
+  - Recover password with emails. smtp server,

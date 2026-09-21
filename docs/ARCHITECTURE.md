@@ -22,7 +22,20 @@ browser ──► Bun.serve (src/index.ts)
    are auto-titled from it.
 4. Non-streaming → `driver.chat()` → JSON. Streaming → `driver.chatStream()`
    → SSE events `token` / `done` / `error`. The full reply is persisted after a
-   successful stream (partial text + `[interrupted]` marker on failure).
+   successful stream; on error the partial text is kept as-is (no internal
+   markers). Server logs each stream open/done/abort per driver when
+   `DRIVER_DEBUG=true`.
+
+Streaming guarantees (ChatGPT-style, no buffering):
+
+- Tokens are forwarded via `controller.enqueue` the moment they arrive from the
+  LLM; disconnects are detected (`req.signal`, guarded `enqueue`,
+  stream `cancel()`) and propagated upstream via an `AbortController` passed as
+  `opts.signal`, so the model stops generating when the tab closes.
+- `Bun.serve` runs with `idleTimeout: 0` — the default 10 s would kill slow
+  streams (cold model load, thinking pauses) mid-generation.
+- Responses carry `X-Accel-Buffering: no` and the NixOS nginx vhost sets
+  `proxy_buffering off`, otherwise the proxy would buffer the whole reply.
 
 ## Database schema
 
