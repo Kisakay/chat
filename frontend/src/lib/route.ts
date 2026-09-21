@@ -11,6 +11,18 @@ export function getPath(): string {
   return normalizePath(window.location.pathname);
 }
 
+/** /chat itself or one conversation page (/chat/<id>). */
+export function isChatPath(pathname: string): boolean {
+  const p = normalizePath(pathname);
+  return p === "/chat" || p.startsWith("/chat/");
+}
+
+/** Conversation id from /chat/<id>, or null on /chat itself. */
+export function chatIdFromPath(pathname: string): string | null {
+  const m = normalizePath(pathname).match(/^\/chat\/([^/]+)$/);
+  return m ? decodeURIComponent(m[1]!) : null;
+}
+
 /** Client-side navigation without reload (same-origin path only). */
 export function navigate(to: string, replace = false): void {
   const dest = normalizePath(to);

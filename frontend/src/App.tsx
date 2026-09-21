@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, clearToken, getToken } from "./lib/api.ts";
 import { featureEnabled, THINKING_SYSTEM_PROMPT } from "./lib/features.ts";
 import type {
@@ -9,7 +9,7 @@ import type {
   FilePreview,
   User,
 } from "./lib/types.ts";
-import { navigate, normalizePath, useRoute } from "./lib/route.ts";
+import { chatIdFromPath, isChatPath, navigate, normalizePath, useRoute } from "./lib/route.ts";
 import { Login } from "./components/Login.tsx";
 import { RegisterPage } from "./components/RegisterPage.tsx";
 import { Sidebar } from "./components/Sidebar.tsx";
@@ -91,6 +91,15 @@ export function App() {
   const [model, setModel] = useState("");
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Async callbacks (refreshConvs) need the current selection without
+  // re-creating on every render.
+  const activeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
+  // True once the conversation list was fetched at least once (so an
+  // unknown /chat/<id> can be bounced instead of flashing empty).
+  const [convsReady, setConvsReady] = useState(false);
   // Conversation opened from "Archived chats" (read-only, not in the sidebar list).
   const [archivedConv, setArchivedConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -127,20 +136,28 @@ export function App() {
     return <SharePage publicId={SHARE_ID} />;
   }
 
-  const refreshConvs = useCallback(async (select?: string) => {
+  // Reload the sidebar list; resolves the id that ends up selected so
+  // callers can sync the URL (/chat/<id>) with it.
+  const refreshConvs = useCallback(async (select?: string): Promise<string | null> => {
     try {
       const res = await api.convs();
       setConvs(res.conversations);
-      if (select) setActiveId(select);
-      else if (res.conversations.length > 0) {
-        setActiveId((cur) =>
+      setConvsReady(true);
+      let next: string | null = null;
+      if (select) {
+        next = res.conversations.some((c) => c.id === select) ? select : null;
+      } else {
+        const cur = activeIdRef.current;
+        next =
           cur && res.conversations.some((c) => c.id === cur)
             ? cur
-            : res.conversations[0]!.id,
-        );
+            : (res.conversations[0]?.id ?? null);
       }
+      setActiveId(next);
+      return next;
     } catch {
       // ignore (session errors reload the page via api layer)
+      return activeIdRef.current;
     }
   }, []);
 
@@ -174,7 +191,18 @@ export function App() {
         setModels(m.models);
         if (m.models.length > 0) setModel(m.models[0]!.id);
         setConvs(c.conversations);
-        if (c.conversations.length > 0) setActiveId(c.conversations[0]!.id);
+        setConvsReady(true);
+        // Deep link: /chat/<id> opens that conversation directly.
+        const urlId = chatIdFromPath(window.location.pathname);
+        if (urlId && c.conversations.some((x) => x.id === urlId)) {
+          setActiveId(urlId);
+        } else if (urlId) {
+          navigate("/chat", true); // unknown or deleted id
+        } else if (c.conversations.length > 0) {
+          const first = c.conversations[0]!.id;
+          setActiveId(first);
+          navigate(`/chat/${first}`, true);
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -197,7 +225,7 @@ export function App() {
       if (user) navigate("/chat", true);
       return;
     }
-    if (path === "/chat") {
+    if (isChatPath(path)) {
       if (noToken || (authReady && !user)) navigate("/login", true);
       return;
     }
@@ -205,6 +233,30 @@ export function App() {
     if (noToken) navigate("/login", true);
     else if (authReady) navigate(user ? "/chat" : "/login", true);
   }, [path, user, authReady]);
+
+  // Browser back/forward (or manual URL edit): the URL is the source of
+  // truth for the selected conversation. Own navigations are no-ops here
+  // (state already matches), so this never fights the handlers below.
+  useEffect(() => {
+    if (!user || checking || !isChatPath(path)) return;
+    const id = chatIdFromPath(path);
+    if (id === activeId) return;
+    // Back to bare /chat (id null): empty composer, unless an archived
+    // chat is being viewed — archived views always live on bare /chat.
+    if (id !== null || !archivedConv) {
+      setArchivedConv(null);
+      setActiveId(id);
+      setMobileNav(false);
+    }
+  }, [path, user, checking, activeId, archivedConv]);
+
+  // Unknown /chat/<id> (deleted elsewhere, typo): bounce to /chat once
+  // the list is loaded. Archived views always live on bare /chat.
+  useEffect(() => {
+    if (!user || checking || !convsReady || !isChatPath(path)) return;
+    const id = chatIdFromPath(path);
+    if (id && !convs.some((c) => c.id === id)) navigate("/chat", true);
+  }, [path, user, checking, convsReady, convs]);
 
   // Load messages for active conversation
   useEffect(() => {
@@ -248,7 +300,10 @@ export function App() {
         setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available)),
       )
       .catch(() => {});
-    refreshConvs();
+    // Land directly on the latest conversation's own URL.
+    refreshConvs().then((id) => {
+      if (id) navigate(`/chat/${id}`, true);
+    });
   }
 
   function logout() {
@@ -266,16 +321,6 @@ export function App() {
     setAttachments([]);
     setFilePreview(null);
     navigate("/login", true);
-  }
-
-  async function newChat() {
-    try {
-      setArchivedConv(null);
-      const res = await api.createConv({ model });
-      await refreshConvs(res.conversation.id);
-    } catch {
-      // fall back to local-only pending state
-    }
   }
 
   /** Stream one assistant reply for an exact history; resolves its text. */
@@ -304,6 +349,7 @@ export function App() {
         const res = await api.createConv({ model });
         convId = res.conversation.id;
         await refreshConvs(convId);
+        navigate(`/chat/${convId}`);
       } catch (err) {
         return;
       }
@@ -449,7 +495,8 @@ export function App() {
         setArchivedConv(null);
         setMessages([]);
       }
-      await refreshConvs();
+      const next = await refreshConvs();
+      navigate(next ? `/chat/${next}` : "/chat");
       pushToast(t("toast.chatDeleted", { title: c.title }), { icon: "trash" });
     } catch {
       // ignore
@@ -464,7 +511,8 @@ export function App() {
         setActiveId(null);
         setMessages([]);
       }
-      await refreshConvs();
+      const next = await refreshConvs();
+      navigate(next ? `/chat/${next}` : "/chat");
       pushToast(t("toast.chatArchived", { title: c.title }), { icon: "archive" });
     } catch {
       // ignore
@@ -478,6 +526,8 @@ export function App() {
     setArchivedConv(c);
     setActiveId(null);
     setMessages([]);
+    // Archived views always live on bare /chat (no per-conversation URL).
+    navigate("/chat");
     api
       .getConv(c.id)
       .then((res) => setMessages(res.messages))
@@ -493,6 +543,7 @@ export function App() {
       pushToast(t("toast.chatUnarchived", { title: archivedConv.title }), { icon: "unarchive" });
       setArchivedConv(null);
       await refreshConvs(id);
+      navigate(`/chat/${id}`);
     } catch {
       // ignore
     }
@@ -506,6 +557,7 @@ export function App() {
     if (deletedId && archivedConv?.id === deletedId) {
       setArchivedConv(null);
       setMessages([]);
+      navigate("/chat");
     }
     await refreshConvs();
   }
@@ -542,7 +594,7 @@ export function App() {
   }
 
   // / (or unknown paths) while the guard above redirects.
-  if (path !== "/chat") {
+  if (!isChatPath(path)) {
     return null;
   }
 
@@ -562,12 +614,20 @@ export function App() {
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(true)}
         onNew={() => {
-          newChat();
+          // Bare /chat with an empty composer; the conversation is
+          // created lazily on send (then the URL becomes /chat/<id>).
+          setArchivedConv(null);
+          setActiveId(null);
+          setMessages([]);
+          setFailed(null);
+          setRetryCount(0);
+          navigate("/chat");
           setMobileNav(false);
         }}
         onSelect={(id) => {
           setArchivedConv(null);
           setActiveId(id);
+          navigate(`/chat/${id}`);
           setMobileNav(false);
         }}
         onRename={setEditConv}

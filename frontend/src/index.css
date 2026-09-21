@@ -52,6 +52,13 @@ body {
 /* markdown content */
 .md p:first-child { margin-top: 0; }
 .md p:last-child { margin-bottom: 0; }
+/* Long unbroken strings (URLs, file paths, hashes, tokens) must wrap
+   anywhere — otherwise they overflow the bubble, which then grows past its
+   row and glues itself to the screen edge. `pre` keeps its own horizontal
+   scroll (white-space:pre ignores wrapping). */
+.md {
+  overflow-wrap: anywhere;
+}
 .md pre {
   @apply relative overflow-x-auto rounded-2xl border border-stone-200 bg-stone-900 p-4 text-[13.5px] leading-relaxed text-stone-100 dark:border-zinc-700;
 }
