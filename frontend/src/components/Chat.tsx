@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Cpu, PanelLeftOpen, SendHorizontal, Share2, User as UserIcon } from "lucide-react";
+import { BookOpen, Bot, Cpu, PanelLeftOpen, SendHorizontal, Share2, User as UserIcon } from "lucide-react";
 import type { ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
 import { Avatar, IconButton, LOGO_URL, Logo, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
@@ -180,7 +180,12 @@ export function Chat({
             <SendHorizontal size={17} />
           </button>
         </form>
-        <p className="py-2 text-center text-xs opacity-50">No cookies — a Bearer key is stored in this browser only.</p>
+        <p className="py-2 text-center text-xs opacity-50">
+          <a href="/wiki" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline-offset-2 hover:underline">
+            <BookOpen size={12} />
+            Wiki & docs
+          </a>
+        </p>
       </div>
     </div>
   );

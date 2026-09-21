@@ -133,6 +133,11 @@ const server = Bun.serve({
       });
     }
 
+    // --- public: /wiki redirects to the remote docs wiki (git forge) ---
+    if ((path === "/wiki" || path === "/wiki/") && req.method === "GET") {
+      return Response.redirect(config.wikiUrl, 302);
+    }
+
     // --- auth: login (rate limited) ---
     if (path === "/api/auth/login" && req.method === "POST") {
       const ip = clientIp(req, server);

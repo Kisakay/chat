@@ -37,6 +37,10 @@ export const config = {
 
   openaiApiKey: env("OPENAI_API_KEY", ""),
   openaiEnabled: envBool("OPENAI_ENABLED", false),
+
+  // Public docs wiki (served by the hosted git forge, e.g. Gitea wiki pages).
+  // The app redirects GET /wiki there (302) so the target stays configurable.
+  wikiUrl: env("WIKI_URL", "https://git.kisakay.com/k/chat/wiki"),
 };
 
 export function assertConfig(): void {

@@ -1,0 +1,20 @@
+fait en sorte de pouvoir upload un avatar (Servir un cdn en local via fichier upload sur le serveur dans un dossier à côté de la codebase)
+
+cdn comme sa
+
+http<remote>/cdn/<avatar>/<id of the account>.<extension>
+
+Extension authorisé ONLY:
+jpg/jpeg/webp/png
+
+BLACKLISTE SYSTÈMATHIQUEMENT LE RESTE.
+Pas que un detect typeFile avec l'extension.
+Logique propre de détection du fichier *magic byte, looking bytes, etc*
+
+Changer l 'avatar à plusieurs règles:
+Rate-limit per change / per account de:
+5 fois maximum en 2 heures
+(window time: 2 hours, max count 5)
+file length maxi: 5MB
+
+SYSTEM DE CHANGEMENT DE MDP:
