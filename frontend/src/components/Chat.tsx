@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Cpu, PanelLeftOpen, SendHorizontal, Share2, Sparkles, User as UserIcon } from "lucide-react";
+import { Bot, Cpu, PanelLeftOpen, SendHorizontal, Share2, User as UserIcon } from "lucide-react";
 import type { ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
-import { Avatar, IconButton, Picker, type PickerGroup, Spinner } from "./ui.tsx";
+import { Avatar, IconButton, LOGO_URL, Logo, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
 import { cn } from "../lib/cn.ts";
 
@@ -9,7 +9,7 @@ function MessageBubble({ msg, authorAvatar, authorName }: { msg: ChatMessage; au
   const isUser = msg.role === "user";
   return (
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
-      <Avatar name={authorName} url={isUser ? authorAvatar : undefined} size={32} />
+      <Avatar name={authorName} url={isUser ? authorAvatar : LOGO_URL} size={32} />
       <div className={cn("min-w-0 max-w-[85%]", isUser && "flex flex-col items-end")}>
         <div className="mb-1 flex items-center gap-1.5 text-xs opacity-60">
           {isUser ? <UserIcon size={12} /> : <Bot size={12} />}
@@ -101,7 +101,7 @@ export function Chat({
           </IconButton>
         )}
         <span className="hidden items-center gap-2 font-semibold sm:flex">
-          <Sparkles size={16} className="text-emerald-600 dark:text-emerald-400" />
+          <Logo size={24} className="rounded-lg" />
           {conv?.title || "New chat"}
         </span>
         {conv?.topic && (
@@ -129,9 +129,7 @@ export function Chat({
         <div className="mx-auto w-full max-w-3xl space-y-5">
           {messages.length === 0 && !streaming && (
             <div className="py-16 text-center">
-              <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
-                <Sparkles size={24} />
-              </span>
+              <Logo size={56} className="mx-auto mb-4 rounded-[1.3rem] shadow-lg shadow-red-900/10" />
               <h2 className="text-2xl font-bold tracking-tight">How can I help, {user.displayName.split(" ")[0]}?</h2>
               <p className="mt-1 text-sm opacity-60">Pick a model, then type below. Markdown is supported.</p>
             </div>
@@ -141,7 +139,7 @@ export function Chat({
           ))}
           {streaming !== "" && (
             <div className="flex gap-3">
-              <Avatar name="KisAssistant" size={32} />
+              <Avatar name="KisAssistant" url={LOGO_URL} size={32} />
               <div className="min-w-0 max-w-[85%]">
                 <div className="mb-1 text-xs opacity-60">KisAssistant</div>
                 <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-5 py-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">

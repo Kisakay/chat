@@ -64,3 +64,21 @@ body {
 @keyframes blink {
   50% { opacity: 0; }
 }
+
+/* Kill Chrome's yellow autofill background (login / password fields) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 60px rgb(245 245 244) inset; /* stone-100, matches soft fields */
+  -webkit-text-fill-color: #1c1917; /* stone-900 */
+  caret-color: #1c1917;
+}
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 60px #27272a inset; /* zinc-800 */
+  -webkit-text-fill-color: #f4f4f5; /* zinc-100 */
+  caret-color: #f4f4f5;
+}

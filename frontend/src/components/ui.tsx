@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, Copy, Loader2, X, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn.ts";
 
 /* ---------- Button ---------- */
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "gradient" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md" | "lg" | "icon";
 };
 
@@ -19,6 +20,7 @@ export function Button({ variant = "primary", size = "md", className, ...props }
         size === "lg" && "px-6 py-3 text-base",
         size === "icon" && "h-9 w-9",
         variant === "primary" && "bg-emerald-600 text-white shadow-sm hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:text-zinc-950",
+        variant === "gradient" && "bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-lg shadow-emerald-600/25 hover:from-emerald-500 hover:to-teal-400 dark:from-emerald-500 dark:to-teal-400 dark:text-zinc-950",
         variant === "secondary" && "border border-stone-200 bg-white hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800",
         variant === "ghost" && "hover:bg-stone-200/60 dark:hover:bg-zinc-800",
         variant === "danger" && "bg-red-600 text-white hover:bg-red-500",
@@ -45,13 +47,17 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ variant = "default", className, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { variant?: "default" | "soft" }) {
   return (
     <input
       className={cn(
-        "w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm outline-none transition",
-        "placeholder:text-stone-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20",
-        "dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-500",
+        "w-full text-sm outline-none transition placeholder:text-stone-400 dark:placeholder:text-zinc-500",
+        variant === "default" &&
+          "rounded-2xl border border-stone-200 bg-white px-4 py-2.5 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-900",
+        // soft: onboarding-style pill field, blends into rounded cards
+        variant === "soft" &&
+          "rounded-full border border-transparent bg-stone-100 px-5 py-3 focus:border-emerald-500/60 focus:bg-white focus:ring-4 focus:ring-emerald-500/15 dark:bg-zinc-800/80 dark:focus:bg-zinc-900",
+        className,
       )}
       {...props}
     />
@@ -95,21 +101,64 @@ export function Picker({
   align?: "left" | "right";
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 208 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
   const all: PickerGroup[] = groups ?? [{ group: "", options: options ?? [] }];
   const selected = all.flatMap((g) => g.options).find((o) => o.value === value);
 
+  // Position the popover in viewport coords (rendered in a portal so no
+  // ancestor overflow — e.g. Modal's overflow-y-auto — can clip it).
+  // Re-measured live so the popover stays anchored to its field.
+  const updatePos = useCallback(() => {
+    const el = btnRef.current;
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return false; // not laid out yet
+    const width = Math.min(Math.max(r.width, 208), 288);
+    let left = align === "right" ? r.right - width : r.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+    const maxH = 288; // matches max-h-72
+    const below = r.bottom + 8;
+    const top = below + maxH > window.innerHeight && r.top - maxH - 8 > 8
+      ? Math.max(8, r.top - maxH - 8) // flip above when there is no room below
+      : below;
+    setPos({ top, left, width });
+    return true;
+  }, [align]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePos();
+    // Second pass after paint: catches late layout shifts (fonts, images).
+    const raf = requestAnimationFrame(() => updatePos());
+    return () => cancelAnimationFrame(raf);
+  }, [open, updatePos]);
+
   useEffect(() => {
     if (!open) return;
-    const h = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    window.addEventListener("keydown", h);
-    return () => window.removeEventListener("keydown", h);
-  }, [open ]);
+    const onScroll = (e: Event) => {
+      if (popRef.current?.contains(e.target as Node)) return; // scrolling inside the list
+      updatePos(); // follow the anchor instead of closing
+    };
+    const onResize = () => updatePos();
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open, updatePos]);
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={className}>
       <button
+        ref={btnRef}
         type="button"
         aria-label={ariaLabel}
         aria-haspopup="listbox"
@@ -127,16 +176,15 @@ export function Picker({
         <span className="truncate">{selected?.label ?? placeholder}</span>
         <ChevronDown size={15} className={cn("shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </button>
-      {open && (
+      {open && createPortal(
         <>
           <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
           <div
+            ref={popRef}
             role="listbox"
             aria-label={ariaLabel}
-            className={cn(
-              "absolute top-full z-50 mt-2 max-h-72 min-w-52 max-w-72 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl dark:border-zinc-700 dark:bg-zinc-900",
-              align === "right" ? "right-0" : "left-0",
-            )}
+            className="fixed z-50 max-h-72 overflow-y-auto rounded-2xl border border-stone-200 bg-white p-1.5 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+            style={{ top: pos.top, left: pos.left, width: pos.width }}
           >
             {all.map((g) => (
               <div key={g.group || "default"}>
@@ -172,7 +220,8 @@ export function Picker({
               </div>
             ))}
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );
@@ -339,6 +388,23 @@ export function Avatar({ name, url, size = 36 }: { name: string; url?: string; s
     >
       {initial}
     </span>
+  );
+}
+
+/* ---------- Brand logo ---------- */
+
+export const LOGO_URL = "/logo.jpg";
+
+export function Logo({ size = 36, className }: { size?: number; className?: string }) {
+  return (
+    <img
+      src={LOGO_URL}
+      alt="KisAssistant logo"
+      width={size}
+      height={size}
+      className={cn("shrink-0 object-cover", className)}
+      style={{ width: size, height: size }}
+    />
   );
 }
 

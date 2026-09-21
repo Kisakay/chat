@@ -1,8 +1,13 @@
 import { useState } from "react";
-import { KeyRound, Sparkles, User } from "lucide-react";
+import { ArrowRight, KeyRound, ShieldCheck, User, Zap } from "lucide-react";
 import { api, setToken } from "../lib/api.ts";
 import type { User as UserType } from "../lib/types.ts";
-import { Button, Field, Input, Spinner } from "./ui.tsx";
+import { Button, Input, Logo, Spinner } from "./ui.tsx";
+
+const PERKS = [
+  { icon: ShieldCheck, text: "Private by design — no cookies, no tracking" },
+  { icon: Zap, text: "Your own models, streamed in real time" },
+];
 
 export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [username, setUsername] = useState("admin");
@@ -27,42 +32,67 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   }
 
   return (
-    <div className="grid min-h-full place-items-center bg-gradient-to-br from-stone-100 via-stone-50 to-emerald-50 p-6 dark:from-zinc-950 dark:via-zinc-950 dark:to-emerald-950/30">
-      <div className="w-full max-w-sm rounded-[2rem] border border-stone-200/70 bg-white/90 p-8 shadow-2xl backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
-        <div className="mb-6 flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg">
-            <Sparkles size={22} />
-          </span>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">KisAssistant</h1>
-            <p className="text-sm opacity-60">Private assistant</p>
+    <div className="grid min-h-full place-items-center overflow-y-auto bg-gradient-to-br from-stone-100 via-stone-50 to-emerald-100/60 p-6 dark:from-zinc-950 dark:via-zinc-950 dark:to-emerald-950/40">
+      <div className="w-full max-w-sm">
+        <div className="rounded-[2rem] border border-white/60 bg-white/80 p-8 shadow-2xl shadow-emerald-900/5 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
+          <div className="mb-2 flex flex-col items-center text-center">
+            <Logo size={68} className="mb-4 rounded-[1.5rem] shadow-lg shadow-red-900/20" />
+            <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+            <p className="mt-1 text-sm opacity-60">Sign in to KisAssistant to continue</p>
           </div>
-        </div>
-        <form onSubmit={submit} className="space-y-4">
-          <Field label="Username">
+
+          <form onSubmit={submit} className="mt-6 space-y-3">
             <div className="relative">
-              <User size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 opacity-40" />
-              <Input className="pl-10" value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" required />
-            </div>
-          </Field>
-          <Field label="Access key" hint="Admin key lives in the server .env; user keys are issued by the admin.">
-            <div className="relative">
-              <KeyRound size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 opacity-40" />
+              <User size={17} className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500" />
               <Input
-                className="pl-10"
+                variant="soft"
+                className="pl-12"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                placeholder="Username"
+                aria-label="Username"
+                required
+              />
+            </div>
+            <div className="relative">
+              <KeyRound size={17} className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500" />
+              <Input
+                variant="soft"
+                className="pl-12"
                 type="password"
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
                 autoComplete="current-password"
+                placeholder="Access key"
+                aria-label="Access key"
                 required
               />
             </div>
-          </Field>
-          {error && <p className="rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400" role="alert">{error}</p>}
-          <Button type="submit" size="lg" className="w-full" disabled={busy}>
-            {busy ? <Spinner /> : "Unlock"}
-          </Button>
-        </form>
+            {error && (
+              <p className="rounded-full bg-red-500/10 px-5 py-2.5 text-center text-sm text-red-600 dark:text-red-400" role="alert">
+                {error}
+              </p>
+            )}
+            <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={busy}>
+              {busy ? <Spinner /> : (<>Unlock <ArrowRight size={17} /></>)}
+            </Button>
+          </form>
+
+          <ul className="mt-6 space-y-2 border-t border-stone-200/70 pt-5 dark:border-zinc-800">
+            {PERKS.map((p) => (
+              <li key={p.text} className="flex items-center gap-2.5 text-[13px] opacity-70">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400">
+                  <p.icon size={14} />
+                </span>
+                {p.text}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="mt-4 text-center text-xs opacity-50">
+          Admin key lives in the server <code>.env</code>; user keys are issued by the admin.
+        </p>
       </div>
     </div>
   );
