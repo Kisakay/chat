@@ -42,3 +42,10 @@ Système de service mails aussi pour les comptes (optionel) pour recovery passwo
 when disabling attachment sendability: the text "Message" placeholder nto the composer chat are too tigh to the left border, make a fallback padding when no attachment button
 
 make in the settigns: an sub category: changing key, admiting TOTP key/passkey for security
+
+--- bugd II:
+sur la page share, l' avatar de l'utilisateur  ne s'affiche pas -> fix sa
+
+--- improvements:
+éviter de ask h24 ollama pour ces modèles quand un utilisateur ce connece. c'est le backend qui sert les demande d el'utilisateurs. iL relay pas sur le ollama. Le backend vas cacher avec un TLL les modèles présent en mémire dans un objet qui est dans le backend. refresh avec un TT: toutes les minutes.
+L'administrateur lui, qand il demande les modèles dams le ollama, lui, force un refresh .

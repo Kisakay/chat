@@ -89,7 +89,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
           {totpToken ? (
             <form onSubmit={submitTotp} className="mt-6 space-y-3">
               <p className="text-center text-sm opacity-70">
-                Two-factor for <strong>@{totpUsername}</strong> — enter the 6-digit code from your authenticator app.
+                {t("login.totpIntro", { user: "@" + totpUsername })}
               </p>
               <div className="relative">
                 <KeyRound size={17} className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500" />
@@ -156,13 +156,13 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
               </p>
             )}
             <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={busy}>
-              {busy ? <Spinner /> : (<>Unlock <ArrowRight size={17} /></>)}
+              {busy ? <Spinner /> : (<>{t("login.unlock")} <ArrowRight size={17} /></>)}
             </Button>
           </form>
           )}
           <div className="mt-4 flex items-center gap-3 text-xs opacity-40">
             <span className="h-px flex-1 bg-current" />
-            New here?
+            {t("login.newHere")}
             <span className="h-px flex-1 bg-current" />
           </div>
           <Button
@@ -170,11 +170,11 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             size="lg"
             className="mt-3 w-full"
             disabled={!registrationOn}
-            title={registrationOn ? "Create an account" : "Registration currently disabled on this platform"}
+            title={registrationOn ? t("login.regTipOn") : t("login.regTipOff")}
             onClick={() => setRegisterOpen(true)}
           >
             <UserPlus size={16} />
-            Register
+            {t("login.register")}
           </Button>
           <RegisterDialog
             open={registerOpen}

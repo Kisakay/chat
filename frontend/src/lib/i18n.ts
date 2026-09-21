@@ -56,8 +56,12 @@ const en = {
   "login.forgot": "Forgot your access key?",
   "login.perk1": "Private by design — no cookies, no tracking",
   "login.perk2": "Your own models, streamed in real time",
-  "login.adminNote":
-    "Admin key lives in the server .env; user keys are issued by the admin.",
+  "login.adminNotePre": "Admin key lives in the server ",
+  "login.adminNotePost": "; user keys are issued by the admin.",
+  "login.totpIntro": "Two-factor for @{user} — enter the 6-digit code from your authenticator app.",
+  "login.totpAria": "Authenticator code",
+  "login.totpInvalid": "Invalid code",
+  "login.verify": "Verify",
 
   "sidebar.newChat": "New chat",
   "sidebar.collapse": "Collapse sidebar",
@@ -357,8 +361,12 @@ const es: Dict = {
   "login.forgot": "¿Olvidaste tu clave de acceso?",
   "login.perk1": "Privado por diseño — sin cookies ni rastreo",
   "login.perk2": "Tus propios modelos, en tiempo real",
-  "login.adminNote":
-    "La clave de admin vive en el .env del servidor; las claves de usuario las emite el admin.",
+  "login.adminNotePre": "La clave de admin vive en el .env del servidor",
+  "login.adminNotePost": "; las claves de usuario las emite el admin.",
+  "login.totpIntro": "Doble factor para @{user} — escribe el código de 6 dígitos de tu app.",
+  "login.totpAria": "Código de autenticación",
+  "login.totpInvalid": "Código inválido",
+  "login.verify": "Verificar",
 
   "sidebar.newChat": "Nuevo chat",
   "sidebar.collapse": "Ocultar barra lateral",
@@ -650,8 +658,12 @@ const fr: Dict = {
   "login.forgot": "Clé d'accès oubliée ?",
   "login.perk1": "Privé par conception — sans cookies ni suivi",
   "login.perk2": "Vos propres modèles, en temps réel",
-  "login.adminNote":
-    "La clé admin vit dans le .env du serveur ; les clés utilisateur sont émises par l'admin.",
+  "login.adminNotePre": "La clé admin vit dans le .env du serveur",
+  "login.adminNotePost": " ; les clés utilisateur sont émises par l'admin.",
+  "login.totpIntro": "Double facteur pour @{user} — entrez le code à 6 chiffres de votre app.",
+  "login.totpAria": "Code d'authentification",
+  "login.totpInvalid": "Code invalide",
+  "login.verify": "Vérifier",
 
   "sidebar.newChat": "Nouveau chat",
   "sidebar.collapse": "Masquer la barre latérale",
@@ -943,8 +955,12 @@ const ru: Dict = {
   "login.forgot": "Забыли ключ доступа?",
   "login.perk1": "Приватность по умолчанию — без cookies и трекинга",
   "login.perk2": "Ваши модели, в реальном времени",
-  "login.adminNote":
-    "Ключ админа живёт в .env сервера; ключи пользователей выдаёт админ.",
+  "login.adminNotePre": "Ключ админа живёт в .env сервера",
+  "login.adminNotePost": "; ключи пользователей выдаёт админ.",
+  "login.totpIntro": "Двухфакторка для @{user} — введите 6-значный код из приложения.",
+  "login.totpAria": "Код аутентификатора",
+  "login.totpInvalid": "Неверный код",
+  "login.verify": "Проверить",
 
   "sidebar.newChat": "Новый чат",
   "sidebar.collapse": "Скрыть панель",
@@ -1225,8 +1241,12 @@ const it: Dict = {
   "login.forgot": "Chiave dimenticata?",
   "login.perk1": "Privato per progettazione — niente cookie né traccianti",
   "login.perk2": "I tuoi modelli, in tempo reale",
-  "login.adminNote":
-    "La chiave admin vive nel .env del server; le chiavi utente le emette l'admin.",
+  "login.adminNotePre": "La chiave admin vive nel .env del server",
+  "login.adminNotePost": "; le chiavi utente le emette l'admin.",
+  "login.totpIntro": "Doppio fattore per @{user} — inserisci il codice a 6 cifre dall'app.",
+  "login.totpAria": "Codice autenticatore",
+  "login.totpInvalid": "Codice non valido",
+  "login.verify": "Verifica",
 
   "sidebar.newChat": "Nuova chat",
   "sidebar.collapse": "Nascondi barra laterale",
@@ -1815,7 +1835,7 @@ export function t(
   let s: string = dicts[current][key] ?? dicts.en[key] ?? key;
   if (vars) {
     for (const [k, v] of Object.entries(vars))
-      s = s.split(`{${k}}`).join(String(v));
+      s = s.replaceAll(`{${k}}`, String(v));
   }
   return s;
 }

@@ -5,7 +5,7 @@ import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
 import type { Conversation, FilePreview, User } from "../lib/types.ts";
-import { Avatar, bumpCdnVersion, Button, CopyButton, Field, Input, Modal, Picker, Spinner, Toggle } from "./ui.tsx";
+import { Avatar, bumpCdnVersion, Button, ConfirmDialog, CopyButton, Field, Input, Modal, Picker, Spinner, Toggle } from "./ui.tsx";
 
 /* ---------- Rename + topic ---------- */
 
@@ -705,7 +705,7 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
   const [error, setError] = useState("");
   const [rotatedKey, setRotatedKey] = useState<string | null>(null);
   const [armingRotate, setArmingRotate] = useState(false);
-  const [armingDelete, setArmingDelete] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     api.totpStatus().then((r) => setTotpOn(r.enabled)).catch(() => setTotpOn(false));
@@ -776,14 +776,11 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
   }
 
   async function removeAccount() {
-    if (!armingDelete) {
-      setArmingDelete(true);
-      return;
-    }
     setBusy(true);
     setError("");
     try {
       await api.deleteMe();
+      setConfirmDelete(false);
       onKeyRotated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed");
@@ -796,24 +793,10 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
     <div className="space-y-5">
       <div>
         <p className="mb-1 flex items-center gap-1.5 text-sm font-medium"><KeyRound size={14} className="opacity-60" /> Access key</p>
-        {rotatedKey ? (
-          <div className="rounded-2xl border border-accent-500/40 bg-accent-50 p-3 dark:bg-accent-950/30">
-            <p className="mb-2 text-sm font-medium">New key — copy it now, it won't be shown again:</p>
-            <div className="flex items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">{rotatedKey}</code>
-              <CopyButton text={rotatedKey} />
-            </div>
-            <p className="mt-2 text-xs opacity-70">Your old sessions are revoked. Log back in with the new key.</p>
-            <Button size="sm" className="mt-2 w-full" onClick={() => onKeyRotated?.()}>Done — log me out</Button>
-          </div>
-        ) : (
-          <>
-            <p className="mb-2 text-xs opacity-60">Rotate your access key. Old sessions are revoked immediately — you'll log back in with the new key.</p>
-            <Button size="sm" variant="secondary" disabled={busy} onClick={rotate}>
-              {armingRotate ? "Click again to confirm rotation" : "Rotate my access key"}
-            </Button>
-          </>
-        )}
+        <p className="mb-2 text-xs opacity-60">Rotate your access key. Old sessions are revoked immediately — you'll log back in with the new key.</p>
+        <Button size="sm" variant="secondary" disabled={busy} onClick={rotate}>
+          {armingRotate ? "Click again to confirm rotation" : "Rotate my access key"}
+        </Button>
       </div>
 
       <div>
@@ -880,12 +863,35 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
           <Trash2 size={14} /> Danger zone
         </p>
         <p className="mb-2 text-xs opacity-60">Permanently delete your account with all chats, shares and sessions. Cannot be undone.</p>
-        <Button size="sm" variant="secondary" disabled={busy} onClick={removeAccount} className="!text-red-600 dark:!text-red-400">
-          {armingDelete ? "Click again to permanently delete" : "Delete my account"}
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => setConfirmDelete(true)} className="!text-red-600 dark:!text-red-400">
+          Delete my account
         </Button>
       </div>
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+      <Modal open={rotatedKey !== null} onClose={() => {}} title="New access key" icon={KeyRound}>
+        <div className="space-y-4">
+          <p className="text-sm opacity-80">Copy it now — it won't be shown again. Your old sessions are revoked.</p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-2xl bg-stone-100 px-3 py-2.5 font-mono text-sm dark:bg-zinc-800">{rotatedKey}</code>
+            {rotatedKey && <CopyButton text={rotatedKey} />}
+          </div>
+          <Button size="sm" className="w-full" onClick={() => onKeyRotated?.()}>Done — log me out</Button>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={removeAccount}
+        title="Delete your account?"
+        message="This permanently removes your account with all conversations, shares and sessions. This cannot be undone."
+        confirmLabel="Delete forever"
+      />
+    </div>
+  );
+}
     </div>
   );
 }
