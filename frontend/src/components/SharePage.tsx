@@ -41,7 +41,7 @@ export function SharePage({ publicId }: { publicId: string }) {
               <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-stone-200/70 text-stone-500 dark:bg-zinc-800 dark:text-zinc-400">
                 <CloudOff size={28} />
               </span>
-              <h1 className="font-serif text-2xl font-bold tracking-tight">This shared chat is gone</h1>
+              <h1 className="bg-gradient-to-br from-stone-900 via-stone-700 to-accent-700 bg-clip-text font-serif text-4xl font-black italic tracking-tight text-transparent dark:from-zinc-100 dark:via-zinc-300 dark:to-accent-400">This shared chat is gone</h1>
               <p className="mt-2 text-sm opacity-70">
                 The link is invalid, expired, or the author unshared it.
                 {error && error.toLowerCase() !== "not found" ? ` (${error})` : ""}
