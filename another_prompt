@@ -37,3 +37,6 @@ Système de service mails aussi pour les comptes (optionel) pour recovery passwo
   when uploading new pfp, actually it uploading the file without click needing into save button.
   the normal flow that i want is. uploading , updating the preview, cancel button: keep the current one, re-freshing the previw.
   save -> saving and pushing the pfp to the api
+
+--- bugs:
+when disabling attachment sendability: the text "Message" placeholder nto the composer chat are too tigh to the left border, make a fallback padding when no attachment button

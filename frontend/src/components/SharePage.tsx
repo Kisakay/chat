@@ -35,7 +35,32 @@ export function SharePage({ publicId }: { publicId: string }) {
         </div>
       </header>
       <main className="mx-auto w-full max-w-3xl space-y-5 px-4 py-6">
-        {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">{error}</p>}
+        {error && (
+          <div className="mx-auto max-w-md py-10 text-center">
+            <div className="rounded-[2rem] border border-stone-200/70 bg-white p-8 shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+              <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-stone-200/70 text-stone-500 dark:bg-zinc-800 dark:text-zinc-400">
+                <CloudOff size={28} />
+              </span>
+              <h1 className="font-serif text-2xl font-bold tracking-tight">This shared chat is gone</h1>
+              <p className="mt-2 text-sm opacity-70">
+                The link is invalid, expired, or the author unshared it.
+                {error && error.toLowerCase() !== "not found" ? ` (${error})` : ""}
+              </p>
+              <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
+                <a href="/" className="rounded-full bg-accent-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-accent-500 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400">
+                  Open KisAssistant
+                </a>
+                <button
+                  onClick={() => window.history.length > 1 ? window.history.back() : (window.location.href = "/")}
+                  className="rounded-full border border-stone-200 px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                >
+                  Go back
+                </button>
+              </div>
+            </div>
+            <FlowerMark size={28} dynamic={false} className="mx-auto mt-6 opacity-40" />
+          </div>
+        )}
         {!chat && !error && <p className="py-16 text-center text-sm opacity-60">Loading shared chat…</p>}
         {chat?.messages.map((m, i) => (
           <div key={i} className="flex gap-3">
