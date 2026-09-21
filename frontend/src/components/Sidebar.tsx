@@ -1,17 +1,21 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Flower,
   LayoutDashboard,
   MessageSquarePlus,
   MoreVertical,
   PanelLeftClose,
   Pencil,
+  Search,
   Settings,
   Share2,
   Tag,
   Trash2,
+  Users,
   X,
 } from "lucide-react";
 import type { Conversation, User } from "../lib/types.ts";
+import { api } from "../lib/api.ts";
 import { Avatar, Button, ContextMenu, IconButton } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 
@@ -57,6 +61,9 @@ export function Sidebar({
   onCloseMobile: () => void;
 }) {
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<(Conversation & { snippet: string | null; snippetRole: string | null })[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const touchX = useRef<number | null>(null);
   // Long-press (mobile right-click): open the context menu, suppress the tap.
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,6 +85,24 @@ export function Sidebar({
     pressTimer.current = null;
     pressPos.current = null;
   }
+
+  // Debounced search over titles, topics and old prompts/replies.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setResults(null);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(() => {
+      api.searchConvs(q)
+        .then((res) => setResults(res.conversations))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [query]);
 
   if (collapsed && !mobileOpen) return null;
 
@@ -102,6 +127,12 @@ export function Sidebar({
           collapsed && "md:hidden",
         )}
       >
+        <div className="flex items-center gap-2 px-2 pb-1 pt-0.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-accent-600/10 text-accent-600 dark:text-accent-400">
+            <Flower size={20} />
+          </span>
+          <span className="font-serif text-xl font-bold tracking-tight">KisAssistant</span>
+        </div>
         <div className="flex items-center gap-1">
           <Button variant="secondary" size="sm" className="flex-1" onClick={onNew}>
             <MessageSquarePlus size={16} />
@@ -114,8 +145,58 @@ export function Sidebar({
             <X size={18} />
           </IconButton>
         </div>
+        <div className="relative">
+          <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search chats…"
+            aria-label="Search conversations"
+            className="w-full rounded-2xl border border-stone-200/70 bg-stone-100 py-2 pl-9 pr-8 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 focus:bg-white dark:border-zinc-800 dark:bg-zinc-800/60 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900"
+          />
+          {query && (
+            <button
+              aria-label="Clear search"
+              onClick={() => setQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 opacity-60 transition hover:opacity-100"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
 
       <div className="flex-1 space-y-1 overflow-y-auto py-1">
+        {results !== null ? (
+          <>
+            {searching && <p className="px-3 py-4 text-center text-sm opacity-50">Searching…</p>}
+            {!searching && results.length === 0 && (
+              <p className="px-3 py-6 text-center text-sm opacity-50">No match for “{query.trim()}”.</p>
+            )}
+            {results.map((c) => (
+              <div
+                key={c.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => { setQuery(""); onSelect(c.id); }}
+                onKeyDown={(e) => { if (e.key === "Enter") { setQuery(""); onSelect(c.id); } }}
+                className={cn(
+                  "group cursor-pointer select-none rounded-2xl px-3 py-2.5 text-sm transition",
+                  c.id === activeId
+                    ? "bg-accent-600/10 font-medium text-accent-900 dark:bg-accent-500/10 dark:text-accent-100"
+                    : "hover:bg-stone-200/50 dark:hover:bg-zinc-800/70",
+                )}
+              >
+                <span className="block truncate">{c.title}</span>
+                {c.snippet && (
+                  <span className="mt-0.5 block truncate text-xs opacity-60">
+                    {c.snippetRole === "user" ? "you: " : ""}{c.snippet}
+                  </span>
+                )}
+              </div>
+            ))}
+          </>
+        ) : (
+        <>
         {convs.length === 0 && (
           <p className="px-3 py-6 text-center text-sm opacity-50">No conversations yet.<br />Start a new chat above.</p>
         )}
@@ -172,6 +253,8 @@ export function Sidebar({
             </button>
           </div>
         ))}
+        </>
+        )}
       </div>
 
       {menu && (

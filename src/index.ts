@@ -25,6 +25,7 @@ import {
   deleteUserSessions,
   ensureShare,
   getConversation,
+  getDb,
   getMessages,
   getShareByConv,
   getShareByPublic,
@@ -42,6 +43,7 @@ import {
   updateUser,
 } from "./db.ts";
 import type { ChatMessage } from "./drivers/types.ts";
+import type { ConversationRow } from "./db.ts";
 import type { OllamaDriver } from "./drivers/ollama.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
 import { createHash, randomBytes } from "node:crypto";
@@ -621,6 +623,37 @@ const server = Bun.serve({
       // --- conversations (server-persisted, per account) ---
       if (path === "/api/conversations" && req.method === "GET") {
         return json({ conversations: listConversations(user.id) });
+      }
+
+      // Full-text-ish search over your own chats: titles, topics AND old
+      // prompts/replies. Returns the matching conversations, most recent
+      // first, with a short snippet of the first hit.
+      if (path === "/api/conversations/search" && req.method === "GET") {
+        const q = (url.searchParams.get("q") ?? "").trim().slice(0, 120);
+        if (q.length < 2) return json({ conversations: [] });
+        const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+        const rows = getDb().query(
+          `SELECT c.*, m.content AS hit, m.role AS hit_role FROM conversations c
+           LEFT JOIN messages m ON m.conv_id = c.id
+             AND m.content LIKE ? ESCAPE '\\'
+           WHERE c.user_id = ? AND (c.title LIKE ? ESCAPE '\\' OR c.topic LIKE ? ESCAPE '\\' OR m.id IS NOT NULL)
+           GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 30`,
+        ).all(like, user.id, like, like) as (ConversationRow & { hit: string | null; hit_role: string | null })[];
+        return json({
+          conversations: rows.map(({ hit, hit_role, ...c }) => {
+            let snippet: string | null = null;
+            if (typeof hit === "string" && hit.length > 0) {
+              if (hit.length <= 140) {
+                snippet = hit;
+              } else {
+                const at = hit.toLowerCase().indexOf(q.toLowerCase());
+                const from = Math.max(0, (at < 0 ? 0 : at) - 40);
+                snippet = `…${hit.slice(from, from + 140)}…`;
+              }
+            }
+            return { ...c, snippet, snippetRole: hit_role ?? null };
+          }),
+        });
       }
 
       if (path === "/api/conversations" && req.method === "POST") {

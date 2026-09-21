@@ -71,6 +71,11 @@ export const api = {
     req<{ settings: { registrationEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
 
   convs: () => req<{ conversations: Conversation[] }>("/api/conversations"),
+  /** Search your old chats (titles, topics and message content). */
+  searchConvs: (q: string) =>
+    req<{ conversations: (Conversation & { snippet: string | null; snippetRole: string | null })[] }>(
+      `/api/conversations/search?q=${encodeURIComponent(q)}`,
+    ),
   createConv: (c: { title?: string; topic?: string; model?: string }) =>
     req<{ conversation: Conversation }>("/api/conversations", { method: "POST", body: JSON.stringify(c) }),
   getConv: (id: string) => req<{ conversation: Conversation; messages: ChatMessage[] }>(`/api/conversations/${id}`),
