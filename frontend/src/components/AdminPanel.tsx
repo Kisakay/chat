@@ -162,7 +162,7 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
                   </span>
                 )}
                 <Button size="sm" variant="secondary" onClick={() => { setPullName(tag); pull(tag); }} disabled={pulling}>
-                  <Download size={14} /> Pull
+                  <Download size={14} /> {t("ollama.pull")}
                 </Button>
               </li>
             );
@@ -173,8 +173,8 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
       <ConfirmDialog
         open={deleteModel !== null}
         onClose={() => setDeleteModel(null)}
-        title={`Delete ${deleteModel}?`}
-        message="The model is removed from the Ollama host. Pull it again anytime."
+        title={t("ollama.delTitle", { name: deleteModel ?? "" })}
+        message={t("ollama.delMsg")}
         onConfirm={() => deleteModel && removeModel(deleteModel)}
       />
     </>
@@ -182,6 +182,7 @@ export function OllamaModelsModal({ open, onClose }: { open: boolean; onClose: (
 }
 
 export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: () => void; bare?: boolean }) {
+  const { t } = useT();
   const [users, setUsers] = useState<User[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -215,7 +216,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
       setPages(res.pages);
       if (res.page !== page) setPage(res.page);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed");
+      setError(err instanceof Error ? err.message : t("admin.loadFailed"));
     } finally {
       setBusy(false);
     }
@@ -256,7 +257,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
       setShowCreate(false);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Create failed");
+      setError(err instanceof Error ? err.message : t("admin.createFailed"));
     }
   }
 
@@ -266,7 +267,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
       const res = await api.adminRegenerate(u.id);
       setFreshKey({ username: u.username, key: res.key });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Regenerate failed");
+      setError(err instanceof Error ? err.message : t("admin.regenFailed"));
     }
   }
 
@@ -275,7 +276,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
       await api.adminDelete(u.id);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : t("admin.deleteFailed"));
     }
   }
 
@@ -283,19 +284,19 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
   // of a modal — no logic duplicated.
   const Shell: FC<{ children: ReactNode }> = bare
     ? ({ children }) => <div className="min-w-0 flex-1 space-y-1">{children}</div>
-    : ({ children }) => <Modal open={open} onClose={onClose} title="Accounts" icon={Users} wide>{children}</Modal>;
+    : ({ children }) => <Modal open={open} onClose={onClose} title={t("admin.title")} icon={Users} wide>{children}</Modal>;
 
   return (
     <>
       <Shell>
         <p className="mb-4 text-sm opacity-70">
-          No-KYC accounts: you create a username, hand the access key to its owner once. Keys are stored hashed — regenerate to rotate.
+          {t("admin.intro")}
         </p>
         {error && <p className="mb-3 rounded-2xl bg-red-50 px-4 py-2.5 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-400">{error}</p>}
 
         {freshKey && (
           <div className="mb-4 rounded-2xl border border-accent-500/40 bg-accent-50 p-4 dark:bg-accent-950/30">
-            <p className="mb-2 flex items-center gap-2 text-sm font-medium"><KeyRound size={15} /> Key for @{freshKey.username} — shown once, copy it now:</p>
+            <p className="mb-2 flex items-center gap-2 text-sm font-medium"><KeyRound size={15} /> {t("admin.keyOnce", { user: freshKey.username })}</p>
             <div className="flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">{freshKey.key}</code>
               <CopyButton text={freshKey.key} />
@@ -306,62 +307,62 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
         {!showCreate ? (
           <div className="mb-5 flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={() => setShowCreate(true)}>
-              <UserPlus size={15} /> New account
+              <UserPlus size={15} /> {t("admin.newAccount")}
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setModelsOpen(true)}>
-              <Bot size={15} /> Ollama models
+              <Bot size={15} /> {t("ollama.models")}
             </Button>
           </div>
         ) : (
           <form onSubmit={create} className="mb-4 flex flex-wrap items-end gap-2 rounded-2xl border border-stone-200 p-3 dark:border-zinc-700">
             <div className="min-w-40 flex-1">
-              <Field label="Username"><Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="alice" required /></Field>
+              <Field label={t("common.username")}><Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="alice" required /></Field>
             </div>
             <div className="min-w-40 flex-1">
-              <Field label="Display name"><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Alice" /></Field>
+              <Field label={t("common.displayName")}><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Alice" /></Field>
             </div>
             <div className="min-w-40 flex-1">
-              <Field label="Email (recovery)"><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" /></Field>
+              <Field label={t("admin.email")}><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" /></Field>
             </div>
-            <Button size="sm" type="submit">Create</Button>
-            <Button size="sm" variant="ghost" type="button" onClick={() => setShowCreate(false)}>Cancel</Button>
+            <Button size="sm" type="submit">{t("common.create")}</Button>
+            <Button size="sm" variant="ghost" type="button" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
           </form>
         )}
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="relative min-w-40 flex-1">
             <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search accounts…" aria-label="Search accounts" className="pl-10" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("admin.searchPh")} aria-label={t("admin.searchAria")} className="pl-10" />
           </div>
           <Picker
-            ariaLabel="Sort accounts"
+            ariaLabel={t("admin.sortAria")}
             icon={ArrowUpDown}
             value={sort}
             onChange={(v) => { setSort(v); setPage(1); }}
             align="right"
             options={[
-              { value: "newest", label: "Newest first" },
-              { value: "oldest", label: "Oldest first" },
-              { value: "az", label: "A → Z" },
-              { value: "za", label: "Z → A" },
+              { value: "newest", label: t("admin.sortNewest") },
+              { value: "oldest", label: t("admin.sortOldest") },
+              { value: "az", label: t("admin.sortAz") },
+              { value: "za", label: t("admin.sortZa") },
             ]}
           />
           <Picker
-            ariaLabel="Filter accounts"
+            ariaLabel={t("admin.filterAria")}
             icon={Filter}
             value={filter}
             onChange={(v) => { setFilter(v); setPage(1); }}
             align="right"
             options={[
-              { value: "all", label: "All accounts" },
-              { value: "with-email", label: "With recovery email" },
-              { value: "no-email", label: "No recovery email" },
+              { value: "all", label: t("admin.filterAll") },
+              { value: "with-email", label: t("admin.filterWith") },
+              { value: "no-email", label: t("admin.filterNo") },
             ]}
           />
         </div>
 
         {busy ? (
-          <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={15} /> Loading…</p>
+          <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={15} /> {t("common.loading")}</p>
         ) : (
           <ul className="space-y-2">
             {users.map((u) => (
@@ -369,13 +370,13 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
                 <Avatar name={u.displayName} url={u.avatarUrl} size={36} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{u.displayName} <span className="font-normal opacity-50">@{u.username}</span></p>
-                  <p className="truncate text-xs opacity-50">{u.email || "no recovery email"} · {new Date(u.createdAt).toLocaleDateString()}</p>
+                  <p className="truncate text-xs opacity-50">{u.email || t("admin.noEmail")} · {new Date(u.createdAt).toLocaleDateString()}</p>
                 </div>
                 {!u.isAdmin && (
                   <div className="flex shrink-0 gap-1">
-                    <button title="Edit profile" onClick={() => setEditTarget(u)} className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"><Pencil size={15} /></button>
-                    <button title="Regenerate key (revokes old sessions)" onClick={() => regenerate(u)} className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"><RefreshCw size={15} /></button>
-                    <button title="Delete account" onClick={() => setDeleteTarget(u)} className="rounded-full p-2 text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><Trash2 size={15} /></button>
+                    <button title={t("admin.editProfile")} onClick={() => setEditTarget(u)} className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"><Pencil size={15} /></button>
+                    <button title={t("admin.regenKey")} onClick={() => regenerate(u)} className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"><RefreshCw size={15} /></button>
+                    <button title={t("admin.deleteAccount")} onClick={() => setDeleteTarget(u)} className="rounded-full p-2 text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><Trash2 size={15} /></button>
                   </div>
                 )}
               </li>
@@ -383,18 +384,18 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
           </ul>
         )}
         <div className="mt-3 flex items-center justify-between gap-2 text-sm">
-          <span className="opacity-60">{total} account{total === 1 ? "" : "s"} · page {page} of {pages}</span>
+          <span className="opacity-60">{total === 1 ? t("admin.countOne", { total, page, pages }) : t("admin.countMany", { total, page, pages })}</span>
           {pages > 1 && (
             <div className="flex gap-2.5">
               <IconButton
-                title="Previous page"
+                title={t("admin.prevPage")}
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
                 <ChevronLeft size={16} />
               </IconButton>
               <IconButton
-                title="Next page"
+                title={t("admin.nextPage")}
                 disabled={page >= pages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -408,8 +409,8 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
       <ConfirmDialog
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
-        title={`Delete @${deleteTarget?.username}?`}
-        message="This permanently removes the account, all its conversations and its shares."
+        title={t("admin.deleteTitle", { user: deleteTarget?.username ?? "" })}
+        message={t("admin.deleteMsg")}
         onConfirm={() => deleteTarget && remove(deleteTarget)}
       />
 
@@ -420,6 +421,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
 }
 
 function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useT();
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [email, setEmail] = useState("");
@@ -444,33 +446,33 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
       onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("common.saveFailed"));
     }
   }
 
   return (
-    <Modal open={user !== null} onClose={onClose} title={`Edit @${user?.username}`} icon={Pencil}>
+    <Modal open={user !== null} onClose={onClose} title={t("admin.editUserTitle", { user: user?.username ?? "" })} icon={Pencil}>
       <form onSubmit={save} className="space-y-4">
-        <Field label="Display name"><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required /></Field>
-        <Field label="Avatar URL"><Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" /></Field>
-        <Field label="Email (recovery)"><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" /></Field>
-        <Field label="Theme">
+        <Field label={t("common.displayName")}><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required /></Field>
+        <Field label={t("admin.avatarUrl")}><Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" /></Field>
+        <Field label={t("admin.email")}><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" /></Field>
+        <Field label={t("common.theme")}>
           <Picker
-            ariaLabel="Theme"
+            ariaLabel={t("common.theme")}
             value={theme}
             onChange={setTheme}
             align="left"
             options={[
-              { value: "auto", label: "Auto" },
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
+              { value: "auto", label: t("common.themeAuto") },
+              { value: "light", label: t("common.light") },
+              { value: "dark", label: t("common.dark") },
             ]}
           />
         </Field>
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" size="sm" type="button" onClick={onClose}>Cancel</Button>
-          <Button size="sm" type="submit">Save</Button>
+          <Button variant="secondary" size="sm" type="button" onClick={onClose}>{t("common.cancel")}</Button>
+          <Button size="sm" type="submit">{t("common.save")}</Button>
         </div>
       </form>
     </Modal>
