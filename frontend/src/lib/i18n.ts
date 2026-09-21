@@ -83,7 +83,7 @@ const en = {
   "sidebar.adminCenter": "Admin Center",
   "sidebar.adminCenterTip": "Open the Admin Center",
   "sidebar.settingsTip": "Profile & settings",
-  "sidebar.logout": "Log out",
+  "sidebar.archive": "Archive",
 
   "chat.expand": "Expand sidebar",
   "chat.openNav": "Open chats",
@@ -457,6 +457,9 @@ const en = {
 
   "admin.editUserTitle": "Edit @{user}",
   "admin.avatarUrl": "Avatar URL",
+
+  "archived.readonly": "This chat is archived and read-only.",
+  "archived.unarchive": "Unarchive",
 } as const;
 
 export type StringKey = keyof typeof en;
@@ -527,7 +530,7 @@ const es: Dict = {
   "sidebar.adminCenter": "Centro de admin",
   "sidebar.adminCenterTip": "Abrir el Centro de admin",
   "sidebar.settingsTip": "Perfil y ajustes",
-  "sidebar.logout": "Cerrar sesión",
+  "sidebar.archive": "Archivar",
 
   "chat.expand": "Mostrar barra lateral",
   "chat.openNav": "Abrir chats",
@@ -896,6 +899,9 @@ const es: Dict = {
 
   "admin.editUserTitle": "Editar @{user}",
   "admin.avatarUrl": "URL del avatar",
+
+  "archived.readonly": "Este chat está archivado y es de solo lectura.",
+  "archived.unarchive": "Desarchivar",
 };
 
 const fr: Dict = {
@@ -963,7 +969,7 @@ const fr: Dict = {
   "sidebar.adminCenter": "Centre admin",
   "sidebar.adminCenterTip": "Ouvrir le Centre admin",
   "sidebar.settingsTip": "Profil et réglages",
-  "sidebar.logout": "Déconnexion",
+  "sidebar.archive": "Archiver",
 
   "chat.expand": "Afficher la barre latérale",
   "chat.openNav": "Ouvrir les chats",
@@ -1332,6 +1338,9 @@ const fr: Dict = {
 
   "admin.editUserTitle": "Modifier @{user}",
   "admin.avatarUrl": "URL de l'avatar",
+
+  "archived.readonly": "Ce chat est archivé en lecture seule.",
+  "archived.unarchive": "Désarchiver",
 };
 
 const ru: Dict = {
@@ -1399,7 +1408,7 @@ const ru: Dict = {
   "sidebar.adminCenter": "Админ-центр",
   "sidebar.adminCenterTip": "Открыть Админ-центр",
   "sidebar.settingsTip": "Профиль и настройки",
-  "sidebar.logout": "Выйти",
+  "sidebar.archive": "В архив",
 
   "chat.expand": "Показать панель",
   "chat.openNav": "Открыть чаты",
@@ -1755,6 +1764,9 @@ const ru: Dict = {
 
   "admin.editUserTitle": "Править @{user}",
   "admin.avatarUrl": "URL аватара",
+
+  "archived.readonly": "Чат в архиве, только чтение.",
+  "archived.unarchive": "Вернуть",
 };
 
 const it: Dict = {
@@ -1822,7 +1834,7 @@ const it: Dict = {
   "sidebar.adminCenter": "Centro admin",
   "sidebar.adminCenterTip": "Apri il Centro admin",
   "sidebar.settingsTip": "Profilo e impostazioni",
-  "sidebar.logout": "Esci",
+  "sidebar.archive": "Archivia",
 
   "chat.expand": "Mostra barra laterale",
   "chat.openNav": "Apri chat",
@@ -2184,6 +2196,9 @@ const it: Dict = {
 
   "admin.editUserTitle": "Modifica @{user}",
   "admin.avatarUrl": "URL avatar",
+
+  "archived.readonly": "Questa chat è archiviata e in sola lettura.",
+  "archived.unarchive": "Ripristina",
 };
 
 const pt: Dict = {
@@ -2251,7 +2266,7 @@ const pt: Dict = {
   "sidebar.adminCenter": "Centro admin",
   "sidebar.adminCenterTip": "Abrir o Centro admin",
   "sidebar.settingsTip": "Perfil e definições",
-  "sidebar.logout": "Sair",
+  "sidebar.archive": "Arquivar",
 
   "chat.expand": "Mostrar barra lateral",
   "chat.openNav": "Abrir chats",
@@ -2604,6 +2619,9 @@ const pt: Dict = {
 
   "admin.editUserTitle": "Editar @{user}",
   "admin.avatarUrl": "URL do avatar",
+
+  "archived.readonly": "Este chat está arquivado e é só de leitura.",
+  "archived.unarchive": "Desarquivar",
 };
 
 const dicts: Record<LangId, Dict> = { en, es, fr, ru, it, pt };

@@ -243,6 +243,22 @@ export function Chat({
             </>
           )}
         </div>
+        {readOnly ? (
+          <div className="mx-auto flex w-full max-w-3xl items-center gap-3 rounded-[1.75rem] border border-stone-200 bg-stone-100 p-2 pl-4 shadow-lg dark:border-zinc-700 dark:bg-zinc-800/60">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
+              <Archive size={17} />
+            </span>
+            <p className="min-w-0 flex-1 text-sm opacity-70">{t("archived.readonly")}</p>
+            <button
+              type="button"
+              onClick={onUnarchive}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-500 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400"
+            >
+              <ArchiveRestore size={15} />
+              {t("archived.unarchive")}
+            </button>
+          </div>
+        ) : (
         <form onSubmit={submit} className={`mx-auto flex w-full max-w-3xl items-end gap-2 rounded-[1.75rem] border border-stone-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 ${features.attachments ? "pl-2" : "pl-5"}`}>
           {features.attachments && (
             <button
@@ -281,6 +297,7 @@ export function Chat({
             <SendHorizontal size={17} />
           </button>
         </form>
+        )}
         <p className="py-2 text-center text-xs opacity-50">
           <a href="/wiki" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline-offset-2 hover:underline">
             <BookOpen size={12} />

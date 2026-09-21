@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, UserPlus, X } from "lucide-react";
+import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, UserPlus, X } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
@@ -345,11 +345,15 @@ export function SettingsModal({
   onClose,
   onSaved,
   onKeyRotated,
+  onViewArchived,
+  onArchivedChanged,
 }: {
   user: User | null;
   onClose: () => void;
   onSaved: (u: User) => void;
   onKeyRotated?: () => void;
+  onViewArchived: (c: Conversation) => void;
+  onArchivedChanged: (deletedId?: string) => void;
 }) {
   const { t } = useT();
   const [displayName, setDisplayName] = useState("");
@@ -382,6 +386,7 @@ export function SettingsModal({
     { id: "appearance", title: t("settings.appearance"), icon: Palette, keywords: ["appearance", "theme", "dark", "light", "color", "colour", "accent", "palette", "language", "langue", "idioma", "lingua", "язык"] },
     { id: "features", title: t("settings.features"), icon: Sparkles, keywords: ["features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable"] },
     { id: "security", title: t("settings.security"), icon: ShieldCheck, keywords: ["security", "key", "rotate", "password", "totp", "2fa", "two", "factor", "authenticator", "passkey", "webauthn"] },
+    { id: "archived", title: t("archived.title"), icon: Archive, keywords: ["archived", "archive", "old", "hidden", "read-only", "readonly", "archiv"] },
   ] as const;
   type CatId = (typeof CATS)[number]["id"];
   const [cat, setCat] = useState<CatId>("profile");
@@ -622,6 +627,12 @@ export function SettingsModal({
                 <SecuritySection onKeyRotated={onKeyRotated} />
               </SettingsPane>
             )}
+
+            {activeCat === "archived" && (
+              <SettingsPane>
+                <ArchivedSection onView={onViewArchived} onChanged={onArchivedChanged} />
+              </SettingsPane>
+            )}
           </div>
         </div>
 
@@ -648,6 +659,126 @@ function SettingsPane({ children }: { children: React.ReactNode }) {
     <section className="space-y-4 rounded-3xl border border-stone-200/70 bg-stone-50 p-4 shadow-sm shadow-stone-900/5 dark:border-zinc-800 dark:bg-zinc-800/60 dark:shadow-black/20">
       {children}
     </section>
+  );
+}
+
+/* ---------- Archived chats (settings): view, unarchive, delete ---------- */
+
+function ArchivedSection({ onView, onChanged }: { onView: (c: Conversation) => void; onChanged: (deletedId?: string) => void }) {
+  const { t } = useT();
+  const [list, setList] = useState<Conversation[] | null>(null);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
+
+  async function refresh() {
+    try {
+      const res = await api.archivedConvs();
+      setList(res.conversations);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.loadFailed"));
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function unarchive(c: Conversation) {
+    setBusyId(c.id);
+    setError("");
+    try {
+      await api.unarchiveConv(c.id);
+      await refresh();
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.saveFailed"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function remove(c: Conversation) {
+    setBusyId(c.id);
+    setError("");
+    try {
+      await api.deleteConv(c.id);
+      setDeleteTarget(null);
+      await refresh();
+      onChanged(c.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.deleteFailed"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (list === null && !error) {
+    return <p className="flex items-center gap-2 py-4 text-sm opacity-60"><Spinner size={15} /> {t("common.loading")}</p>;
+  }
+
+  return (
+    <div>
+      <p className="-mb-2 text-xs opacity-60">{t("archived.readonly")}</p>
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {(list ?? []).length === 0 ? (
+        <p className="py-4 text-center text-sm opacity-50">{t("archived.empty")}</p>
+      ) : (
+        <ul className="space-y-2">
+          {(list ?? []).map((c) => (
+            <li key={c.id} className="flex items-center gap-2 rounded-2xl border border-stone-200/70 px-3.5 py-2.5 dark:border-zinc-800">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-600/10 text-accent-600 dark:text-accent-400">
+                <Archive size={15} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{c.title}</p>
+                <p className="truncate text-xs opacity-50">{new Date(c.updated_at).toLocaleDateString()}</p>
+              </div>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  title={t("archived.view")}
+                  aria-label={`${t("archived.view")}: ${c.title}`}
+                  onClick={() => onView(c)}
+                  className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"
+                >
+                  <Eye size={15} />
+                </button>
+                <button
+                  type="button"
+                  title={t("archived.unarchive")}
+                  aria-label={`${t("archived.unarchive")}: ${c.title}`}
+                  disabled={busyId === c.id}
+                  onClick={() => unarchive(c)}
+                  className="rounded-full p-2 transition hover:bg-stone-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                >
+                  <ArchiveRestore size={15} />
+                </button>
+                <button
+                  type="button"
+                  title={t("common.delete")}
+                  aria-label={`${t("common.delete")}: ${c.title}`}
+                  disabled={busyId === c.id}
+                  onClick={() => setDeleteTarget(c)}
+                  className="rounded-full p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title={t("archived.deleteTitle")}
+        message={t("archived.deleteMsg")}
+        confirmLabel={t("common.delete")}
+        onConfirm={() => deleteTarget && remove(deleteTarget)}
+      />
+    </div>
   );
 }
 

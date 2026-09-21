@@ -3,7 +3,7 @@ import { ArrowRight, KeyRound, MessageSquareText, ShieldCheck, User, UserPlus, Z
 import { api, setToken } from "../lib/api.ts";
 import { useT } from "../lib/i18n.ts";
 import type { User as UserType } from "../lib/types.ts";
-import { Button, FlowerMark, Input, Spinner } from "./ui.tsx";
+import { Button, FlowerMark, Input, LangPicker, Spinner } from "./ui.tsx";
 import { RecoverDialog, RegisterDialog } from "./dialogs.tsx";
 import { AccessRequestModal } from "./ReviewPage.tsx";
 
@@ -201,6 +201,10 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             </button>
           )}
           <RecoverDialog open={recoverOpen} onClose={() => setRecoverOpen(false)} from={recoveryFrom} />
+
+          <div className="mt-4 flex justify-center">
+            <LangPicker />
+          </div>
 
           <ul className="mt-6 space-y-2 border-t border-stone-200/70 pt-5 dark:border-zinc-800">
             {PERKS.map((p) => (

@@ -53,6 +53,8 @@ export function App() {
   const [model, setModel] = useState("");
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Conversation opened from "Archived chats" (read-only, not in the sidebar list).
+  const [archivedConv, setArchivedConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState("");
   const [sending, setSending] = useState(false);
@@ -162,12 +164,14 @@ export function App() {
     setConvs([]);
     setMessages([]);
     setActiveId(null);
+    setArchivedConv(null);
     setAttachments([]);
     setFilePreview(null);
   }
 
   async function newChat() {
     try {
+      setArchivedConv(null);
       const res = await api.createConv({ model });
       await refreshConvs(res.conversation.id);
     } catch {
@@ -176,7 +180,7 @@ export function App() {
   }
 
   async function send(text: string) {
-    if (sending || !model) return;
+    if (sending || !model || archivedConv) return;
     let convId = activeId;
     if (!convId) {
       try {
@@ -271,10 +275,63 @@ export function App() {
         setActiveId(null);
         setMessages([]);
       }
+      if (archivedConv?.id === c.id) {
+        setArchivedConv(null);
+        setMessages([]);
+      }
       await refreshConvs();
     } catch {
       // ignore
     }
+  }
+
+  /** Archive from the sidebar menu: the chat leaves the side list. */
+  async function archiveConv(c: Conversation) {
+    try {
+      await api.archiveConv(c.id);
+      if (activeId === c.id) {
+        setActiveId(null);
+        setMessages([]);
+      }
+      await refreshConvs();
+    } catch {
+      // ignore
+    }
+  }
+
+  /** Open an archived chat (from settings) read-only in the main view. */
+  function openArchived(c: Conversation) {
+    setSettingsOpen(false);
+    setMobileNav(false);
+    setArchivedConv(c);
+    setActiveId(null);
+    setMessages([]);
+    api.getConv(c.id).then((res) => setMessages(res.messages)).catch(() => setMessages([]));
+  }
+
+  /** Unarchive the currently viewed archived chat and select it. */
+  async function unarchiveActive() {
+    if (!archivedConv) return;
+    try {
+      await api.unarchiveConv(archivedConv.id);
+      const id = archivedConv.id;
+      setArchivedConv(null);
+      await refreshConvs(id);
+    } catch {
+      // ignore
+    }
+  }
+
+  /**
+   * Settings "Archived chats" changed something: refresh the sidebar, and
+   * drop the read-only view if its conversation was deleted underneath us.
+   */
+  async function handleArchivedChanged(deletedId?: string) {
+    if (deletedId && archivedConv?.id === deletedId) {
+      setArchivedConv(null);
+      setMessages([]);
+    }
+    await refreshConvs();
   }
 
   if (checking) {
@@ -285,7 +342,8 @@ export function App() {
     return <Login onLogin={handleLogin} />;
   }
 
-  const active = convs.find((c) => c.id === activeId) ?? null;
+  const active = convs.find((c) => c.id === activeId) ?? archivedConv;
+  const readOnly = (active?.archived_at ?? 0) !== 0;
 
   return (
     <div className="flex h-full">
@@ -296,10 +354,11 @@ export function App() {
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(true)}
         onNew={() => { newChat(); setMobileNav(false); }}
-        onSelect={(id) => { setActiveId(id); setMobileNav(false); }}
+        onSelect={(id) => { setArchivedConv(null); setActiveId(id); setMobileNav(false); }}
         onRename={setEditConv}
         onTopic={setEditConv}
         onShare={setShareConv}
+        onArchive={archiveConv}
         onDelete={setDeleteConv}
         onOpenSettings={() => { setSettingsOpen(true); setMobileNav(false); }}
         onOpenAdmin={() => { window.location.href = "/admin"; }}
@@ -318,6 +377,8 @@ export function App() {
         onModelChange={setModel}
         onSend={send}
         onShare={() => active && setShareConv(active)}
+        readOnly={readOnly}
+        onUnarchive={unarchiveActive}
         sidebarCollapsed={sidebarCollapsed}
         onExpandSidebar={() => setSidebarCollapsed(false)}
         onOpenNav={() => setMobileNav(true)}
@@ -358,6 +419,8 @@ export function App() {
         }}
         // Key rotated or account deleted: sessions are dead server-side.
         onKeyRotated={() => { setSettingsOpen(false); logout(); }}
+        onViewArchived={openArchived}
+        onArchivedChanged={handleArchivedChanged}
       />
     </div>
   );
