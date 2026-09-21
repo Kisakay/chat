@@ -69,7 +69,7 @@ import type { OllamaDriver } from "./drivers/ollama.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
 import { createHash, randomBytes } from "node:crypto";
 import { statSync } from "node:fs";
-import { mailEnabled, sendAccessMessageEmail, sendAccessReceivedEmail, sendAccessStatusEmail, sendRecoveryEmail } from "./mail.ts";
+import { mailEnabled, sendAccessMessageEmail, sendAccessReceivedEmail, sendAccessStatusEmail, sendRecoveryEmail, sendSmtpTestMail, smtpStatus, verifySmtp } from "./mail.ts";
 import {
   CDN_NAMESPACES,
   cdnFile,
