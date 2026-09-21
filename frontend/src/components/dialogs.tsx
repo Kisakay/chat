@@ -396,19 +396,25 @@ export function SettingsModal({
 
   return (
     <Modal open={user !== null} onClose={onClose} title={t("settings.title")} icon={Settings2} wide>
-      <form onSubmit={save} className="space-y-4">
-        <div className="relative">
+      <div className="space-y-4">
+        {/* Filter UI lives OUTSIDE the data <form> on purpose: when the
+            Providers pane mounts its password fields, browsers and
+            password-manager extensions must not mistake this filter for
+            the login username field (autofilling e.g. "admin" into it and
+            popping their search menu over the modal). */}
+        <div className="relative" role="search">
           <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            // The search field lives inside the settings <form>: Enter must
-            // only filter, never submit (save + close the modal).
             onKeyDown={(e) => {
               if (e.key === "Enter") e.preventDefault();
             }}
             placeholder={t("settings.searchPh")}
             aria-label={t("settings.searchAria")}
+            name="ka-settings-search"
+            autoComplete="off"
+            spellCheck={false}
             className="w-full rounded-2xl border border-stone-200/70 bg-stone-100 py-2 pl-9 pr-8 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 focus:bg-white dark:border-zinc-800 dark:bg-zinc-800/60 dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900"
           />
           {search && (
@@ -423,6 +429,7 @@ export function SettingsModal({
           )}
         </div>
 
+        <form onSubmit={save} className="space-y-4">
         {search.trim() && visibleCats.length === 0 ? (
           <div className="space-y-2 px-2 py-4 text-center">
             <p className="text-sm opacity-50">{t("settings.noMatch", { q: search.trim() })}</p>
@@ -525,10 +532,10 @@ export function SettingsModal({
               {uploadError && <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
             </div>
             <Field label={t("common.displayName")}>
-              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required />
+              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required autoComplete="nickname" />
             </Field>
             <Field label={t("settings.email")} hint={t("settings.emailHint")}>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" />
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" autoComplete="email" />
             </Field>
               </SettingsPane>
             )}
@@ -588,7 +595,8 @@ export function SettingsModal({
           <Button variant="secondary" size="sm" type="button" onClick={onClose}>{t("common.cancel")}</Button>
           <Button size="sm" type="submit" disabled={busy}>{busy ? <Spinner size={15} /> : t("common.save")}</Button>
         </div>
-      </form>
+        </form>
+      </div>
     </Modal>
   );
 }
@@ -1163,7 +1171,16 @@ function ProvidersSection({ onChanged }: { onChanged?: () => void }) {
               <div className="flex gap-2">
                 <Input
                   type="password"
-                  autoComplete="off"
+                  // API keys are not login credentials: tell browsers and
+                  // password-manager extensions to leave these fields alone
+                  // (no username fill, no inline search menu, no save prompt).
+                  // Note: plain "off" is deliberately ignored by browsers on
+                  // password fields — "new-password" is the token they honor.
+                  autoComplete="new-password"
+                  name={`ka-provider-key-${m.id}`}
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-bwignore
                   spellCheck={false}
                   value={locked ? "" : (keys[m.id] ?? "")}
                   onChange={(e) => setKeys((k) => ({ ...k, [m.id]: e.target.value }))}
