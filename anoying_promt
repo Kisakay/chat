@@ -30,7 +30,7 @@ Can refusing with a reason / accepting with reason / reviewing :
 
 --- UX bugs / improvements:
 class="flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left transition hover:bg-stone-100 dark:hover:bg-zinc-800"
-the actual on:hover makes the two buttons together, seprared it goodly
+the actual on:hover makes the settings button very next to the border hover clor
 
 Use the new flower svgs built-in for the ai logo. Only one declaration of the logo, not copy-paste everywhere needing it. One constant and imported anywhere
 Make the loading screen smoother
@@ -39,3 +39,8 @@ Make the loading screen smoother
 --- SETTINGS REWAMPING:
 Make a paginations system for users into the Admin Center.
 Filtering, by account timetamp, alphabetily filtered, unverified/etc...
+
+
+---(NEW) BUGS WITH SETTINGS:
+glossian blur its diffent at each settings section opened: need to unify it
+padding for buttons into admin center at pagination is so tigh. fix it

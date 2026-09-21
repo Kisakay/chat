@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, KeyRound, ShieldCheck, User, UserPlus, Zap } from "lucide-react";
+import { ArrowRight, KeyRound, MessageSquareText, ShieldCheck, User, UserPlus, Zap } from "lucide-react";
 import { api, setToken } from "../lib/api.ts";
 import type { User as UserType } from "../lib/types.ts";
-import { Button, Input, Logo, Spinner } from "./ui.tsx";
+import { Button, FlowerMark, Input, Spinner } from "./ui.tsx";
 import { RecoverDialog, RegisterDialog } from "./dialogs.tsx";
+import { AccessRequestModal } from "./ReviewPage.tsx";
 
 const PERKS = [
   { icon: ShieldCheck, text: "Private by design — no cookies, no tracking" },
@@ -20,6 +21,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [recoveryFrom, setRecoveryFrom] = useState<string | undefined>(undefined);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [registrationOn, setRegistrationOn] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
 
   useEffect(() => {
     api.methods().then((m) => {
@@ -50,7 +52,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
       <div className="w-full max-w-sm">
         <div className="rounded-[2rem] border border-white/60 bg-white/80 p-8 shadow-2xl shadow-accent-900/5 backdrop-blur-xl dark:border-zinc-700/60 dark:bg-zinc-900/80">
           <div className="mb-2 flex flex-col items-center text-center">
-            <Logo size={68} className="mb-4 rounded-[1.5rem] shadow-lg shadow-red-900/20" />
+            <FlowerMark size={68} className="mb-4 drop-shadow-lg" />
             <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
             <p className="mt-1 text-sm opacity-60">Sign in to KisAssistant to continue</p>
           </div>
@@ -113,6 +115,20 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
             onClose={() => setRegisterOpen(false)}
             onDone={(u, k) => { setUsername(u); setKey(k); }}
           />
+          {/* Wishlist path: when open registration is off, visitors can still
+              reserve a username and plead their case; an admin triages it. */}
+          {!registrationOn && (
+            <Button
+              variant="secondary"
+              size="lg"
+              className="mt-3 w-full"
+              onClick={() => setRequestOpen(true)}
+            >
+              <MessageSquareText size={16} />
+              Request access
+            </Button>
+          )}
+          <AccessRequestModal open={requestOpen} onClose={() => setRequestOpen(false)} />
           {recoveryOn && (
             <button onClick={() => setRecoverOpen(true)} className="mt-3 w-full text-center text-sm opacity-60 transition hover:opacity-100 hover:underline">
               Forgot your access key?

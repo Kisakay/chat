@@ -9,6 +9,7 @@ import { ConvEditDialog, FilePreviewModal, SettingsModal, ShareModal } from "./c
 import { AdminCenter } from "./components/AdminCenter.tsx";
 import { SharePage } from "./components/SharePage.tsx";
 import { ResetPage } from "./components/ResetPage.tsx";
+import { ReviewPage } from "./components/ReviewPage.tsx";
 import { ConfirmDialog, LoadingScreen } from "./components/ui.tsx";
 
 function shareIdFromPath(): string | null {
@@ -19,10 +20,16 @@ function shareIdFromPath(): string | null {
 // Module-level: the path never changes without a full reload, so hook order stays stable.
 const SHARE_ID = typeof window !== "undefined" ? shareIdFromPath() : null;
 const RESET_TOKEN = typeof window !== "undefined" ? resetTokenFromPath() : null;
+const REVIEW_ID = typeof window !== "undefined" ? reviewIdFromPath() : null;
 const IS_ADMIN_PAGE = typeof window !== "undefined" && /^\/admin\/?$/.test(window.location.pathname);
 
 function resetTokenFromPath(): string | null {
   const m = window.location.pathname.match(/^\/reset\/([A-Za-z0-9_-]{6,80})\/?$/);
+  return m ? m[1]! : null;
+}
+
+function reviewIdFromPath(): string | null {
+  const m = window.location.pathname.match(/^\/review\/([0-9a-f-]{36})\/?$/i);
   return m ? m[1]! : null;
 }
 
@@ -36,7 +43,7 @@ function applyTheme(theme: string) {
 
 export function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [checking, setChecking] = useState(!SHARE_ID && !RESET_TOKEN && !IS_ADMIN_PAGE && !!getToken());
+  const [checking, setChecking] = useState(!SHARE_ID && !RESET_TOKEN && !REVIEW_ID && !IS_ADMIN_PAGE && !!getToken());
   const [models, setModels] = useState<DriverModel[]>([]);
   const [model, setModel] = useState("");
   const [convs, setConvs] = useState<Conversation[]>([]);
@@ -62,6 +69,9 @@ export function App() {
   }
   if (RESET_TOKEN) {
     return <ResetPage token={RESET_TOKEN} />;
+  }
+  if (REVIEW_ID) {
+    return <ReviewPage ticketId={REVIEW_ID} />;
   }
   if (SHARE_ID) {
     return <SharePage publicId={SHARE_ID} />;

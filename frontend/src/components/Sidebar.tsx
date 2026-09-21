@@ -271,7 +271,7 @@ export function Sidebar({
       )}
 
       <div className="space-y-2 rounded-2xl border border-stone-200/70 bg-white p-2.5 dark:border-zinc-800 dark:bg-zinc-900">
-        <button onClick={onOpenSettings} className="flex w-full items-center gap-2.5 rounded-xl p-1.5 text-left transition hover:bg-stone-100 dark:hover:bg-zinc-800">
+        <button onClick={onOpenSettings} className="m-0.5 flex w-[calc(100%-4px)] items-center gap-2.5 rounded-xl p-1.5 text-left transition hover:bg-accent-600/10" title="Profile & settings">
           <Avatar name={user.displayName} url={user.avatarUrl} size={34} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{user.displayName}</span>

@@ -109,6 +109,15 @@ body {
   0%, 100% { transform: scale(0.85); }
   50% { transform: scale(1.15); }
 }
+/* Smooth entrance for full-screen loaders. */
+@keyframes loading-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+.loading-enter {
+  animation: loading-in 0.45s ease-out both;
+}
+
 .loading-dots::after {
   content: "";
   animation: dots 1.4s steps(4) infinite;
@@ -118,6 +127,12 @@ body {
   25% { content: "."; }
   50% { content: ".."; }
   75% { content: "..."; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flower-petal, .flower-core, .loading-dots::after, .loading-enter, .typing-cursor::after {
+    animation: none;
+  }
 }
 
 /* Kill Chrome's yellow autofill background (login / password fields) */

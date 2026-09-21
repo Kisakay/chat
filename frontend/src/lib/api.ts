@@ -1,5 +1,26 @@
 import type { ChatMessage, Conversation, DriverModel, SharedChat, User } from "./types.ts";
 
+export type AccessStatus = "pending" | "reviewing" | "accepted" | "refused";
+
+export interface AccessRequest {
+  id: string;
+  username: string;
+  email: string;
+  message: string;
+  status: AccessStatus;
+  reason: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface AccessMessage {
+  id: number;
+  request_id: string;
+  author: "user" | "admin";
+  body: string;
+  created_at: number;
+}
+
 const TOKEN_KEY = "kisassistant_token";
 
 export function getToken(): string | null {
@@ -58,7 +79,18 @@ export const api = {
   updateMe: (patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>("/api/me", { method: "PATCH", body: JSON.stringify(patch) }),
 
-  adminList: () => req<{ users: User[] }>("/api/admin/users"),
+  adminList: (p: { q?: string; sort?: string; filter?: string; page?: number; per?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (p.q) qs.set("q", p.q);
+    if (p.sort) qs.set("sort", p.sort);
+    if (p.filter) qs.set("filter", p.filter);
+    if (p.page) qs.set("page", String(p.page));
+    if (p.per) qs.set("per", String(p.per));
+    const s = qs.toString();
+    return req<{ users: User[]; total: number; page: number; perPage: number; pages: number }>(
+      `/api/admin/users${s ? `?${s}` : ""}`,
+    );
+  },
   adminCreate: (u: { username: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User; key: string }>("/api/admin/users", { method: "POST", body: JSON.stringify(u) }),
   adminDelete: (id: string) => req<{ ok: boolean }>(`/api/admin/users/${id}`, { method: "DELETE" }),
@@ -90,7 +122,34 @@ export const api = {
 
   models: () => req<{ models: DriverModel[] }>("/api/models"),
 
-  /** Admin: stream an Ollama /api/pull as NDJSON progress events. */
+  /** Access-request wishlist (public, no auth). */
+  accessRequest: (a: { username: string; email: string; message: string }) =>
+    req<{ request: AccessRequest; reviewUrl: string }>("/api/access/request", {
+      method: "POST",
+      body: JSON.stringify(a),
+    }, false),
+  accessTicket: (id: string) =>
+    req<{ request: AccessRequest; messages: AccessMessage[] }>(`/api/access/ticket/${id}`, {}, false),
+  accessReply: (id: string, body: string) =>
+    req<{ message: AccessMessage }>(`/api/access/ticket/${id}/message`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }, false),
+
+  /** Admin: access-request triage. */
+  adminAccessList: () => req<{ requests: (AccessRequest & { message_count: number })[] }>("/api/admin/access"),
+  adminAccessGet: (id: string) =>
+    req<{ request: AccessRequest; messages: AccessMessage[] }>(`/api/admin/access/${id}`),
+  adminAccessPatch: (id: string, patch: { status: AccessStatus; reason?: string }) =>
+    req<{ request: AccessRequest; key?: string }>(`/api/admin/access/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
+  adminAccessReply: (id: string, body: string) =>
+    req<{ message: AccessMessage }>(`/api/admin/access/${id}/message`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }),
   ollamaPull: async (
     name: string,
     onProgress: (p: { status?: string; digest?: string; total?: number; completed?: number; error?: string }) => void,

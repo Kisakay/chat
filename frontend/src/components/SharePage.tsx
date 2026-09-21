@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Bot, Globe, User as UserIcon } from "lucide-react";
 import { api } from "../lib/api.ts";
 import type { SharedChat } from "../lib/types.ts";
-import { Avatar, LOGO_URL, Logo } from "./ui.tsx";
+import { AssistantAvatar, Avatar, FlowerMark } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
 
 export function SharePage({ publicId }: { publicId: string }) {
@@ -19,7 +19,7 @@ export function SharePage({ publicId }: { publicId: string }) {
     <div className="min-h-full">
       <header className="border-b border-stone-200/70 bg-white/70 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/70">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2.5 px-4 py-3">
-          <Logo size={36} className="rounded-2xl" />
+          <FlowerMark size={36} dynamic={false} />
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{chat?.title ?? "Shared chat"}</p>
             {chat && (
@@ -39,7 +39,9 @@ export function SharePage({ publicId }: { publicId: string }) {
         {!chat && !error && <p className="py-16 text-center text-sm opacity-60">Loading shared chat…</p>}
         {chat?.messages.map((m, i) => (
           <div key={i} className="flex gap-3">
-            <Avatar name={m.role === "user" ? chat.authorName : "KisAssistant"} url={m.role === "user" ? undefined : LOGO_URL} size={32} />
+            {m.role === "user"
+              ? <Avatar name={chat.authorName} size={32} />
+              : <AssistantAvatar size={32} />}
             <div className="min-w-0 max-w-[90%] flex-1">
               <div className="mb-1 flex items-center gap-1.5 text-xs opacity-60">
                 {m.role === "user" ? <UserIcon size={12} /> : <Bot size={12} />}

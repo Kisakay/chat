@@ -1,8 +1,8 @@
 import { useEffect, useState, type FC, type ReactNode } from "react";
-import { Bot, Download, HardDrive, KeyRound, Pencil, RefreshCw, Trash2, UserPlus, Users } from "lucide-react";
+import { ArrowUpDown, Bot, ChevronLeft, ChevronRight, Download, Filter, HardDrive, KeyRound, Pencil, RefreshCw, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { api } from "../lib/api.ts";
 import type { DriverModel, User } from "../lib/types.ts";
-import { Avatar, Button, ConfirmDialog, CopyButton, Field, Input, Modal, Picker, Spinner } from "./ui.tsx";
+import { Avatar, Button, ConfirmDialog, CopyButton, Field, IconButton, Input, Modal, Picker, Spinner } from "./ui.tsx";
 
 /** Curated Ollama library catalog (admin downloads only). */
 const OLLAMA_CATALOG: { name: string; desc: string; sizes: string[] }[] = [
@@ -187,6 +187,15 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [modelsOpen, setModelsOpen] = useState(false);
+  // Listing: search + sort + filter + pagination (server-side).
+  const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+  const PER_PAGE = 8;
 
   // create form
   const [username, setUsername] = useState("");
@@ -197,8 +206,11 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
     setBusy(true);
     setError("");
     try {
-      const res = await api.adminList();
+      const res = await api.adminList({ q: debouncedQ || undefined, sort, filter, page, per: PER_PAGE });
       setUsers(res.users);
+      setTotal(res.total);
+      setPages(res.pages);
+      if (res.page !== page) setPage(res.page);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Load failed");
     } finally {
@@ -214,6 +226,20 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, bare ]);
+
+  // Debounced search (resets to first page); sort/filter reload too.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedQ(q);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [q ]);
+
+  useEffect(() => {
+    if (open || bare) refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQ, sort, filter, page ]);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -299,6 +325,38 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
           </form>
         )}
 
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-40 flex-1">
+            <Search size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search accounts…" aria-label="Search accounts" className="pl-10" />
+          </div>
+          <Picker
+            ariaLabel="Sort accounts"
+            icon={ArrowUpDown}
+            value={sort}
+            onChange={(v) => { setSort(v); setPage(1); }}
+            align="right"
+            options={[
+              { value: "newest", label: "Newest first" },
+              { value: "oldest", label: "Oldest first" },
+              { value: "az", label: "A → Z" },
+              { value: "za", label: "Z → A" },
+            ]}
+          />
+          <Picker
+            ariaLabel="Filter accounts"
+            icon={Filter}
+            value={filter}
+            onChange={(v) => { setFilter(v); setPage(1); }}
+            align="right"
+            options={[
+              { value: "all", label: "All accounts" },
+              { value: "with-email", label: "With recovery email" },
+              { value: "no-email", label: "No recovery email" },
+            ]}
+          />
+        </div>
+
         {busy ? (
           <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={15} /> Loading…</p>
         ) : (
@@ -308,7 +366,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
                 <Avatar name={u.displayName} url={u.avatarUrl} size={36} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{u.displayName} <span className="font-normal opacity-50">@{u.username}</span></p>
-                  <p className="text-xs opacity-50">theme: {u.theme} · since {new Date(u.createdAt).toLocaleDateString()}</p>
+                  <p className="truncate text-xs opacity-50">{u.email || "no recovery email"} · {new Date(u.createdAt).toLocaleDateString()}</p>
                 </div>
                 {!u.isAdmin && (
                   <div className="flex shrink-0 gap-1">
@@ -321,6 +379,27 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
             ))}
           </ul>
         )}
+        <div className="mt-3 flex items-center justify-between gap-2 text-sm">
+          <span className="opacity-60">{total} account{total === 1 ? "" : "s"} · page {page} of {pages}</span>
+          {pages > 1 && (
+            <div className="flex gap-2.5">
+              <IconButton
+                title="Previous page"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                <ChevronLeft size={16} />
+              </IconButton>
+              <IconButton
+                title="Next page"
+                disabled={page >= pages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                <ChevronRight size={16} />
+              </IconButton>
+            </div>
+          )}
+        </div>
       </Shell>
 
       <ConfirmDialog

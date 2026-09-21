@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, LayoutDashboard, Mail, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
+import { ArrowLeft, Inbox, LayoutDashboard, Mail, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
 import { api } from "../lib/api.ts";
 import { AdminPanel } from "./AdminPanel.tsx";
-import { LoadingScreen, Logo, Spinner, Switch } from "./ui.tsx";
+import { AccessRequestsPanel } from "./AccessRequests.tsx";
+import { FlowerMark, LoadingScreen, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 
-type Tab = "accounts" | "features" | "mail";
+type Tab = "accounts" | "access" | "features" | "mail";
 
 function applyTheme(theme: string) {
   const root = document.documentElement;
@@ -16,6 +17,7 @@ function applyTheme(theme: string) {
 
 const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
   { id: "accounts", label: "Accounts", icon: Users },
+  { id: "access", label: "Access", icon: Inbox },
   { id: "features", label: "Features", icon: SlidersHorizontal },
   { id: "mail", label: "Mail", icon: Mail },
 ];
@@ -80,7 +82,7 @@ export function AdminCenter() {
           <a href="/" aria-label="Back to chat" className="rounded-full p-2 transition hover:bg-stone-200/60 dark:hover:bg-zinc-800">
             <ArrowLeft size={18} />
           </a>
-          <Logo size={32} className="rounded-xl" />
+          <FlowerMark size={32} />
           <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight">
             <LayoutDashboard size={18} className="text-accent-600 dark:text-accent-400" />
             Admin Center
@@ -113,6 +115,12 @@ export function AdminCenter() {
         {tab === "accounts" && (
           <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <AdminPanel open bare onClose={() => {}} />
+          </section>
+        )}
+
+        {tab === "access" && (
+          <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <AccessRequestsPanel />
           </section>
         )}
 

@@ -357,13 +357,22 @@ export function SettingsModal({
   const [search, setSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Section search: each section lists keywords; a section shows when the
-  // query is empty or matches its title/keywords.
-  function show(...keywords: string[]): boolean {
+  // Two-column settings: categories on the left, content on the right.
+  // Searching filters the category list and jumps to the first match.
+  const CATS = [
+    { id: "profile", title: "Profile", icon: UserIcon, keywords: ["profile", "avatar", "picture", "photo", "name", "display", "email", "account"] },
+    { id: "appearance", title: "Appearance", icon: Palette, keywords: ["appearance", "theme", "dark", "light", "color", "colour", "accent", "palette"] },
+    { id: "features", title: "Features", icon: Sparkles, keywords: ["features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable"] },
+  ] as const;
+  type CatId = (typeof CATS)[number]["id"];
+  const [cat, setCat] = useState<CatId>("profile");
+
+  const visibleCats = CATS.filter((c) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
-    return keywords.some((k) => k.toLowerCase().includes(q));
-  }
+    return c.title.toLowerCase().includes(q) || c.keywords.some((k) => k.includes(q));
+  });
+  const activeCat = visibleCats.some((c) => c.id === cat) ? cat : (visibleCats[0]?.id ?? "profile");
 
   useEffect(() => {
     if (user) {
@@ -442,9 +451,31 @@ export function SettingsModal({
           )}
         </div>
 
-        {show("profile", "avatar", "picture", "photo", "name", "display", "email", "account") && (
-          <SettingSection icon={UserIcon} title="Profile">
-            <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <nav aria-label="Settings categories" className="flex shrink-0 gap-1.5 overflow-x-auto sm:w-44 sm:flex-col">
+            {visibleCats.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setCat(c.id)}
+                aria-current={activeCat === c.id}
+                className={cn(
+                  "flex shrink-0 items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-sm transition",
+                  activeCat === c.id
+                    ? "bg-accent-600/10 font-medium text-accent-900 dark:bg-accent-500/10 dark:text-accent-100"
+                    : "hover:bg-stone-200/50 dark:hover:bg-zinc-800/70",
+                )}
+              >
+                <c.icon size={16} className="opacity-70" />
+                {c.title}
+              </button>
+            ))}
+          </nav>
+
+          <div className="min-w-0 flex-1 space-y-4">
+            {activeCat === "profile" && (
+              <SettingsPane>
+                <div className="flex items-center gap-3">
               <Avatar name={displayName || "?"} url={avatarUrl || undefined} size={52} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{displayName || "…"}</p>
@@ -501,11 +532,11 @@ export function SettingsModal({
             <Field label="Recovery email" hint="Optional. Used only to send you a fresh access key if you lose it.">
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" inputMode="email" />
             </Field>
-          </SettingSection>
-        )}
+              </SettingsPane>
+            )}
 
-        {show("appearance", "theme", "dark", "light", "color", "colour", "accent", "palette") && (
-          <SettingSection icon={Palette} title="Appearance">
+            {activeCat === "appearance" && (
+              <SettingsPane>
             <Field label="Theme">
               <Picker
                 ariaLabel="Theme"
@@ -520,18 +551,19 @@ export function SettingsModal({
               />
             </Field>
             <AccentSection />
-          </SettingSection>
-        )}
+              </SettingsPane>
+            )}
 
-        {show("features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable") && (
-          <SettingSection icon={Sparkles} title="Features" hint="Turn composer capabilities on or off. Applied instantly, saved on this device.">
+            {activeCat === "features" && (
+              <SettingsPane>
+            <p className="-mb-2 text-xs opacity-60">Turn composer capabilities on or off. Applied instantly, saved on this device.</p>
             <FeaturesSection />
-          </SettingSection>
-        )}
+              </SettingsPane>
+            )}
+          </div>
+        </div>
 
-        {search.trim() && !show("profile", "avatar", "picture", "photo", "name", "display", "email", "account")
-          && !show("appearance", "theme", "dark", "light", "color", "colour", "accent", "palette")
-          && !show("features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable") && (
+        {search.trim() && visibleCats.length === 0 && (
           <p className="px-2 py-4 text-center text-sm opacity-50">No settings match “{search.trim()}”.</p>
         )}
 
@@ -545,27 +577,14 @@ export function SettingsModal({
   );
 }
 
-/* ---------- Settings sections ---------- */
+/* ---------- Settings pane (unified glass card for every category) ---------- */
 
-function SettingSection({
-  icon: Icon,
-  title,
-  hint,
-  children,
-}: {
-  icon: typeof Settings2;
-  title: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function SettingsPane({ children }: { children: React.ReactNode }) {
+  // Single unified surface for every settings section: flat matte card, no
+  // blur, no gradient — identical gloss on profile, appearance and features.
   return (
-    <section className="rounded-3xl border border-stone-200/70 p-4 dark:border-zinc-800">
-      <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
-        <Icon size={15} className="opacity-60" />
-        {title}
-      </h3>
-      {hint && <p className="mb-3 text-xs opacity-60">{hint}</p>}
-      <div className="mt-3 space-y-4">{children}</div>
+    <section className="space-y-4 rounded-3xl border border-stone-200/70 bg-stone-50 p-4 dark:border-zinc-800 dark:bg-zinc-800/60">
+      {children}
     </section>
   );
 }

@@ -55,8 +55,9 @@ unshare. See `AGENTS.md`.
 ## Admin Center (`/admin`) & self-registration
 
 The sidebar **Admin Center** button (admin only) opens the `/admin` page with
-three tabs: **Accounts** (same manager as before, incl. the Ollama model
-catalog), **Features** (server-side switches), **Mail** (SMTP status).
+four tabs: **Accounts** (same manager as before, incl. the Ollama model
+catalog), **Access** (access-request wishlist triage, see below),
+**Features** (server-side switches), **Mail** (SMTP status).
 
 - `registration_enabled` (default off): when on, the login page shows a
   working **Register** button — anyone can create an account (key shown once)
@@ -66,6 +67,28 @@ catalog), **Features** (server-side switches), **Mail** (SMTP status).
 - `tools_ocr_enabled` (default on): admin kill-switch for the OCR tool.
 - Flags live in the `settings` SQLite table, edited via
   `GET/PATCH /api/admin/settings` (admin Bearer only).
+
+## Access-request wishlist (registration approval queue)
+
+When public registration is off, visitors can still reserve a username via
+**Request access** on the login page: username + email (required) + a
+motivation message (10+ chars). This creates a ticket (`access_requests` +
+`access_messages` tables) with a personal page at `/review/<id>` (unguessable
+UUID, same pattern as share links).
+
+- Requester: follows the decision, argues their case and replies on the
+  `/review` page. Closed tickets (accepted/refused) are read-only.
+- Admin: **Access** tab in the Admin Center — filter by status, open a ticket,
+  reply (emailed to the requester), and set `pending → reviewing → accepted /
+  refused` with a reason. **Accepting creates the account** and returns the
+  access key once (also emailed). Terminal tickets can't be reopened.
+- Email (needs `SMTP_*`): received-confirmation, reviewing/accepted/refused
+  notices, and every admin reply — all HTML, all stating email is
+  notification-only and replies belong on the `/review` page.
+- Routes: `POST /api/access/request` (public, rate-limited),
+  `GET /api/access/ticket/:id` + `POST .../message` (public, ticket bearer),
+  `GET /api/admin/access`, `GET/PATCH /api/admin/access/:id`,
+  `POST /api/admin/access/:id/message` (admin).
 
 ## Key recovery via email (optional)
 

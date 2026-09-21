@@ -43,12 +43,23 @@ import {
   updateUser,
 } from "./db.ts";
 import type { ChatMessage } from "./drivers/types.ts";
+import {
+  addAccessMessage,
+  createAccessRequest,
+  findOpenAccessRequest,
+  getAccessRequest,
+  initAccessTables,
+  listAccessMessages,
+  listAccessRequests,
+  setAccessStatus,
+  type AccessStatus,
+} from "./access.ts";
 import type { ConversationRow } from "./db.ts";
 import type { OllamaDriver } from "./drivers/ollama.ts";
 import { DriverRegistry } from "./drivers/registry.ts";
 import { createHash, randomBytes } from "node:crypto";
 import { statSync } from "node:fs";
-import { mailEnabled, sendRecoveryEmail } from "./mail.ts";
+import { mailEnabled, sendAccessMessageEmail, sendAccessReceivedEmail, sendAccessStatusEmail, sendRecoveryEmail } from "./mail.ts";
 import {
   CDN_NAMESPACES,
   cdnFile,
@@ -71,6 +82,7 @@ const registry = new DriverRegistry();
 // Ollama handles admin model pulls/deletes (host is loopback/LAN, no auth).
 const ollamaDriver = registry.get("ollama") as OllamaDriver;
 await tools.init();
+initAccessTables();
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -390,6 +402,66 @@ const server = Bun.serve({
       }
     }
 
+    // --- access-request wishlist (public ticket system, email-notified) ---
+    // Reserve a username + email with a motivation; triaged in the AdminCenter.
+    if (path === "/api/access/request" && req.method === "POST") {
+      const ip = clientIp(req, server);
+      if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
+      const { ok, body } = await readJson(req);
+      if (!ok) {
+        recordAttempt(ip);
+        return json({ error: "invalid JSON" }, 400);
+      }
+      const username = validUsername(body.username);
+      const email = validEmail(body.email);
+      const message = cleanStr(body.message, 2000);
+      if (!username || !email || !message || message.length < 10) {
+        recordAttempt(ip);
+        return json({ error: "username (2-32 chars), valid email and a motivation (10+ chars) are required" }, 400);
+      }
+      if (getUserByUsername(username)) {
+        recordAttempt(ip);
+        return json({ error: "username taken" }, 409);
+      }
+      if (findOpenAccessRequest(username, email)) {
+        recordAttempt(ip);
+        return json({ error: "a request for this username or email is already open" }, 409);
+      }
+      const created = createAccessRequest({ username, email, message });
+      addAccessMessage(created.id, "user", message);
+      clearAttempts(ip);
+      // Ticket page: /review/<uuid> (unguessable, same pattern as share links).
+      const reviewUrl = `${config.appUrl}/review/${created.id}`;
+      sendAccessReceivedEmail(email, username, reviewUrl).catch(() => {});
+      return json({ request: created, reviewUrl }, 201);
+    }
+
+    const ticketMatch = path.match(/^\/api\/access\/ticket\/([0-9a-f-]{36})(\/message)?$/);
+    if (ticketMatch) {
+      const r = getAccessRequest(ticketMatch[1]!);
+      if (!r) return json({ error: "invalid ticket link" }, 404);
+      if (req.method === "GET" && !ticketMatch[2]) {
+        return json({ request: r, messages: listAccessMessages(r.id) });
+      }
+      if (req.method === "POST" && ticketMatch[2] === "/message") {
+        const ip = clientIp(req, server);
+        if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
+        if (r.status === "accepted" || r.status === "refused") {
+          return json({ error: "ticket closed" }, 403);
+        }
+        const { ok, body } = await readJson(req);
+        const text = ok ? cleanStr(body.body, 2000) : null;
+        if (!text) {
+          recordAttempt(ip);
+          return json({ error: "message: 1-2000 chars" }, 400);
+        }
+        const msg = addAccessMessage(r.id, "user", text);
+        clearAttempts(ip);
+        return json({ message: msg }, 201);
+      }
+      return json({ error: "not found" }, 404);
+    }
+
     // --- everything below requires auth ---
     if (path.startsWith("/api/")) {
       const user = requireAuth(req);
@@ -430,7 +502,35 @@ const server = Bun.serve({
       // --- admin: user management (No-KYC accounts, keys issued by admin) ---
       if (path === "/api/admin/users" && req.method === "GET") {
         if (!admin) return json({ error: "forbidden" }, 403);
-        return json({ users: listUsers().map(toPublicUser) });
+        // Listing with search / sort / filter / pagination for the Admin Center.
+        const q = (url.searchParams.get("q") || "").trim().toLowerCase();
+        const sort = url.searchParams.get("sort") || "newest";
+        const filter = url.searchParams.get("filter") || "all"; // all | with-email | no-email
+        const per = Math.min(Math.max(Number(url.searchParams.get("per")) || 10, 1), 50);
+        const page = Math.max(Number(url.searchParams.get("page")) || 1, 1);
+        let users = listUsers();
+        if (q) {
+          users = users.filter(
+            (u) =>
+              u.username.includes(q) ||
+              u.display_name.toLowerCase().includes(q) ||
+              (u.email || "").toLowerCase().includes(q),
+          );
+        }
+        if (filter === "with-email") users = users.filter((u) => u.email);
+        else if (filter === "no-email") users = users.filter((u) => !u.email);
+        const sorts: Record<string, (a: (typeof users)[number], b: (typeof users)[number]) => number> = {
+          newest: (a, b) => b.created_at - a.created_at,
+          oldest: (a, b) => a.created_at - b.created_at,
+          az: (a, b) => a.username.localeCompare(b.username),
+          za: (a, b) => b.username.localeCompare(a.username),
+        };
+        users.sort(sorts[sort] ?? sorts.newest);
+        const total = users.length;
+        const pages = Math.max(1, Math.ceil(total / per));
+        const safePage = Math.min(page, pages);
+        const slice = users.slice((safePage - 1) * per, safePage * per);
+        return json({ users: slice.map(toPublicUser), total, page: safePage, perPage: per, pages });
       }
 
       if (path === "/api/admin/users" && req.method === "POST") {
@@ -618,6 +718,57 @@ const server = Bun.serve({
         } catch (e) {
           return json({ error: (e as Error).message }, 502);
         }
+      }
+
+      // --- admin: access-request wishlist triage ---
+      if (path === "/api/admin/access" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        return json({ requests: listAccessRequests() });
+      }
+
+      const accessMatch = path.match(/^\/api\/admin\/access\/([0-9a-f-]{36})(\/message)?$/);
+      if (accessMatch) {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const target = getAccessRequest(accessMatch[1]!);
+        if (!target) return json({ error: "request not found" }, 404);
+        const reviewUrl = `${config.appUrl}/review/${target.id}`;
+        if (req.method === "GET" && !accessMatch[2]) {
+          return json({ request: target, messages: listAccessMessages(target.id) });
+        }
+        if (req.method === "POST" && accessMatch[2] === "/message") {
+          const { ok, body } = await readJson(req);
+          const text = ok ? cleanStr(body.body, 2000) : null;
+          if (!text) return json({ error: "message: 1-2000 chars" }, 400);
+          const msg = addAccessMessage(target.id, "admin", text);
+          // Every admin reply is forwarded to the requester (notification-only).
+          sendAccessMessageEmail(target.email, target.username, true, text, reviewUrl).catch(() => {});
+          return json({ message: msg });
+        }
+        if (req.method === "PATCH" && !accessMatch[2]) {
+          const { ok, body } = await readJson(req);
+          if (!ok) return json({ error: "invalid JSON" }, 400);
+          const status = body.status as AccessStatus | undefined;
+          if (status !== "pending" && status !== "reviewing" && status !== "accepted" && status !== "refused") {
+            return json({ error: "status must be pending|reviewing|accepted|refused" }, 400);
+          }
+          const reason = body.reason === undefined ? "" : cleanStr(body.reason, 500);
+          if (reason === null) return json({ error: "reason: max 500 chars" }, 400);
+          if ((target.status === "accepted" || target.status === "refused") && status !== target.status) {
+            return json({ error: "ticket closed" }, 409);
+          }
+          let key: string | undefined;
+          if (status === "accepted" && target.status !== "accepted") {
+            if (getUserByUsername(target.username)) return json({ error: "username taken" }, 409);
+            key = newAccessKey();
+            createUser({ username: target.username, displayName: target.username, avatarUrl: "", theme: "auto", email: target.email, keyHash: hashSecret(key) });
+          }
+          const updated = setAccessStatus(target.id, status, reason);
+          if (status !== target.status && status !== "pending") {
+            sendAccessStatusEmail(target.email, target.username, status, reason, reviewUrl, key).catch(() => {});
+          }
+          return json({ request: updated, ...(key ? { key } : {}) });
+        }
+        return json({ error: "not found" }, 404);
       }
 
       // --- conversations (server-persisted, per account) ---

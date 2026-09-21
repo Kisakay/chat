@@ -455,20 +455,52 @@ export function Avatar({ name, url, size = 36 }: { name: string; url?: string; s
   );
 }
 
-/* ---------- Brand logo ---------- */
+/* ---------- Brand logo (single declaration — import anywhere) ---------- */
 
-export const LOGO_URL = "/logo.jpg";
-
-export function Logo({ size = 36, className }: { size?: number; className?: string }) {
+/**
+ * The KisAssistant flower mark. Petals follow the runtime accent color,
+ * heart stays amber — same artwork as the loading screen and favicon.
+ * `dynamic` controls the bloom animation: pass false for a static,
+ * full-bloom mark (e.g. thread bars and headers).
+ */
+export function FlowerMark({ size, className, dynamic = true }: { size?: number; className?: string; dynamic?: boolean }) {
+  const petals = [0, 60, 120, 180, 240, 300];
   return (
-    <img
-      src={LOGO_URL}
-      alt="KisAssistant logo"
+    <svg
       width={size}
       height={size}
-      className={cn("shrink-0 object-cover", className)}
+      viewBox="0 0 100 100"
+      className={cn("shrink-0", className)}
+      role="img"
+      aria-label="KisAssistant"
+    >
+      {petals.map((r, i) => (
+        <g key={r} transform={`rotate(${r} 50 50)`}>
+          <ellipse
+            cx="50"
+            cy="25"
+            rx="13"
+            ry="21"
+            className={dynamic ? "flower-petal fill-accent-500" : "fill-accent-500"}
+            style={dynamic ? { animationDelay: `${i * 0.22}s` } : undefined}
+          />
+        </g>
+      ))}
+      <circle cx="50" cy="50" r="10" className={dynamic ? "flower-core fill-amber-400" : "fill-amber-400"} />
+    </svg>
+  );
+}
+
+/** Assistant identity: flower mark on a soft circle (message avatars, headers). */
+export function AssistantAvatar({ size = 32 }: { size?: number }) {
+  return (
+    <span
+      className="grid shrink-0 place-items-center rounded-full bg-accent-600/10"
       style={{ width: size, height: size }}
-    />
+      aria-label="KisAssistant"
+    >
+      <FlowerMark size={Math.round(size * 0.78)} />
+    </span>
   );
 }
 
@@ -542,18 +574,10 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
 
 /** Animated blooming flower shown while the app boots (themed, mobile-safe). */
 export function LoadingScreen() {
-  const petals = [0, 60, 120, 180, 240, 300];
   return (
-    <div className="grid min-h-full place-items-center" role="status" aria-label="Loading KisAssistant">
+    <div className="loading-enter grid min-h-full place-items-center" role="status" aria-label="Loading KisAssistant">
       <div className="flex flex-col items-center gap-4 px-6 text-center">
-        <svg width="72" height="72" viewBox="0 0 100 100" className="h-16 w-16 sm:h-20 sm:w-20" aria-hidden="true">
-          {petals.map((r, i) => (
-            <g key={r} transform={`rotate(${r} 50 50)`}>
-              <ellipse cx="50" cy="25" rx="13" ry="21" className="flower-petal fill-accent-500" style={{ animationDelay: `${i * 0.22}s` }} />
-            </g>
-          ))}
-          <circle cx="50" cy="50" r="10" className="flower-core fill-accent-700 dark:fill-accent-400" />
-        </svg>
+        <FlowerMark className="h-16 w-16 sm:h-20 sm:w-20" />
         <p className="font-serif text-2xl font-bold tracking-tight">KisAssistant</p>
         <p className="loading-dots text-sm opacity-60">Preparing your chats</p>
       </div>

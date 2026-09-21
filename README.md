@@ -63,6 +63,9 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | GET | `/api/conversations/search?q=` | Bearer | search titles, topics + old prompts (with snippet) |
 | POST | `/api/admin/ollama/pull` | admin | pull a model from the Ollama library (NDJSON progress) |
 | DELETE | `/api/admin/ollama/models/:name` | admin | remove a local Ollama model |
+| POST | `/api/access/request` | public | reserve username+email with a motivation → ticket (`/review/:id`) |
+| GET/POST | `/api/access/ticket/:id` (+`/message`) | ticket bearer | follow + reply on an access request |
+| GET/PATCH/POST | `/api/admin/access…` | admin | wishlist triage: list, accept/refuse/review, reply |
 | GET/PATCH/DELETE | `/api/conversations/:id` | owner | incl. messages on GET |
 | POST/GET/DELETE | `/api/conversations/:id/share` | owner | public link `/share/:publicId` |
 | GET | `/api/share/:publicId` | **public** | read-only shared chat JSON |

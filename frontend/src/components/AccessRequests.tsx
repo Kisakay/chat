@@ -1,0 +1,242 @@
+import { useEffect, useState } from "react";
+import { CheckCircle2, Clock, Inbox, Search, SendHorizontal, Undo2, XCircle } from "lucide-react";
+import { api, type AccessMessage, type AccessRequest, type AccessStatus } from "../lib/api.ts";
+import { Button, CopyButton, Field, Input, Spinner } from "./ui.tsx";
+import { cn } from "../lib/cn.ts";
+
+const STATUS_STYLE: Record<AccessStatus, { label: string; cls: string }> = {
+  pending: { label: "Pending", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+  reviewing: { label: "Reviewing", cls: "bg-sky-500/10 text-sky-700 dark:text-sky-400" },
+  accepted: { label: "Accepted", cls: "bg-accent-500/10 text-accent-700 dark:text-accent-400" },
+  refused: { label: "Refused", cls: "bg-red-500/10 text-red-600 dark:text-red-400" },
+};
+
+type Filter = "all" | AccessStatus;
+const FILTERS: Filter[] = ["all", "pending", "reviewing", "accepted", "refused"];
+
+/** Admin triage for the access-request wishlist: accept / refuse / review. */
+export function AccessRequestsPanel() {
+  const [requests, setRequests] = useState<(AccessRequest & { message_count: number })[]>([]);
+  const [filter, setFilter] = useState<Filter>("pending");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function refresh(select?: string) {
+    try {
+      const res = await api.adminAccessList();
+      setRequests(res.requests);
+      if (select) setSelectedId(select);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Load failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const visible = requests.filter((r) => filter === "all" || r.status === filter);
+  const pendingCount = requests.filter((r) => r.status === "pending").length;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {FILTERS.map((f) => {
+          const n = f === "all" ? requests.length : requests.filter((r) => r.status === f).length;
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition",
+                filter === f
+                  ? "bg-stone-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  : "bg-stone-200/70 hover:bg-stone-300/60 dark:bg-zinc-800 dark:hover:bg-zinc-700",
+              )}
+            >
+              {f} · {n}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => refresh()}
+          className="ml-auto rounded-full p-2 opacity-60 transition hover:bg-stone-200/60 hover:opacity-100 dark:hover:bg-zinc-800"
+          title="Refresh"
+          aria-label="Refresh requests"
+        >
+          <Undo2 size={15} />
+        </button>
+      </div>
+
+      {error && <p className="rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>}
+      {loading && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> Loading…</p>}
+
+      {!loading && visible.length === 0 && (
+        <p className="flex items-center justify-center gap-2 rounded-3xl border border-dashed border-stone-300 px-4 py-8 text-sm opacity-50 dark:border-zinc-700">
+          <Inbox size={16} />
+          {pendingCount > 0 ? "Nothing with this status." : "No access requests. The wishlist is empty."}
+        </p>
+      )}
+
+      <ul className="space-y-2">
+        {visible.map((r) => (
+          <li key={r.id}>
+            <button
+              onClick={() => setSelectedId((cur) => (cur === r.id ? null : r.id))}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-3xl border p-4 text-left transition",
+                selectedId === r.id
+                  ? "border-accent-500/50 bg-accent-500/5"
+                  : "border-stone-200/70 bg-white hover:border-stone-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700",
+              )}
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-200/70 text-sm font-semibold dark:bg-zinc-800">
+                {(r.username[0] || "?").toUpperCase()}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">@{r.username} <span className="font-normal opacity-50">{r.email}</span></span>
+                <span className="block truncate text-xs opacity-60">{r.message} · {r.message_count} message{r.message_count === 1 ? "" : "s"}</span>
+              </span>
+              <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-medium", STATUS_STYLE[r.status].cls)}>
+                {STATUS_STYLE[r.status].label}
+              </span>
+            </button>
+            {selectedId === r.id && <TicketDetail request={r} onChanged={() => refresh(r.id)} />}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TicketDetail({ request, onChanged }: { request: AccessRequest; onChanged: () => void }) {
+  const [messages, setMessages] = useState<AccessMessage[]>([]);
+  const [reason, setReason] = useState(request.reason);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [freshKey, setFreshKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReason(request.reason);
+    setFreshKey(null);
+    api.adminAccessGet(request.id).then((res) => setMessages(res.messages)).catch(() => {});
+  }, [request.id, request.reason]);
+
+  const closed = request.status === "accepted" || request.status === "refused";
+
+  async function setStatus(status: AccessStatus) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.adminAccessPatch(request.id, { status, reason: reason.trim() });
+      if (res.key) setFreshKey(res.key);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reply(e: React.FormEvent) {
+    e.preventDefault();
+    const body = draft.trim();
+    if (!body || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.adminAccessReply(request.id, body);
+      setMessages((prev) => [...prev, res.message]);
+      setDraft("");
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Send failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 space-y-3 rounded-3xl border border-stone-200/70 bg-stone-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+      {freshKey && (
+        <div className="rounded-2xl border border-accent-500/40 bg-accent-50 p-3 dark:bg-accent-950/30">
+          <p className="mb-2 flex items-center gap-2 text-sm font-medium"><CheckCircle2 size={15} /> Account created — key shown once, copy it now:</p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-xl bg-white px-3 py-2 text-sm dark:bg-zinc-900">{freshKey}</code>
+            <CopyButton text={freshKey} />
+          </div>
+        </div>
+      )}
+
+      <div className="max-h-64 space-y-2 overflow-y-auto">
+        {messages.map((m) => (
+          <div key={m.id} className={cn("flex", m.author === "admin" ? "justify-end" : "justify-start")}>
+            <div className={cn(
+              "max-w-[85%] rounded-2xl px-3 py-2 text-sm",
+              m.author === "admin"
+                ? "rounded-tr-lg bg-accent-600 text-white dark:bg-accent-500 dark:text-zinc-950"
+                : "rounded-tl-lg bg-white dark:bg-zinc-800",
+            )}>
+              <p className="mb-0.5 text-[11px] font-medium opacity-70">
+                {m.author === "admin" ? "You (admin)" : `@${request.username}`} · {new Date(m.created_at).toLocaleString()}
+              </p>
+              <p className="whitespace-pre-wrap">{m.body}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <form onSubmit={reply} className="flex items-end gap-2">
+        <textarea
+          rows={2}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Reply (emailed to the requester)…"
+          aria-label="Reply to requester"
+          className="max-h-32 flex-1 resize-none rounded-2xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-accent-500/60 dark:border-zinc-700 dark:bg-zinc-900 dark:placeholder:text-zinc-500"
+        />
+        <button
+          type="submit"
+          disabled={!draft.trim() || busy}
+          aria-label="Send reply"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600 text-white shadow transition hover:bg-accent-500 active:scale-95 disabled:opacity-40 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400"
+        >
+          {busy ? <Spinner size={15} /> : <SendHorizontal size={15} />}
+        </button>
+      </form>
+
+      {!closed ? (
+        <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-stone-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="min-w-48 flex-1">
+            <Field label="Reason (emailed with the decision)">
+              <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional reason…" maxLength={500} />
+            </Field>
+          </div>
+          <div className="flex gap-2">
+            {request.status === "pending" && (
+              <Button size="sm" variant="secondary" disabled={busy} onClick={() => setStatus("reviewing")}>
+                <Search size={14} /> Reviewing
+              </Button>
+            )}
+            <Button size="sm" disabled={busy} onClick={() => setStatus("accepted")}>
+              <CheckCircle2 size={14} /> Accept
+            </Button>
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => setStatus("refused")} className="!text-red-600 dark:!text-red-400">
+              <XCircle size={14} /> Refuse
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="flex items-center gap-2 text-xs opacity-60">
+          <Clock size={13} /> Ticket closed ({STATUS_STYLE[request.status].label.toLowerCase()}).
+          {request.reason && <> Reason: <em>{request.reason}</em></>}
+        </p>
+      )}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+    </div>
+  );
+}
