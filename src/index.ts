@@ -1274,16 +1274,17 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         // mutated by the per-user merge below.
         const models = [...(await registry.listAllModelsCached(wantRefresh && admin))];
         // Personal providers (BYOK): merge the caller's own-key models.
-        // Same ids as the global drivers, so already-listed ones are skipped
-        // and the model picker groups them with their driver.
+        // A personal entry replaces the platform entry with the same id so
+        // the menu shows one clearly-marked (personal: true) section per
+        // connected provider — matching /api/chat, which bills those ids
+        // to the personal key.
         try {
           const personal = await listUserProviderModels(user.id);
-          const seen = new Set(models.map((m) => m.id));
+          const at = new Map(models.map((m, i) => [m.id, i]));
           for (const m of personal) {
-            if (!seen.has(m.id)) {
-              seen.add(m.id);
-              models.push(m);
-            }
+            const idx = at.get(m.id);
+            if (idx === undefined) models.push(m);
+            else models[idx] = m;
           }
         } catch {
           // personal listing is best-effort — global models still served

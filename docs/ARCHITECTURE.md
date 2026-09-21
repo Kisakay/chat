@@ -118,9 +118,11 @@ Models are addressed as `"driver:model"` (split on the first `:`).
   `openai` / `anthropic` / `deepseek` / `gemini` keys in settings
   (`GET/PUT/DELETE /api/me/providers`, keys stored in `user_provider_keys`,
   never returned — GET exposes presence + last4 only). `GET /api/models`
-  merges the caller's own-key models into their menu, and `POST /api/chat`
-  prefers the personal key for those four providers (also when the global
-  driver is disabled). The admin model policy still applies. Driver
+  merges the caller's own-key models into their menu (a personal entry
+  replaces the platform entry with the same id, flagged `personal: true` so
+  the picker lists it under its own "driver · personal key" section), and
+  `POST /api/chat` prefers the personal key for those four providers (also
+  when the global driver is disabled). The admin model policy still applies. Driver
   constructors accept an `apiKeyOverride` for these per-user instances.
 - `ArcaicSubDriver` ×3 (`arcaic-openai`, `arcaic-gemini`, `arcaic-qwen`,
   one model each: `chat`) + `browser.ts` engine: web-UI sessions driven by a

@@ -13,6 +13,9 @@ export interface DriverModel {
   label: string;
   /** Display category in the model picker (defaults to `driver`). */
   group?: string;
+  /** True when served through the caller's own provider key (BYOK) rather
+   *  than the platform key — the UI lists these in their own section. */
+  personal?: boolean;
 }
 
 export interface ChatOptions {

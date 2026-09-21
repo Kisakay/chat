@@ -241,9 +241,12 @@ export function Chat({
   const modelGroups: PickerGroup[] = (() => {
     const byDriver = new Map<string, { value: string; label: string; hint: string }[]>();
     for (const m of models) {
-      const group = m.group ?? m.driver;
+      // Own-key (BYOK) models get their own section so they are never
+      // confused with platform models: "openai · personal key".
+      const base = m.group ?? m.driver;
+      const group = m.personal ? `${base} · ${t("chat.personalTag")}` : base;
       const list = byDriver.get(group) ?? [];
-      list.push({ value: m.id, label: m.label, hint: m.id });
+      list.push({ value: m.id, label: m.label, hint: m.personal ? `${m.id} · ${t("chat.personalTag")}` : m.id });
       byDriver.set(group, list);
     }
     return [...byDriver.entries()].map(([group, options]) => ({ group, options }));

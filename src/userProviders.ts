@@ -99,9 +99,10 @@ export function buildUserProviderDriver(provider: UserProviderId, apiKey: string
 }
 
 /**
- * List models reachable with the user's own keys. Never throws: a failing
- * provider is skipped (its driver falls back to a static list, and only a
- * total failure is swallowed here).
+ * List models reachable with the user's own keys. Every entry is marked
+ * `personal: true` so the UI can list them in their own menu section.
+ * Never throws: a failing provider is skipped (its driver falls back to a
+ * static list, and only a total failure is swallowed here).
  */
 export async function listUserProviderModels(userId: string): Promise<DriverModel[]> {
   const out: DriverModel[] = [];
@@ -109,7 +110,9 @@ export async function listUserProviderModels(userId: string): Promise<DriverMode
     const key = getUserProviderKey(userId, p);
     if (!key) return;
     try {
-      out.push(...(await buildUserProviderDriver(p, key).listModels()));
+      for (const m of await buildUserProviderDriver(p, key).listModels()) {
+        out.push({ ...m, personal: true });
+      }
     } catch (e) {
       console.error(`[providers] user ${p} listModels failed:`, (e as Error).message);
     }

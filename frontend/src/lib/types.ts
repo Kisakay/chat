@@ -31,6 +31,8 @@ export interface DriverModel {
   driver: string;
   label: string;
   group?: string;
+  /** Served through your own provider key (BYOK) — shown in its own menu section. */
+  personal?: boolean;
 }
 
 export interface Attachment {
