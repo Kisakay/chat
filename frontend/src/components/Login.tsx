@@ -70,7 +70,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
       setToken(res.token);
       onLogin(res.user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid code");
+      setError(err instanceof Error ? err.message : t("login.totpInvalid"));
     } finally {
       setBusy(false);
     }
@@ -100,7 +100,7 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   autoComplete="one-time-code"
                   placeholder="000000"
-                  aria-label="Authenticator code"
+                  aria-label={t("login.totpAria")}
                   inputMode="numeric"
                   required
                 />
@@ -111,14 +111,14 @@ export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
                 </p>
               )}
               <Button type="submit" variant="gradient" size="lg" className="w-full" disabled={busy || code.length !== 6}>
-                {busy ? <Spinner /> : (<>Verify <ArrowRight size={17} /></>)}
+                {busy ? <Spinner /> : (<>{t("login.verify")} <ArrowRight size={17} /></>)}
               </Button>
               <button
                 type="button"
                 onClick={() => { setTotpToken(null); setCode(""); setError(""); }}
                 className="w-full text-center text-sm opacity-60 transition hover:opacity-100 hover:underline"
               >
-                Back to login
+                {t("common.backToLogin")}
               </button>
             </form>
           ) : (

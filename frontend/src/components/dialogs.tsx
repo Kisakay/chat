@@ -892,6 +892,3 @@ function SecuritySection({ onKeyRotated }: { onKeyRotated?: () => void }) {
     </div>
   );
 }
-    </div>
-  );
-}

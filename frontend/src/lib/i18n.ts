@@ -1532,8 +1532,12 @@ const pt: Dict = {
   "login.forgot": "Esqueceste a chave?",
   "login.perk1": "Privado por design — sem cookies nem rastreio",
   "login.perk2": "Os teus modelos, em tempo real",
-  "login.adminNote":
-    "A chave admin vive no .env do servidor; as chaves são emitidas pelo admin.",
+  "login.adminNotePre": "A chave admin vive no .env do servidor",
+  "login.adminNotePost": "; as chaves são emitidas pelo admin.",
+  "login.totpIntro": "Dois fatores para @{user} — escreve o código de 6 dígitos da app.",
+  "login.totpAria": "Código do autenticador",
+  "login.totpInvalid": "Código inválido",
+  "login.verify": "Verificar",
 
   "sidebar.newChat": "Novo chat",
   "sidebar.collapse": "Ocultar barra lateral",
