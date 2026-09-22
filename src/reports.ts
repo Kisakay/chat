@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { getConversation, getDb, getMessages } from "./db.ts";
+import { getConversation, getMessages, db } from "./db.ts";
 
 /**
  * Content reports (user-flagged AI responses). Tables are created
@@ -38,14 +38,14 @@ export interface Report {
   updated_at: number;
 }
 
-export function initReportsTables(): void {
-  const d = getDb();
-  d.query(`CREATE TABLE IF NOT EXISTS reports (
+export async function initReportsTables(): Promise<void> {
+  const d = db();
+  await d.exec(`CREATE TABLE IF NOT EXISTS reports (
     id TEXT PRIMARY KEY,
     reporter_id TEXT NOT NULL,
     reporter_name TEXT NOT NULL DEFAULT '',
     conversation_id TEXT NOT NULL DEFAULT '',
-    message_index INTEGER NOT NULL DEFAULT -1,
+    message_index BIGINT NOT NULL DEFAULT -1,
     content TEXT NOT NULL DEFAULT '',
     prompt TEXT NOT NULL DEFAULT '',
     model TEXT NOT NULL DEFAULT '',
@@ -53,21 +53,27 @@ export function initReportsTables(): void {
     details TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'open',
     admin_note TEXT NOT NULL DEFAULT '',
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
-  )`).run();
-  d.query(`CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, updated_at DESC)`).run();
-  d.query(`CREATE INDEX IF NOT EXISTS idx_reports_reporter ON reports(reporter_id, created_at DESC)`).run();
-  d.query(`CREATE INDEX IF NOT EXISTS idx_reports_message ON reports(conversation_id, message_index)`).run();
-  // Prompt snapshot added after the initial schema — keep idempotent.
-  const rcols = d.query("PRAGMA table_info(reports)").all() as { name: string }[];
-  if (!rcols.some((c) => c.name === "prompt")) {
-    d.query("ALTER TABLE reports ADD COLUMN prompt TEXT NOT NULL DEFAULT ''").run();
-  }
-  // Per-user report shadow-ban (unreliable reporters) — keep idempotent.
-  const ucols = d.query("PRAGMA table_info(users)").all() as { name: string }[];
-  if (!ucols.some((c) => c.name === "report_shadowbanned")) {
-    d.query("ALTER TABLE users ADD COLUMN report_shadowbanned INTEGER NOT NULL DEFAULT 0").run();
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL
+  )`);
+  await d.exec(`CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, updated_at DESC)`);
+  await d.exec(`CREATE INDEX IF NOT EXISTS idx_reports_reporter ON reports(reporter_id, created_at DESC)`);
+  await d.exec(`CREATE INDEX IF NOT EXISTS idx_reports_message ON reports(conversation_id, message_index)`);
+  if (d.kind === "sqlite") {
+    // Prompt snapshot added after the initial schema — keep idempotent.
+    const rcols = await d.all<{ name: string }>("PRAGMA table_info(reports)");
+    if (!rcols.some((c) => c.name === "prompt")) {
+      await d.exec("ALTER TABLE reports ADD COLUMN prompt TEXT NOT NULL DEFAULT ''");
+    }
+    // Per-user report shadow-ban (unreliable reporters) — keep idempotent.
+    const ucols = await d.all<{ name: string }>("PRAGMA table_info(users)");
+    if (!ucols.some((c) => c.name === "report_shadowbanned")) {
+      await d.exec("ALTER TABLE users ADD COLUMN report_shadowbanned INTEGER NOT NULL DEFAULT 0");
+    }
+  } else {
+    // Postgres: ADD COLUMN IF NOT EXISTS is natively idempotent.
+    await d.exec("ALTER TABLE reports ADD COLUMN IF NOT EXISTS prompt TEXT NOT NULL DEFAULT ''");
+    await d.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS report_shadowbanned INTEGER NOT NULL DEFAULT 0");
   }
 }
 
@@ -75,14 +81,15 @@ export function initReportsTables(): void {
 export const MAX_OPEN_REPORTS = 20;
 
 /** Still-triageable report already covering this message, if any. */
-export function findOpenReport(conversationId: string, messageIndex: number): Report | null {
+export async function findOpenReport(conversationId: string, messageIndex: number): Promise<Report | null> {
   if (!conversationId || messageIndex < 0) return null;
-  return getDb().query(
+  return db().get<Report>(
     "SELECT r.*, COALESCE(u.report_shadowbanned, 0) AS reporter_shadowbanned FROM reports r LEFT JOIN users u ON u.id = r.reporter_id WHERE r.conversation_id = ? AND r.message_index = ? AND r.status IN ('open','reviewing') ORDER BY r.created_at DESC LIMIT 1",
-  ).get(conversationId, messageIndex) as Report | null;
+    conversationId, messageIndex,
+  );
 }
 
-export function createReport(opts: {
+export async function createReport(opts: {
   reporterId: string;
   reporterName: string;
   conversationId: string;
@@ -92,28 +99,28 @@ export function createReport(opts: {
   clientContent: string;
   clientPrompt: string;
   clientModel: string;
-}): Report {
-  const d = getDb();
+}): Promise<Report> {
   const dup = opts.conversationId && opts.messageIndex >= 0
-    ? findOpenReport(opts.conversationId, opts.messageIndex)
+    ? await findOpenReport(opts.conversationId, opts.messageIndex)
     : null;
   if (dup) {
     const err = new Error("ALREADY_REPORTED") as Error & { report: Report };
     err.report = dup;
     throw err;
   }
-  const open = d.query(
+  const open = await db().get<{ n: number }>(
     "SELECT COUNT(*) AS n FROM reports WHERE reporter_id = ? AND status IN ('open','reviewing')",
-  ).get(opts.reporterId) as { n: number };
-  if (open.n >= MAX_OPEN_REPORTS) throw new Error("TOO_MANY_OPEN");
+    opts.reporterId,
+  );
+  if ((open?.n ?? 0) >= MAX_OPEN_REPORTS) throw new Error("TOO_MANY_OPEN");
   let content = opts.clientContent;
   let prompt = opts.clientPrompt;
   let model = opts.clientModel;
   if (opts.conversationId) {
-    const conv = getConversation(opts.conversationId);
+    const conv = await getConversation(opts.conversationId);
     if (conv && conv.user_id === opts.reporterId) {
       if (conv.model) model = conv.model;
-      const msgs = getMessages(conv.id).filter((m) => m.role !== "system");
+      const msgs = (await getMessages(conv.id)).filter((m) => m.role !== "system");
       if (opts.messageIndex >= 0) {
         const at = msgs[opts.messageIndex];
         if (at) content = at.content;
@@ -140,9 +147,8 @@ export function createReport(opts: {
     created_at: now,
     updated_at: now,
   };
-  d.query(
+  await db().run(
     "INSERT INTO reports (id, reporter_id, reporter_name, conversation_id, message_index, content, prompt, model, reason, details, status, admin_note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-  ).run(
     row.id, row.reporter_id, row.reporter_name, row.conversation_id, row.message_index,
     row.content, row.prompt, row.model, row.reason, row.details, row.status, row.admin_note,
     row.created_at, row.updated_at,
@@ -150,20 +156,21 @@ export function createReport(opts: {
   return row;
 }
 
-export function listReports(): Report[] {
-  return getDb().query(
+export async function listReports(): Promise<Report[]> {
+  return db().all<Report>(
     "SELECT r.*, COALESCE(u.report_shadowbanned, 0) AS reporter_shadowbanned FROM reports r LEFT JOIN users u ON u.id = r.reporter_id ORDER BY r.updated_at DESC LIMIT 500",
-  ).all() as Report[];
+  );
 }
 
-export function getReport(id: string): Report | null {
-  return getDb().query(
+export async function getReport(id: string): Promise<Report | null> {
+  return db().get<Report>(
     "SELECT r.*, COALESCE(u.report_shadowbanned, 0) AS reporter_shadowbanned FROM reports r LEFT JOIN users u ON u.id = r.reporter_id WHERE r.id = ?",
-  ).get(id) as Report | null;
+    id,
+  );
 }
 
-export function setReportStatus(id: string, status: ReportStatus, adminNote: string): Report | null {
-  getDb().query("UPDATE reports SET status = ?, admin_note = ?, updated_at = ? WHERE id = ?").run(
+export async function setReportStatus(id: string, status: ReportStatus, adminNote: string): Promise<Report | null> {
+  await db().run("UPDATE reports SET status = ?, admin_note = ?, updated_at = ? WHERE id = ?",
     status, adminNote, Date.now(), id,
   );
   return getReport(id);
@@ -173,8 +180,8 @@ export function setReportStatus(id: string, status: ReportStatus, adminNote: str
  * Shadow-ban a reporter: their reports are still accepted but flagged
  * unreliable (excluded from the admin badge). Returns the new flag.
  */
-export function setReportShadowbanned(userId: string, shadowbanned: boolean): number {
-  getDb().query("UPDATE users SET report_shadowbanned = ? WHERE id = ?").run(shadowbanned ? 1 : 0, userId);
-  const row = getDb().query("SELECT report_shadowbanned AS v FROM users WHERE id = ?").get(userId) as { v: number } | null;
+export async function setReportShadowbanned(userId: string, shadowbanned: boolean): Promise<number> {
+  await db().run("UPDATE users SET report_shadowbanned = ? WHERE id = ?", shadowbanned ? 1 : 0, userId);
+  const row = await db().get<{ v: number }>("SELECT report_shadowbanned AS v FROM users WHERE id = ?", userId);
   return row?.v ?? 0;
 }

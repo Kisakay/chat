@@ -3,16 +3,12 @@ import { config } from "./config.ts";
 import {
   createSession,
   deleteSession,
-  getDb,
   getSession,
   getUserById,
   getUserByUsername,
   toPublicUser,
   type PublicUser,
 } from "./db.ts";
-
-// Ensure DB + admin row exist at startup.
-getDb();
 
 export type { PublicUser };
 
@@ -49,40 +45,40 @@ function checkAdminKey(candidate: string): boolean {
  * - username "admin" authenticates against APP_PASSWORD (.env).
  * - other usernames authenticate against their admin-issued access key.
  */
-export function login(username: string, key: string): PublicUser | null {
+export async function login(username: string, key: string): Promise<PublicUser | null> {
   if (username === "admin") {
     if (!checkAdminKey(key)) return null;
-    const admin = getUserByUsername("admin");
+    const admin = await getUserByUsername("admin");
     if (!admin) return null;
     return toPublicUser(admin);
   }
-  const u = getUserByUsername(username);
+  const u = await getUserByUsername(username);
   if (!u || !u.key_hash) return null;
   if (!secretsEqual(key, u.key_hash)) return null;
   return toPublicUser(u);
 }
 
-/** Issue a fresh one-time Bearer token per successful login (stored hashed in SQLite). */
-export function issueToken(user: PublicUser): { token: string; expiresAt: number } {
+/** Issue a fresh one-time Bearer token per successful login (stored hashed server-side). */
+export async function issueToken(user: PublicUser): Promise<{ token: string; expiresAt: number }> {
   const token = randomBytes(32).toString("hex"); // 256-bit
   const expiresAt = Date.now() + config.sessionTtlMs;
-  createSession(sha256hex(token), user.id, expiresAt);
+  await createSession(sha256hex(token), user.id, expiresAt);
   return { token, expiresAt };
 }
 
-export function verifyToken(token: string): PublicUser | null {
-  const s = getSession(sha256hex(token));
+export async function verifyToken(token: string): Promise<PublicUser | null> {
+  const s = await getSession(sha256hex(token));
   if (!s) return null;
-  const u = getUserById(s.user_id);
+  const u = await getUserById(s.user_id);
   if (!u) {
-    deleteSession(sha256hex(token));
+    await deleteSession(sha256hex(token));
     return null;
   }
   return toPublicUser(u);
 }
 
-export function revokeToken(token: string): void {
-  deleteSession(sha256hex(token));
+export async function revokeToken(token: string): Promise<void> {
+  await deleteSession(sha256hex(token));
 }
 
 export function extractBearer(req: Request): string | null {

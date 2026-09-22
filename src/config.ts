@@ -24,6 +24,11 @@ export const config = {
   sessionTtlMs: envInt("SESSION_TTL_HOURS", 720) * 3600_000,
   dataDir: env("DATA_DIR", "./data"),
 
+  // Database: empty POSTGRESQL_URL = local SQLite in DATA_DIR (default).
+  // Set POSTGRESQL_URL=postgres://user:pass@host:5432/db to run on Postgres
+  // (typically a docker container) via Bun's native SQL driver instead.
+  postgresqlUrl: env("POSTGRESQL_URL", ""),
+
   rateLimitMax: envInt("RATE_LIMIT_MAX", 5),
   rateLimitWindowMs: envInt("RATE_LIMIT_WINDOW_MIN", 10) * 60_000,
 

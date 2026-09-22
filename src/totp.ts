@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
-import { getDb } from "./db.ts";
+import { db } from "./db.ts";
 
 /**
  * TOTP two-factor (RFC 6238, SHA-1, 30s step, 6 digits, ±1 window).
@@ -13,19 +13,23 @@ const DIGITS = 6;
 const WINDOW = 1;
 const CHALLENGE_TTL_MS = 5 * 60_000;
 
-export function initTotpTables(): void {
-  const d = getDb();
-  try {
-    d.query("ALTER TABLE users ADD COLUMN totp_secret TEXT NOT NULL DEFAULT ''").run();
-  } catch {
-    // column already exists — fine
+export async function initTotpTables(): Promise<void> {
+  const d = db();
+  if (d.kind === "sqlite") {
+    try {
+      await d.exec("ALTER TABLE users ADD COLUMN totp_secret TEXT NOT NULL DEFAULT ''");
+    } catch {
+      // column already exists — fine
+    }
+  } else {
+    await d.exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret TEXT NOT NULL DEFAULT ''");
   }
-  d.query(`CREATE TABLE IF NOT EXISTS totp_challenges (
+  await d.exec(`CREATE TABLE IF NOT EXISTS totp_challenges (
     token_hash TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    expires_at INTEGER NOT NULL
-  )`).run();
+    created_at BIGINT NOT NULL,
+    expires_at BIGINT NOT NULL
+  )`);
 }
 
 const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -104,36 +108,41 @@ export function verifyTotp(secret: string, code: string): boolean {
   return ok;
 }
 
-export function getTotpSecret(userId: string): string {
-  const row = getDb().query("SELECT totp_secret AS s FROM users WHERE id = ?").get(userId) as { s: string } | null;
+export async function getTotpSecret(userId: string): Promise<string> {
+  const row = await db().get<{ s: string }>("SELECT totp_secret AS s FROM users WHERE id = ?", userId);
   return row?.s ?? "";
 }
 
-export function setTotpSecret(userId: string, secret: string): void {
-  getDb().query("UPDATE users SET totp_secret = ? WHERE id = ?").run(secret, userId);
+export async function setTotpSecret(userId: string, secret: string): Promise<void> {
+  await db().run("UPDATE users SET totp_secret = ? WHERE id = ?", secret, userId);
 }
 
 /** Short-lived login challenge after a correct key; returns the raw token. */
-export function createTotpChallenge(userId: string): string {
+export async function createTotpChallenge(userId: string): Promise<string> {
   const token = "tc_" + randomBytes(24).toString("base64url");
   const hash = createHash("sha256").update(token).digest("hex");
   const now = Date.now();
-  getDb().query("INSERT INTO totp_challenges (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)").run(
+  await db().run(
+    "INSERT INTO totp_challenges (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
     hash, userId, now, now + CHALLENGE_TTL_MS,
   );
   // Opportunistic cleanup.
-  getDb().query("DELETE FROM totp_challenges WHERE expires_at < ?").run(now);
+  await db().run("DELETE FROM totp_challenges WHERE expires_at < ?", now);
   return token;
 }
 
-export function consumeTotpChallenge(token: string): string | null {
+export async function consumeTotpChallenge(token: string): Promise<string | null> {
   const hash = createHash("sha256").update(token).digest("hex");
-  const row = getDb().query("SELECT user_id, expires_at FROM totp_challenges WHERE token_hash = ?").get(hash) as {
-    user_id: string;
-    expires_at: number;
-  } | null;
+  const row = await db().get<{ user_id: string; expires_at: number }>(
+    "SELECT user_id, expires_at FROM totp_challenges WHERE token_hash = ?", hash,
+  );
   if (!row) return null;
-  getDb().query("DELETE FROM totp_challenges WHERE token_hash = ?").run(hash);
+  await db().run("DELETE FROM totp_challenges WHERE token_hash = ?", hash);
   if (row.expires_at < Date.now()) return null;
   return row.user_id;
+}
+
+/** Housekeeping for account deletion (no other caller needs it). */
+export async function deleteTotpChallenges(userId: string): Promise<void> {
+  await db().run("DELETE FROM totp_challenges WHERE user_id = ?", userId);
 }

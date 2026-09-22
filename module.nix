@@ -29,6 +29,15 @@ in {
       description = "File containing APP_PASSWORD (use agenix/sops-nix, never store in the store).";
     };
     ollamaHost = lib.mkOption { type = lib.types.str; default = "http://localhost:11434"; };
+    postgresqlUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = ''
+        Postgres connection URL (e.g. postgres://user:pass@localhost:5432/kisassistant,
+        typically a docker container). Null (default) keeps the local SQLite file.
+        Prefer a credential file + extraEnv for secrets in production.
+      '';
+    };
     domain = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -93,6 +102,8 @@ in {
         CDN_DIR = "${cfg.dataDir}/cdn";
         DRIVER_DEBUG = "false";
         OLLAMA_HOST = cfg.ollamaHost;
+      } // lib.optionalAttrs (cfg.postgresqlUrl != null) {
+        POSTGRESQL_URL = cfg.postgresqlUrl;
       } // lib.optionalAttrs cfg.enableBrowserDriver {
         ARCAIC_ENABLED = "true";
         ARCAIC_HEADLESS = "true";

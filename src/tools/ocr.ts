@@ -62,20 +62,20 @@ export class OcrTool implements PlatformTool {
     this.available = availableCache;
   }
 
-  isAvailable(): boolean {
-    return (this.available ?? false) && isOcrToolEnabled();
+  async isAvailable(): Promise<boolean> {
+    return (this.available ?? false) && (await isOcrToolEnabled());
   }
 
-  unavailableReason(): string | null {
+  async unavailableReason(): Promise<string | null> {
     if (!(this.available ?? false)) {
       return `tesseract binary not found (looked for "${tessBin()}"). Install tesseract or set TESSERACT_BIN.`;
     }
-    if (!isOcrToolEnabled()) return "OCR is disabled by the administrator (Admin Center → Features).";
+    if (!(await isOcrToolEnabled())) return "OCR is disabled by the administrator (Admin Center → Features).";
     return null;
   }
 
   async transcribe(image: Uint8Array): Promise<{ text: string; truncated: boolean }> {
-    if (!this.isAvailable()) throw new Error(this.unavailableReason() ?? "ocr unavailable");
+    if (!(await this.isAvailable())) throw new Error((await this.unavailableReason()) ?? "ocr unavailable");
     const t0 = Date.now();
     const maxChars = config.ocrMaxChars;
     let proc;

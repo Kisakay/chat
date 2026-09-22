@@ -1,15 +1,26 @@
 # Architecture (backend)
 
 Single Bun process: `Bun.serve` handles the JSON/SSE API **and** the static
-frontend (same origin, no CORS). Persistence is SQLite via Bun's native
-`bun:sqlite` driver (`$DATA_DIR/kisassistant.db`, WAL mode).
+frontend (same origin, no CORS). Persistence is SQLite by default via Bun's
+native `bun:sqlite` driver (`$DATA_DIR/kisassistant.db`, WAL mode), or
+Postgres when `POSTGRESQL_URL` is set (Bun's native `bun:sql` driver,
+typically a docker container — see `docs/OPERATIONS.md`).
 
 ```
 browser ──► Bun.serve (src/index.ts)
-              ├─ /api/* ──► auth gate ──► routes ──► db.ts ──► kisassistant.db
+              ├─ /api/* ──► auth gate ──► routes ──► db.ts ──► sqlite file | postgres
               │                              └─────► DriverRegistry ──► ollama / APIs
               └─ /* ──► static files + SPA fallback (index.html, covers /share/:id and /chat/:id)
 ```
+
+All store functions (`db.ts`, `access.ts`, `reports.ts`, `totp.ts`,
+`modelPolicy.ts`, `userProviders.ts`) are `async` and talk through the
+`DbClient` interface (`src/db/client.ts`): `get` / `all` / `run` / `exec` /
+`insertReturningId` / `transaction`. Queries are written once with `?`
+placeholders and translated to `$1, $2, …` for Postgres (quote-aware);
+Postgres `BIGINT` cells arrive as `bigint` and are normalized to `number`.
+One portable-SQL rule this forces: no bare `GROUP BY pk` with unaggregated
+columns (rejected by Postgres) — use correlated subqueries instead.
 
 ## Request flow: chat
 
@@ -40,7 +51,10 @@ Streaming guarantees (ChatGPT-style, no buffering):
 
 ## Database schema
 
-Created idempotently at boot in `getDb()` (no migration framework; keep it so).
+Created idempotently at boot in `initDb()` (no migration framework; keep it
+so). On Postgres, timestamps are `BIGINT`, auto ids `BIGSERIAL`, later
+columns arrive via `ADD COLUMN IF NOT EXISTS`, and `"window"` (model_usage)
+is quoted — `WINDOW` is reserved on Postgres.
 
 | Table | Purpose |
 |---|---|

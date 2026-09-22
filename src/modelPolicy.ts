@@ -1,4 +1,4 @@
-import { getDb, getSetting, setSetting } from "./db.ts";
+import { db, getSetting, setSetting } from "./db.ts";
 
 /**
  * Per-model access policy (admin kill-switch + per-user rate limits).
@@ -41,8 +41,8 @@ function isDefault(e: ModelPolicyEntry): boolean {
   return e.enabled && e.hourly === 0 && e.daily === 0;
 }
 
-export function getModelPolicy(): ModelPolicy {
-  const raw = getSetting(SETTINGS_KEY, "");
+export async function getModelPolicy(): Promise<ModelPolicy> {
+  const raw = await getSetting(SETTINGS_KEY, "");
   if (!raw) return {};
   try {
     const obj = JSON.parse(raw) as Record<string, unknown>;
@@ -61,14 +61,14 @@ export function policyFor(policy: ModelPolicy, modelId: string): ModelPolicyEntr
   return policy[modelId] ?? { ...DEFAULT_POLICY };
 }
 
-export function setModelPolicyEntry(
+export async function setModelPolicyEntry(
   modelId: string,
   patch: { enabled?: boolean; hourly?: number; daily?: number },
-): ModelPolicyEntry {
+): Promise<ModelPolicyEntry> {
   if (patch.enabled !== undefined && typeof patch.enabled !== "boolean") throw new Error("BAD_POLICY");
   if (patch.hourly !== undefined && !Number.isInteger(patch.hourly)) throw new Error("BAD_POLICY");
   if (patch.daily !== undefined && !Number.isInteger(patch.daily)) throw new Error("BAD_POLICY");
-  const policy = getModelPolicy();
+  const policy = await getModelPolicy();
   const cur = policy[modelId] ?? { ...DEFAULT_POLICY };
   const next: ModelPolicyEntry = {
     enabled: patch.enabled ?? cur.enabled,
@@ -80,53 +80,56 @@ export function setModelPolicyEntry(
   }
   if (isDefault(next)) delete policy[modelId];
   else policy[modelId] = next;
-  setSetting(SETTINGS_KEY, JSON.stringify(policy));
+  await setSetting(SETTINGS_KEY, JSON.stringify(policy));
   return { ...DEFAULT_POLICY, ...policy[modelId] };
 }
 
-export function initModelUsageTables(): void {
-  getDb().query(`CREATE TABLE IF NOT EXISTS model_usage (
+export async function initModelUsageTables(): Promise<void> {
+  // "window" is quoted: WINDOW is a reserved keyword on Postgres (and the
+  // quotes are harmless on SQLite).
+  await db().exec(`CREATE TABLE IF NOT EXISTS model_usage (
     user_id TEXT NOT NULL,
     model TEXT NOT NULL,
-    window TEXT NOT NULL,
-    bucket INTEGER NOT NULL,
+    "window" TEXT NOT NULL,
+    bucket BIGINT NOT NULL,
     count INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (user_id, model, window, bucket)
-  )`).run();
+    PRIMARY KEY (user_id, model, "window", bucket)
+  )`);
 }
 
 function buckets(now = Date.now()): { h: number; d: number } {
   return { h: Math.floor(now / 3600_000), d: Math.floor(now / 86400_000) };
 }
 
-function windowCount(userId: string, modelId: string, window: "h" | "d", bucket: number): number {
-  const row = getDb().query(
-    "SELECT count AS n FROM model_usage WHERE user_id = ? AND model = ? AND window = ? AND bucket = ?",
-  ).get(userId, modelId, window, bucket) as { n: number } | null;
+async function windowCount(userId: string, modelId: string, window: "h" | "d", bucket: number): Promise<number> {
+  const row = await db().get<{ n: number }>(
+    'SELECT count AS n FROM model_usage WHERE user_id = ? AND model = ? AND "window" = ? AND bucket = ?',
+    userId, modelId, window, bucket,
+  );
   return row?.n ?? 0;
 }
 
 export type ModelAccess = { ok: true } | { ok: false; code: 403 | 429; message: string };
 
-export function checkModelAccess(userId: string, modelId: string): ModelAccess {
-  const p = policyFor(getModelPolicy(), modelId);
+export async function checkModelAccess(userId: string, modelId: string): Promise<ModelAccess> {
+  const p = policyFor(await getModelPolicy(), modelId);
   if (!p.enabled) return { ok: false, code: 403, message: "model disabled by administrator" };
   const { h, d } = buckets();
-  if (p.hourly > 0 && windowCount(userId, modelId, "h", h) >= p.hourly) {
+  if (p.hourly > 0 && (await windowCount(userId, modelId, "h", h)) >= p.hourly) {
     return { ok: false, code: 429, message: "hourly limit reached for this model, try again later" };
   }
-  if (p.daily > 0 && windowCount(userId, modelId, "d", d) >= p.daily) {
+  if (p.daily > 0 && (await windowCount(userId, modelId, "d", d)) >= p.daily) {
     return { ok: false, code: 429, message: "daily limit reached for this model, try again tomorrow" };
   }
   return { ok: true };
 }
 
-export function recordModelUse(userId: string, modelId: string): void {
-  const d = getDb();
+export async function recordModelUse(userId: string, modelId: string): Promise<void> {
+  const d = db();
   const { h, d: day } = buckets();
-  d.query(`INSERT INTO model_usage (user_id, model, window, bucket, count) VALUES (?, ?, 'h', ?, 1)
-    ON CONFLICT(user_id, model, window, bucket) DO UPDATE SET count = count + 1`).run(userId, modelId, h);
-  d.query(`INSERT INTO model_usage (user_id, model, window, bucket, count) VALUES (?, ?, 'd', ?, 1)
-    ON CONFLICT(user_id, model, window, bucket) DO UPDATE SET count = count + 1`).run(userId, modelId, day);
-  d.query("DELETE FROM model_usage WHERE (window = 'h' AND bucket < ?) OR (window = 'd' AND bucket < ?)").run(h - 1, day - 1);
+  await d.run(`INSERT INTO model_usage (user_id, model, "window", bucket, count) VALUES (?, ?, 'h', ?, 1)
+    ON CONFLICT(user_id, model, "window", bucket) DO UPDATE SET count = count + 1`, userId, modelId, h);
+  await d.run(`INSERT INTO model_usage (user_id, model, "window", bucket, count) VALUES (?, ?, 'd', ?, 1)
+    ON CONFLICT(user_id, model, "window", bucket) DO UPDATE SET count = count + 1`, userId, modelId, day);
+  await d.run('DELETE FROM model_usage WHERE ("window" = \'h\' AND bucket < ?) OR ("window" = \'d\' AND bucket < ?)', h - 1, day - 1);
 }

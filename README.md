@@ -2,7 +2,7 @@
 
 Private ChatGPT/Claude-like chat. React + Tailwind + lucide frontend (rounded,
 Signal-style, Inter font, light/dark/auto themes), Bun backend with
-class-oriented LLM **drivers** and a **SQLite** database (Bun native driver) for
+class-oriented LLM **drivers** and a **SQLite/Postgres** database (Bun native drivers) for
 accounts, server-side chats and public shares. No cookies — Bearer keys in
 `localStorage`.
 
@@ -89,9 +89,10 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 `POST /api/chat` with `conversationId` persists the user message + assistant
 reply into that conversation (ownership enforced) and auto-titles new chats.
 
-## Database (SQLite, Bun native)
+## Database (SQLite default, Postgres fallback — both Bun native)
 
-`$DATA_DIR/kisassistant.db` (WAL mode). Tables: `users` (id, username,
+`$DATA_DIR/kisassistant.db` (WAL mode), or Postgres when `POSTGRESQL_URL` is
+set (e.g. a docker container — see `docs/OPERATIONS.md`). Tables: `users` (id, username,
 display_name, avatar_url, theme, email, key_hash), `sessions` (hashed Bearer tokens),
 `conversations` (id, user, title, topic, model, archived_at), `messages`, `shares`,
 `resets` (recovery tokens), `settings` (feature flags),
@@ -109,7 +110,7 @@ src/drivers/browser.ts   ArcaicBrowserEngine + site configs (openai/qwen/gemini)
 src/drivers/arcaic.ts      ArcaicSubDriver ×3 — arcaic-openai / arcaic-gemini / arcaic-qwen (ARCAIC_ENABLED)
 src/drivers/registry.ts  DriverRegistry — priority order + "driver:model" routing
 src/userProviders.ts     personal providers (BYOK): per-user keys, own-key driver factory
-src/db.ts                SQLite store (users, sessions, convs, messages, shares)
+src/db.ts                async store (users, sessions, convs, messages, shares) — SQLite/Postgres via DbClient
 src/auth.ts              login/sessions/rate-limit (admin key = APP_PASSWORD)
 ```
 

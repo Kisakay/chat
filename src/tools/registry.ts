@@ -10,13 +10,15 @@ class ToolRegistry {
     await this.ocr.init();
   }
 
-  list(): { name: string; description: string; available: boolean; reason: string | null }[] {
-    return this.tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      available: t.isAvailable(),
-      reason: t.unavailableReason(),
-    }));
+  async list(): Promise<{ name: string; description: string; available: boolean; reason: string | null }[]> {
+    return Promise.all(
+      this.tools.map(async (t) => ({
+        name: t.name,
+        description: t.description,
+        available: await t.isAvailable(),
+        reason: await t.unavailableReason(),
+      })),
+    );
   }
 }
 

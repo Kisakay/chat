@@ -25,13 +25,14 @@ import {
   deleteUserSessions,
   ensureShare,
   getConversation,
-  getDb,
+  db,
   getMessages,
   getShareByConv,
   getShareByPublic,
   getSetting,
   getUserById,
   getUserByUsername,
+  initDb,
   isRegistrationEnabled,
   isReportsEnabled,
   isUsernameChangeEnabled,
@@ -50,6 +51,7 @@ import type { ChatMessage } from "./drivers/types.ts";
 import {
   consumeTotpChallenge,
   createTotpChallenge,
+  deleteTotpChallenges,
   getTotpSecret,
   initTotpTables,
   newTotpSecret,
@@ -123,14 +125,15 @@ import { OCR_MAX_BYTES, ocrAllowed, recordOcrJob } from "./tools/ocr.ts";
 import { tools } from "./tools/registry.ts";
 
 assertConfig();
+await initDb();
 const registry = new DriverRegistry();
 // Ollama handles admin model pulls/deletes (host is loopback/LAN, no auth).
 const ollamaDriver = registry.get("ollama") as OllamaDriver;
 await tools.init();
-initAccessTables();
-initReportsTables();
-initModelUsageTables();
-initTotpTables();
+await initAccessTables();
+await initReportsTables();
+await initModelUsageTables();
+await initTotpTables();
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -149,7 +152,7 @@ function clientIp(req: Request, server: { requestIP?: (r: Request) => { address:
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 }
 
-function requireAuth(req: Request): PublicUser | null {
+async function requireAuth(req: Request): Promise<PublicUser | null> {
   const token = extractBearer(req);
   if (!token) return null;
   return verifyToken(token);
@@ -273,7 +276,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
     // --- public: shared chat page data (no auth) ---
     const shareMatch = path.match(/^\/api\/share\/([A-Za-z0-9_-]{6,64})$/);
     if (shareMatch && req.method === "GET") {
-      const s = getShareByPublic(shareMatch[1]!);
+      const s = await getShareByPublic(shareMatch[1]!);
       if (!s) return json({ error: "share not found" }, 404);
       return json({
         title: s.conv.title,
@@ -338,7 +341,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
     // extension always comes from magic-byte detection, never the client.
     const cdnPut = path.match(/^\/cdn\/([a-z0-9]{1,16})\/([A-Za-z0-9_-]{1,64})$/);
     if (cdnPut && req.method === "PUT") {
-      const user = requireAuth(req);
+      const user = await requireAuth(req);
       if (!user) return json({ error: "unauthorized" }, 401);
       const [, ns, key] = cdnPut as [string, string, string];
       if (!validNamespace(ns) || !validKey(key)) return json({ error: "unknown namespace or key" }, 404);
@@ -385,7 +388,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         recordAttempt(ip);
         return json({ error: 'expected { username, key }' }, 400);
       }
-      const user = login(body.username.trim().toLowerCase(), body.key);
+      const user = await login(body.username.trim().toLowerCase(), body.key);
       if (!user) {
         recordAttempt(ip);
         await Bun.sleep(400);
@@ -394,11 +397,11 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       clearAttempts(ip);
       // Second factor: correct key but TOTP enabled -> short-lived challenge,
       // the session is only issued after POST /api/auth/totp verifies a code.
-      if (getTotpSecret(user.id)) {
-        const totpToken = createTotpChallenge(user.id);
+      if (await getTotpSecret(user.id)) {
+        const totpToken = await createTotpChallenge(user.id);
         return json({ totpRequired: true, totpToken, username: user.username });
       }
-      const { token, expiresAt } = issueToken(user);
+      const { token, expiresAt } = await issueToken(user);
       return json({ token, expiresAt, user });
     }
 
@@ -408,27 +411,27 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
       const { ok, body } = await readJson(req);
       const userId =
-        ok && typeof body.totpToken === "string" ? consumeTotpChallenge(body.totpToken) : null;
+        ok && typeof body.totpToken === "string" ? await consumeTotpChallenge(body.totpToken) : null;
       const code = ok && typeof body.code === "string" ? body.code : "";
-      const target = userId ? getUserById(userId) : null;
-      if (!target || !verifyTotp(getTotpSecret(target.id), code)) {
+      const target = userId ? await getUserById(userId) : null;
+      if (!target || !verifyTotp(await getTotpSecret(target.id), code)) {
         recordAttempt(ip);
         await Bun.sleep(400);
         return json({ error: "invalid code" }, 401);
       }
       clearAttempts(ip);
-      const { token, expiresAt } = issueToken(toPublicUser(target));
+      const { token, expiresAt } = await issueToken(toPublicUser(target));
       return json({ token, expiresAt, user: toPublicUser(target) });
     }
 
     if (path === "/api/auth/verify" && req.method === "GET") {
-      const user = requireAuth(req);
+      const user = await requireAuth(req);
       return user ? json({ ok: true, user }) : json({ error: "unauthorized" }, 401);
     }
 
     if (path === "/api/auth/logout" && req.method === "POST") {
       const token = extractBearer(req);
-      if (token) revokeToken(token);
+      if (token) await revokeToken(token);
       return json({ ok: true });
     }
 
@@ -437,8 +440,8 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       return json({
         recovery: mailEnabled(),
         from: mailEnabled() ? config.smtpFrom : undefined,
-        registration: isRegistrationEnabled(),
-        accessRequest: getSetting("registration_request_enabled", "1") === "1",
+        registration: await isRegistrationEnabled(),
+        accessRequest: (await getSetting("registration_request_enabled", "1")) === "1",
       });
     }
 
@@ -446,7 +449,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
     if (path === "/api/auth/register" && req.method === "POST") {
       const ip = clientIp(req, server);
       if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
-      if (!isRegistrationEnabled()) {
+      if (!await isRegistrationEnabled()) {
         recordAttempt(ip);
         return json({ error: "registration is currently disabled on this platform" }, 403);
       }
@@ -460,7 +463,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         recordAttempt(ip);
         return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
       }
-      if (getUserByUsername(username)) {
+      if (await getUserByUsername(username)) {
         recordAttempt(ip);
         return json({ error: "username taken" }, 409);
       }
@@ -475,7 +478,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         return json({ error: "invalid email address" }, 400);
       }
       const key = newAccessKey();
-      const created = createUser({ username, displayName, avatarUrl: "", theme: "auto", email, keyHash: hashSecret(key) });
+      const created = await createUser({ username, displayName, avatarUrl: "", theme: "auto", email, keyHash: hashSecret(key) });
       clearAttempts(ip);
       // Show the raw key exactly once.
       return json({ user: toPublicUser(created), key }, 201);
@@ -488,10 +491,10 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       // Never enumerate accounts: always answer ok.
       if (ok && typeof body.username === "string") {
         const name = body.username.trim().toLowerCase();
-        const target = name === "admin" ? null : getUserByUsername(name);
+        const target = name === "admin" ? null : await getUserByUsername(name);
         if (target && target.email && mailEnabled()) {
           const token = "rt_" + randomBytes(24).toString("base64url");
-          createReset(createHash("sha256").update(token).digest("hex"), target.id, Date.now() + config.resetTtlMs);
+          await createReset(createHash("sha256").update(token).digest("hex"), target.id, Date.now() + config.resetTtlMs);
           sendRecoveryEmail(target.email, target.username, `${config.appUrl}/reset/${token}`).catch(() => {});
           clearAttempts(ip);
           return json({ ok: true });
@@ -506,19 +509,19 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
     if (resetMatch) {
       const tokenHash = createHash("sha256").update(resetMatch[1]!).digest("hex");
       if (req.method === "GET") {
-        const r = peekReset(tokenHash);
-        const u = r ? getUserById(r.user_id) : null;
+        const r = await peekReset(tokenHash);
+        const u = r ? await getUserById(r.user_id) : null;
         if (!r || !u) return json({ error: "invalid or expired link" }, 404);
         return json({ ok: true, username: u.username });
       }
       if (req.method === "POST") {
-        const r = consumeReset(tokenHash);
-        const u = r ? getUserById(r.user_id) : null;
+        const r = await consumeReset(tokenHash);
+        const u = r ? await getUserById(r.user_id) : null;
         if (!r || !u || u.username === "admin") return json({ error: "invalid or expired link" }, 404);
         // Recovery = instant key rotation; the new key is shown exactly once.
         const key = newAccessKey();
-        updateUser(u.id, { keyHash: hashSecret(key) });
-        deleteUserSessions(u.id);
+        await updateUser(u.id, { keyHash: hashSecret(key) });
+        await deleteUserSessions(u.id);
         return json({ key });
       }
     }
@@ -530,7 +533,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
       // Wishlist is mutually exclusive with open registration: when anyone
       // can register, there is nothing to request.
-      if (isRegistrationEnabled() || getSetting("registration_request_enabled", "1") !== "1") {
+      if ((await isRegistrationEnabled()) || (await getSetting("registration_request_enabled", "1")) !== "1") {
         recordAttempt(ip);
         return json({ error: "access requests are currently disabled on this platform" }, 403);
       }
@@ -546,16 +549,16 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         recordAttempt(ip);
         return json({ error: "username (2-32 chars), valid email and a motivation (10+ chars) are required" }, 400);
       }
-      if (getUserByUsername(username)) {
+      if (await getUserByUsername(username)) {
         recordAttempt(ip);
         return json({ error: "username taken" }, 409);
       }
-      if (findOpenAccessRequest(username, email)) {
+      if (await findOpenAccessRequest(username, email)) {
         recordAttempt(ip);
         return json({ error: "a request for this username or email is already open" }, 409);
       }
-      const created = createAccessRequest({ username, email, message });
-      const firstMsg = addAccessMessage(created.id, "user", message);
+      const created = await createAccessRequest({ username, email, message });
+      const firstMsg = await addAccessMessage(created.id, "user", message);
       clearAttempts(ip);
       broadcastAccessLive({ type: "access_created", request_id: created.id, request: created });
       broadcastAccessLive({ type: "access_message", request_id: created.id, message: firstMsg });
@@ -567,10 +570,10 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
     const ticketMatch = path.match(/^\/api\/access\/ticket\/([0-9a-f-]{36})(\/message)?$/);
     if (ticketMatch) {
-      const r = getAccessRequest(ticketMatch[1]!);
+      const r = await getAccessRequest(ticketMatch[1]!);
       if (!r) return json({ error: "invalid ticket link" }, 404);
       if (req.method === "GET" && !ticketMatch[2]) {
-        return json({ request: r, messages: listAccessMessages(r.id) });
+        return json({ request: r, messages: await listAccessMessages(r.id) });
       }
       if (req.method === "POST" && ticketMatch[2] === "/message") {
         const ip = clientIp(req, server);
@@ -584,7 +587,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           recordAttempt(ip);
           return json({ error: "message: 1-2000 chars" }, 400);
         }
-        const msg = addAccessMessage(r.id, "user", text);
+        const msg = await addAccessMessage(r.id, "user", text);
         clearAttempts(ip);
         broadcastAccessLive({ type: "access_message", request_id: r.id, message: msg });
         return json({ message: msg }, 201);
@@ -598,14 +601,14 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
     // ?token= (browsers can't set WS headers) or Authorization header.
     const ticketWsMatch = path.match(/^\/api\/access\/ws\/([0-9a-f-]{36})$/);
     if (ticketWsMatch && req.method === "GET") {
-      const t = getAccessRequest(ticketWsMatch[1]!);
+      const t = await getAccessRequest(ticketWsMatch[1]!);
       if (!t) return json({ error: "invalid ticket link" }, 404);
       if (server.upgrade(req, { data: { ticketId: t.id, isAdmin: false } })) return;
       return json({ error: "websocket upgrade failed" }, 500);
     }
     if (path === "/api/admin/ws" && req.method === "GET") {
       const token = url.searchParams.get("token") ?? extractBearer(req);
-      const u = token ? verifyToken(token) : null;
+      const u = token ? await verifyToken(token) : null;
       if (!u?.isAdmin) return json({ error: "unauthorized" }, 401);
       if (server.upgrade(req, { data: { ticketId: null, isAdmin: true } })) return;
       return json({ error: "websocket upgrade failed" }, 500);
@@ -613,7 +616,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
     // --- everything below requires auth ---
     if (path.startsWith("/api/")) {
-      const user = requireAuth(req);
+      const user = await requireAuth(req);
       if (!user) return json({ error: "unauthorized" }, 401);
       const admin = user.isAdmin;
 
@@ -626,10 +629,10 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         const patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
         if (body.username !== undefined) {
           if (user.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
-          if (!isUsernameChangeEnabled()) return json({ error: "username changes are disabled" }, 403);
+          if (!await isUsernameChangeEnabled()) return json({ error: "username changes are disabled" }, 403);
           const u = validUsername(body.username);
           if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
-          const taken = getUserByUsername(u);
+          const taken = await getUserByUsername(u);
           if (taken && taken.id !== user.id) return json({ error: "username taken" }, 409);
           patch.username = u;
         }
@@ -652,7 +655,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (e === null) return json({ error: "invalid email address" }, 400);
           patch.email = e;
         }
-        const updated = updateUser(user.id, patch);
+        const updated = await updateUser(user.id, patch);
         if (!updated) return json({ error: "user not found" }, 404);
         return json({ user: toPublicUser(updated) });
       }
@@ -660,25 +663,25 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       // --- self-service security: rotate access key (old sessions revoked) ---
       if (path === "/api/me/key/rotate" && req.method === "POST") {
         const key = newAccessKey();
-        updateUser(user.id, { keyHash: hashSecret(key) });
-        deleteUserSessions(user.id);
+        await updateUser(user.id, { keyHash: hashSecret(key) });
+        await deleteUserSessions(user.id);
         return json({ key });
       }
 
       // --- self-service: delete your own account (chats, shares, sessions gone) ---
       if (path === "/api/me" && req.method === "DELETE") {
         if (user.username === "admin") return json({ error: "the admin account cannot be deleted" }, 403);
-        deleteUser(user.id);
-        getDb().query("DELETE FROM totp_challenges WHERE user_id = ?").run(user.id);
+        await deleteUser(user.id);
+        await deleteTotpChallenges(user.id);
         return json({ ok: true });
       }
 
       // --- self-service security: TOTP two-factor ---
       if (path === "/api/me/totp" && req.method === "GET") {
-        return json({ enabled: getTotpSecret(user.id).length > 0 });
+        return json({ enabled: (await getTotpSecret(user.id)).length > 0 });
       }
       if (path === "/api/me/totp/setup" && req.method === "POST") {
-        if (getTotpSecret(user.id)) return json({ error: "TOTP already enabled — disable it first" }, 409);
+        if (await getTotpSecret(user.id)) return json({ error: "TOTP already enabled — disable it first" }, 409);
         const secret = newTotpSecret();
         return json({ secret, otpauthUrl: totpAuthUrl(secret, user.username) });
       }
@@ -688,14 +691,14 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         const code = ok && typeof body.code === "string" ? body.code : "";
         if (!/^[A-Z2-7]{16,64}$/.test(secret.trim().toUpperCase())) return json({ error: "invalid secret" }, 400);
         if (!verifyTotp(secret, code)) return json({ error: "invalid code" }, 401);
-        setTotpSecret(user.id, secret.trim().toUpperCase());
+        await setTotpSecret(user.id, secret.trim().toUpperCase());
         return json({ enabled: true });
       }
       if (path === "/api/me/totp" && req.method === "DELETE") {
         const { ok, body } = await readJson(req);
         const code = ok && typeof body.code === "string" ? body.code : "";
-        if (!verifyTotp(getTotpSecret(user.id), code)) return json({ error: "invalid code" }, 401);
-        setTotpSecret(user.id, "");
+        if (!verifyTotp(await getTotpSecret(user.id), code)) return json({ error: "invalid code" }, 401);
+        await setTotpSecret(user.id, "");
         return json({ enabled: false });
       }
 
@@ -704,7 +707,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       // presence + last4. Connected providers add their models to this
       // user's /api/models list and /api/chat honors the personal key.
       if (path === "/api/me/providers" && req.method === "GET") {
-        return json({ providers: listUserProviders(user.id) });
+        return json({ providers: await listUserProviders(user.id) });
       }
 
       const providerMatch = path.match(/^\/api\/me\/providers\/([a-z]{3,12})$/);
@@ -718,12 +721,12 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           const { ok, body } = await readJson(req);
           const key = ok ? validProviderKey(body.apiKey) : null;
           if (!key) return json({ error: "apiKey: 8-256 chars, no whitespace" }, 400);
-          setUserProviderKey(user.id, provider, key);
-          return json({ providers: listUserProviders(user.id) });
+          await setUserProviderKey(user.id, provider, key);
+          return json({ providers: await listUserProviders(user.id) });
         }
         if (req.method === "DELETE") {
-          deleteUserProviderKey(user.id, provider);
-          return json({ providers: listUserProviders(user.id) });
+          await deleteUserProviderKey(user.id, provider);
+          return json({ providers: await listUserProviders(user.id) });
         }
         return json({ error: "not found" }, 404);
       }
@@ -737,7 +740,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         const filter = url.searchParams.get("filter") || "all"; // all | with-email | no-email
         const per = Math.min(Math.max(Number(url.searchParams.get("per")) || 10, 1), 50);
         const page = Math.max(Number(url.searchParams.get("page")) || 1, 1);
-        let users = listUsers();
+        let users = await listUsers();
         if (q) {
           users = users.filter(
             (u) =>
@@ -768,7 +771,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         if (!ok) return json({ error: "invalid JSON" }, 400);
         const username = validUsername(body.username);
         if (!username) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
-        if (getUserByUsername(username)) return json({ error: "username taken" }, 409);
+        if (await getUserByUsername(username)) return json({ error: "username taken" }, 409);
         const displayName = body.displayName === undefined ? username : cleanStr(body.displayName, 60);
         if (displayName === null) return json({ error: "displayName: 1-60 chars" }, 400);
         const avatarUrl = body.avatarUrl === undefined ? "" : validAvatar(body.avatarUrl);
@@ -778,7 +781,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         const email = body.email === undefined ? "" : validEmail(body.email);
         if (email === null) return json({ error: "invalid email address" }, 400);
         const key = newAccessKey();
-        const created = createUser({ username, displayName, avatarUrl, theme, email, keyHash: hashSecret(key) });
+        const created = await createUser({ username, displayName, avatarUrl, theme, email, keyHash: hashSecret(key) });
         // Show the raw key exactly once.
         return json({ user: toPublicUser(created), key }, 201);
       }
@@ -786,16 +789,16 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       const adminUserMatch = path.match(/^\/api\/admin\/users\/([0-9a-f-]{10,50})(\/regenerate|\/shadowban)?$/);
       if (adminUserMatch) {
         if (!admin) return json({ error: "forbidden" }, 403);
-        const target = getUserById(adminUserMatch[1]!);
+        const target = await getUserById(adminUserMatch[1]!);
         if (!target || target.username === "admin") return json({ error: "user not found" }, 404);
         if (req.method === "DELETE" && !adminUserMatch[2]) {
-          deleteUser(target.id);
+          await deleteUser(target.id);
           return json({ ok: true });
         }
         if (req.method === "POST" && adminUserMatch[2] === "/regenerate") {
           const key = newAccessKey();
-          updateUser(target.id, { keyHash: hashSecret(key) });
-          deleteUserSessions(target.id);
+          await updateUser(target.id, { keyHash: hashSecret(key) });
+          await deleteUserSessions(target.id);
           return json({ key });
         }
         if (req.method === "POST" && adminUserMatch[2] === "/shadowban") {
@@ -803,7 +806,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (!ok || typeof body.shadowbanned !== "boolean") {
             return json({ error: "expected { shadowbanned: boolean }" }, 400);
           }
-          return json({ shadowbanned: setReportShadowbanned(target.id, body.shadowbanned) === 1 });
+          return json({ shadowbanned: (await setReportShadowbanned(target.id, body.shadowbanned)) === 1 });
         }
         if (req.method === "PATCH" && !adminUserMatch[2]) {
           const { ok, body } = await readJson(req);
@@ -813,7 +816,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             if (target.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
             const u = validUsername(body.username);
             if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
-            const taken = getUserByUsername(u);
+            const taken = await getUserByUsername(u);
             if (taken && taken.id !== target.id) return json({ error: "username taken" }, 409);
             patch.username = u;
           }
@@ -836,7 +839,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             if (e === null) return json({ error: "invalid email address" }, 400);
             patch.email = e;
           }
-          const updated = updateUser(target.id, patch);
+          const updated = await updateUser(target.id, patch);
           return json({ user: toPublicUser(updated!) });
         }
         return json({ error: "not found" }, 404);
@@ -847,11 +850,11 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         if (!admin) return json({ error: "forbidden" }, 403);
         return json({
           settings: {
-            registrationEnabled: isRegistrationEnabled(),
-            accessRequestEnabled: getSetting("registration_request_enabled", "1") === "1",
-            ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
-            reportsEnabled: isReportsEnabled(),
-            usernameChangeEnabled: isUsernameChangeEnabled(),
+            registrationEnabled: await isRegistrationEnabled(),
+            accessRequestEnabled: (await getSetting("registration_request_enabled", "1")) === "1",
+            ocrEnabled: (await getSetting("tools_ocr_enabled", "1")) === "1",
+            reportsEnabled: await isReportsEnabled(),
+            usernameChangeEnabled: await isUsernameChangeEnabled(),
           },
         });
       }
@@ -862,38 +865,38 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         if (!ok) return json({ error: "invalid JSON" }, 400);
         if (body.registrationEnabled !== undefined) {
           if (typeof body.registrationEnabled !== "boolean") return json({ error: "registrationEnabled must be boolean" }, 400);
-          setSetting("registration_enabled", body.registrationEnabled ? "1" : "0");
+          await setSetting("registration_enabled", body.registrationEnabled ? "1" : "0");
           // Opening registration retires the wishlist automatically.
-          if (body.registrationEnabled) setSetting("registration_request_enabled", "0");
+          if (body.registrationEnabled) await setSetting("registration_request_enabled", "0");
         }
         if (body.accessRequestEnabled !== undefined) {
           if (typeof body.accessRequestEnabled !== "boolean") return json({ error: "accessRequestEnabled must be boolean" }, 400);
           // Mutually exclusive with open registration: the wishlist only
           // makes sense when anyone-can-register is off.
-          if (body.accessRequestEnabled && (body.registrationEnabled ?? isRegistrationEnabled())) {
+          if (body.accessRequestEnabled && (body.registrationEnabled ?? await isRegistrationEnabled())) {
             return json({ error: "disable public registration first — the wishlist replaces it" }, 409);
           }
-          setSetting("registration_request_enabled", body.accessRequestEnabled ? "1" : "0");
+          await setSetting("registration_request_enabled", body.accessRequestEnabled ? "1" : "0");
         }
         if (body.ocrEnabled !== undefined) {
           if (typeof body.ocrEnabled !== "boolean") return json({ error: "ocrEnabled must be boolean" }, 400);
-          setSetting("tools_ocr_enabled", body.ocrEnabled ? "1" : "0");
+          await setSetting("tools_ocr_enabled", body.ocrEnabled ? "1" : "0");
         }
         if (body.reportsEnabled !== undefined) {
           if (typeof body.reportsEnabled !== "boolean") return json({ error: "reportsEnabled must be boolean" }, 400);
-          setSetting("reports_enabled", body.reportsEnabled ? "1" : "0");
+          await setSetting("reports_enabled", body.reportsEnabled ? "1" : "0");
         }
         if (body.usernameChangeEnabled !== undefined) {
           if (typeof body.usernameChangeEnabled !== "boolean") return json({ error: "usernameChangeEnabled must be boolean" }, 400);
-          setSetting("username_change_enabled", body.usernameChangeEnabled ? "1" : "0");
+          await setSetting("username_change_enabled", body.usernameChangeEnabled ? "1" : "0");
         }
         return json({
           settings: {
-            registrationEnabled: isRegistrationEnabled(),
-            accessRequestEnabled: getSetting("registration_request_enabled", "1") === "1",
-            ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
-            reportsEnabled: isReportsEnabled(),
-            usernameChangeEnabled: isUsernameChangeEnabled(),
+            registrationEnabled: await isRegistrationEnabled(),
+            accessRequestEnabled: (await getSetting("registration_request_enabled", "1")) === "1",
+            ocrEnabled: (await getSetting("tools_ocr_enabled", "1")) === "1",
+            reportsEnabled: await isReportsEnabled(),
+            usernameChangeEnabled: await isUsernameChangeEnabled(),
           },
         });
       }
@@ -1041,7 +1044,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
       // --- content reports (flagged AI responses) ---
       if (path === "/api/reports" && req.method === "POST") {
-        if (!isReportsEnabled()) return json({ error: "reports are disabled" }, 403);
+        if (!await isReportsEnabled()) return json({ error: "reports are disabled" }, 403);
         const { ok, body } = await readJson(req);
         if (!ok) return json({ error: "invalid JSON" }, 400);
         const reason = body.reason as ReportReason | undefined;
@@ -1059,7 +1062,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (typeof body.conversationId !== "string" || !body.conversationId) {
             return json({ error: "bad conversationId" }, 400);
           }
-          const conv = getConversation(body.conversationId);
+          const conv = await getConversation(body.conversationId);
           if (!conv || conv.user_id !== user.id) return json({ error: "conversation not found" }, 404);
           conversationId = conv.id;
           if (body.messageIndex !== undefined) {
@@ -1070,7 +1073,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           }
         }
         try {
-          const report = createReport({
+          const report = await createReport({
             reporterId: user.id,
             reporterName: user.displayName,
             conversationId,
@@ -1093,13 +1096,13 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
       if (path === "/api/admin/reports" && req.method === "GET") {
         if (!admin) return json({ error: "forbidden" }, 403);
-        return json({ reports: listReports() });
+        return json({ reports: await listReports() });
       }
 
       const reportMatch = path.match(/^\/api\/admin\/reports\/([0-9a-f-]{36})$/);
       if (reportMatch) {
         if (!admin) return json({ error: "forbidden" }, 403);
-        const target = getReport(reportMatch[1]!);
+        const target = await getReport(reportMatch[1]!);
         if (!target) return json({ error: "report not found" }, 404);
         if (req.method === "PATCH") {
           const { ok, body } = await readJson(req);
@@ -1110,7 +1113,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           }
           const adminNote = cleanOptionalStr(body.adminNote, 1000);
           if (adminNote === null) return json({ error: "adminNote: max 1000 chars" }, 400);
-          return json({ report: setReportStatus(target.id, status, adminNote) });
+          return json({ report: await setReportStatus(target.id, status, adminNote) });
         }
       }
 
@@ -1122,7 +1125,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         }
         // Full list (policy never hides models from admins) merged with policy.
         const models = await registry.listAllModelsCached();
-        const policy = getModelPolicy();
+        const policy = await getModelPolicy();
         return json({
           models: models.map((m) => ({ ...m, ...policyFor(policy, m.id) })),
         });
@@ -1140,7 +1143,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           return json({ error: "nothing to update (enabled, hourly, daily)" }, 400);
         }
         try {
-          const entry = setModelPolicyEntry(b.model, {
+          const entry = await setModelPolicyEntry(b.model, {
             enabled: b.enabled as boolean | undefined,
             hourly: b.hourly as number | undefined,
             daily: b.daily as number | undefined,
@@ -1154,23 +1157,23 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       // --- admin: access-request wishlist triage ---
       if (path === "/api/admin/access" && req.method === "GET") {
         if (!admin) return json({ error: "forbidden" }, 403);
-        return json({ requests: listAccessRequests() });
+        return json({ requests: await listAccessRequests() });
       }
 
       const accessMatch = path.match(/^\/api\/admin\/access\/([0-9a-f-]{36})(\/message)?$/);
       if (accessMatch) {
         if (!admin) return json({ error: "forbidden" }, 403);
-        const target = getAccessRequest(accessMatch[1]!);
+        const target = await getAccessRequest(accessMatch[1]!);
         if (!target) return json({ error: "request not found" }, 404);
         const reviewUrl = `${config.appUrl}/review/${target.id}`;
         if (req.method === "GET" && !accessMatch[2]) {
-          return json({ request: target, messages: listAccessMessages(target.id) });
+          return json({ request: target, messages: await listAccessMessages(target.id) });
         }
         if (req.method === "POST" && accessMatch[2] === "/message") {
           const { ok, body } = await readJson(req);
           const text = ok ? cleanStr(body.body, 2000) : null;
           if (!text) return json({ error: "message: 1-2000 chars" }, 400);
-          const msg = addAccessMessage(target.id, "admin", text);
+          const msg = await addAccessMessage(target.id, "admin", text);
           // Every admin reply is forwarded to the requester (notification-only).
           sendAccessMessageEmail(target.email, target.username, true, text, reviewUrl).catch(() => {});
           broadcastAccessLive({ type: "access_message", request_id: target.id, message: msg });
@@ -1190,11 +1193,11 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           }
           let key: string | undefined;
           if (status === "accepted" && target.status !== "accepted") {
-            if (getUserByUsername(target.username)) return json({ error: "username taken" }, 409);
+            if (await getUserByUsername(target.username)) return json({ error: "username taken" }, 409);
             key = newAccessKey();
-            createUser({ username: target.username, displayName: target.username, avatarUrl: "", theme: "auto", email: target.email, keyHash: hashSecret(key) });
+            await createUser({ username: target.username, displayName: target.username, avatarUrl: "", theme: "auto", email: target.email, keyHash: hashSecret(key) });
           }
-          const updated = setAccessStatus(target.id, status, reason);
+          const updated = await setAccessStatus(target.id, status, reason);
           if (status !== target.status && status !== "pending") {
             sendAccessStatusEmail(target.email, target.username, status, reason, reviewUrl, key).catch(() => {});
           }
@@ -1242,28 +1245,34 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
       // --- conversations (server-persisted, per account) ---
       if (path === "/api/conversations" && req.method === "GET") {
-        return json({ conversations: listConversations(user.id) });
+        return json({ conversations: await listConversations(user.id) });
       }
 
       // Archived chats (hidden from the sidebar, managed in settings).
       if (path === "/api/conversations/archived" && req.method === "GET") {
-        return json({ conversations: listArchivedConversations(user.id) });
+        return json({ conversations: await listArchivedConversations(user.id) });
       }
 
       // Full-text-ish search over your own chats: titles, topics AND old
       // prompts/replies. Returns the matching conversations, most recent
       // first, with a short snippet of the first hit.
+      // Correlated subqueries (not GROUP BY c.id + bare m.* columns): the
+      // loose form runs on SQLite but Postgres rejects it.
       if (path === "/api/conversations/search" && req.method === "GET") {
         const q = (url.searchParams.get("q") ?? "").trim().slice(0, 120);
         if (q.length < 2) return json({ conversations: [] });
         const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-        const rows = getDb().query(
-          `SELECT c.*, m.content AS hit, m.role AS hit_role FROM conversations c
-           LEFT JOIN messages m ON m.conv_id = c.id
-             AND m.content LIKE ? ESCAPE '\\'
-            WHERE c.user_id = ? AND c.archived_at = 0 AND (c.title LIKE ? ESCAPE '\\' OR c.topic LIKE ? ESCAPE '\\' OR m.id IS NOT NULL)
-           GROUP BY c.id ORDER BY c.updated_at DESC LIMIT 30`,
-        ).all(like, user.id, like, like) as (ConversationRow & { hit: string | null; hit_role: string | null })[];
+        const rows = await db().all<ConversationRow & { hit: string | null; hit_role: string | null }>(
+          `SELECT c.*,
+             (SELECT m.content FROM messages m WHERE m.conv_id = c.id AND m.content LIKE ? ESCAPE '\\' ORDER BY m.id ASC LIMIT 1) AS hit,
+             (SELECT m.role FROM messages m WHERE m.conv_id = c.id AND m.content LIKE ? ESCAPE '\\' ORDER BY m.id ASC LIMIT 1) AS hit_role
+           FROM conversations c
+           WHERE c.user_id = ? AND c.archived_at = 0
+             AND (c.title LIKE ? ESCAPE '\\' OR c.topic LIKE ? ESCAPE '\\'
+               OR EXISTS (SELECT 1 FROM messages m WHERE m.conv_id = c.id AND m.content LIKE ? ESCAPE '\\'))
+           ORDER BY c.updated_at DESC LIMIT 30`,
+          like, like, user.id, like, like, like,
+        );
         return json({
           conversations: rows.map(({ hit, hit_role, ...c }) => {
             let snippet: string | null = null;
@@ -1284,7 +1293,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       if (path === "/api/conversations" && req.method === "POST") {
         const { ok, body } = await readJson(req);
         if (!ok) return json({ error: "invalid JSON" }, 400);
-        const conv = createConversation(user.id, {
+        const conv = await createConversation(user.id, {
           title: typeof body.title === "string" ? body.title : undefined,
           topic: typeof body.topic === "string" ? body.topic : undefined,
           model: typeof body.model === "string" ? body.model : undefined,
@@ -1294,35 +1303,35 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
       const archiveMatch = path.match(/^\/api\/conversations\/([0-9a-f-]{10,50})\/(archive|unarchive)$/);
       if (archiveMatch && req.method === "POST") {
-        const conv = getConversation(archiveMatch[1]!);
+        const conv = await getConversation(archiveMatch[1]!);
         if (!conv || conv.user_id !== user.id) return json({ error: "conversation not found" }, 404);
-        return json({ conversation: setConversationArchived(conv.id, archiveMatch[2] === "archive") });
+        return json({ conversation: await setConversationArchived(conv.id, archiveMatch[2] === "archive") });
       }
 
       const convMatch = path.match(/^\/api\/conversations\/([0-9a-f-]{10,50})(\/(share))?$/);
       if (convMatch) {
-        const conv = getConversation(convMatch[1]!);
+        const conv = await getConversation(convMatch[1]!);
         if (!conv || conv.user_id !== user.id) return json({ error: "conversation not found" }, 404);
         const isShare = convMatch[3] === "share";
 
         if (isShare) {
           if (req.method === "POST") {
-            const publicId = ensureShare(conv.id);
+            const publicId = await ensureShare(conv.id);
             return json({ publicId, url: `/share/${publicId}` }, 201);
           }
           if (req.method === "GET") {
-            const publicId = getShareByConv(conv.id);
+            const publicId = await getShareByConv(conv.id);
             return publicId ? json({ publicId, url: `/share/${publicId}` }) : json({ shared: false });
           }
           if (req.method === "DELETE") {
-            deleteShare(conv.id);
+            await deleteShare(conv.id);
             return json({ ok: true });
           }
           return json({ error: "not found" }, 404);
         }
 
         if (req.method === "GET") {
-          return json({ conversation: conv, messages: getMessages(conv.id) });
+          return json({ conversation: conv, messages: await getMessages(conv.id) });
         }
         if (req.method === "PATCH") {
           const { ok, body } = await readJson(req);
@@ -1340,10 +1349,10 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             if (typeof body.model !== "string" || body.model.length > 160) return json({ error: "model too long" }, 400);
             patch.model = body.model;
           }
-          return json({ conversation: updateConversation(conv.id, patch) });
+          return json({ conversation: await updateConversation(conv.id, patch) });
         }
         if (req.method === "DELETE") {
-          deleteConversation(conv.id);
+          await deleteConversation(conv.id);
           return json({ ok: true });
         }
         return json({ error: "not found" }, 404);
@@ -1378,18 +1387,22 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         if (admin) return json({ models });
         // Users never see admin-disabled models (nor select them — /api/chat
         // enforces the same policy server-side).
-        const policy = getModelPolicy();
+        const policy = await getModelPolicy();
         return json({ models: models.filter((m) => policyFor(policy, m.id).enabled) });
       }
 
       // --- platform tools (uploads always go through tools) ---
       if (path === "/api/tools" && req.method === "GET") {
-        return json({ tools: tools.list(), reportsEnabled: isReportsEnabled(), usernameChangeEnabled: isUsernameChangeEnabled() });
+        return json({
+          tools: await tools.list(),
+          reportsEnabled: await isReportsEnabled(),
+          usernameChangeEnabled: await isUsernameChangeEnabled(),
+        });
       }
 
       if (path === "/api/tools/ocr" && req.method === "POST") {
         const ocr = tools.ocr;
-        if (!ocr.isAvailable()) return json({ error: ocr.unavailableReason() ?? "ocr unavailable" }, 501);
+        if (!await ocr.isAvailable()) return json({ error: (await ocr.unavailableReason()) ?? "ocr unavailable" }, 501);
         const declared = Number(req.headers.get("content-length") || "0");
         if (declared > OCR_MAX_BYTES) return json({ error: "image too large (max 5MB)" }, 413);
         let buf: Uint8Array;
@@ -1430,7 +1443,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           // BYOK precedence: when the caller connected this provider with
           // their own key, the request is billed to them, not the platform.
           if (isUserProviderId(driver.name)) {
-            const personalKey = getUserProviderKey(user.id, driver.name);
+            const personalKey = await getUserProviderKey(user.id, driver.name);
             if (personalKey) driver = buildUserProviderDriver(driver.name, personalKey);
           }
         } catch (e) {
@@ -1441,7 +1454,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           const pname = idx === -1 ? "" : fullId.slice(0, idx);
           const sub = idx === -1 ? "" : fullId.slice(idx + 1);
           if (!isUserProviderId(pname)) return json({ error: (e as Error).message }, 400);
-          const personalKey = getUserProviderKey(user.id, pname);
+          const personalKey = await getUserProviderKey(user.id, pname);
           if (!personalKey || !sub) return json({ error: (e as Error).message }, 400);
           driver = buildUserProviderDriver(pname, personalKey);
           model = sub;
@@ -1449,43 +1462,43 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         // Per-model access policy (kill-switch + per-user rate limits).
         // Admins bypass; attempts count even when generation later fails.
         if (!user.isAdmin) {
-          const access = checkModelAccess(user.id, body.model);
+          const access = await checkModelAccess(user.id, body.model);
           if (!access.ok) return json({ error: access.message }, access.code);
-          recordModelUse(user.id, body.model);
+          await recordModelUse(user.id, body.model);
         }
         const messages = body.messages as ChatMessage[];
         // Optional persistence into a server-side conversation (must belong to the user).
         let conv = null;
         if (body.conversationId !== undefined) {
           if (typeof body.conversationId !== "string") return json({ error: "bad conversationId" }, 400);
-          conv = getConversation(body.conversationId);
+          conv = await getConversation(body.conversationId);
           if (!conv || conv.user_id !== user.id) return json({ error: "conversation not found" }, 404);
           // Archived chats are read-only: no new messages may be written.
           if (conv.archived_at) return json({ error: "conversation is archived (read-only) — unarchive it to write again" }, 403);
           // Persist the new user message (dedupe against last stored one).
           const lastUser = [...messages].reverse().find((m) => m.role === "user");
-          const stored = getMessages(conv.id);
+          const stored = await getMessages(conv.id);
           const lastStored = stored[stored.length - 1];
           if (lastUser && (!lastStored || lastStored.content !== lastUser.content || lastStored.role !== "user")) {
-            addMessage(conv.id, "user", lastUser.content);
+            await addMessage(conv.id, "user", lastUser.content);
             if (conv.title === "New chat") {
-              updateConversation(conv.id, { title: lastUser.content.slice(0, 50) || "New chat" });
+              await updateConversation(conv.id, { title: lastUser.content.slice(0, 50) || "New chat" });
             }
           }
         }
         const wantStream = body.stream === true || req.headers.get("accept") === "text/event-stream";
 
-        const persistReply = (text: string) => {
+        const persistReply = async (text: string): Promise<void> => {
           if (conv && text) {
-            addMessage(conv.id, "assistant", text);
-            touchConversation(conv.id, body.model as string);
+            await addMessage(conv.id, "assistant", text);
+            await touchConversation(conv.id, body.model as string);
           }
         };
 
         if (!wantStream) {
           try {
             const text = await driver.chat(messages, { model, signal: req.signal });
-            persistReply(text);
+            await persistReply(text);
             return json({ model: body.model, message: { role: "assistant", content: text } });
           } catch (e) {
             return json({ error: (e as Error).message }, 502);
@@ -1523,12 +1536,12 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
                 full += token;
                 if (!safeSend("token", JSON.stringify({ token }))) break;
               }
-              persistReply(full);
+              await persistReply(full);
               safeSend("done", "{}");
             } catch (e) {
               // Genuine driver error: keep the partial text as-is (no internal
               // markers persisted) and notify the client if still connected.
-              if (full) persistReply(full);
+              if (full) await persistReply(full);
               if (!req.signal.aborted && !clientGone) {
                 safeSend("error", JSON.stringify({ error: (e as Error).message }));
               }

@@ -1,4 +1,4 @@
-import { getDb } from "./db.ts";
+import { db } from "./db.ts";
 import { AnthropicDriver, DeepSeekDriver, GeminiDriver, OpenAIDriver } from "./drivers/apis.ts";
 import type { DriverModel, LLMDriver } from "./drivers/types.ts";
 
@@ -7,7 +7,7 @@ import type { DriverModel, LLMDriver } from "./drivers/types.ts";
  * settings, and the matching models show up in their model menu.
  *
  * Security notes (do not weaken):
- * - Keys are stored reversibly in SQLite (they must be sent upstream) and
+ * - Keys are stored reversibly server-side (they must be sent upstream) and
  *   are NEVER returned to any client — GET only exposes presence + last4.
  * - Never log or print keys. Key material only travels server -> provider.
  * - Scoping is per account: every helper takes userId and all chat/model
@@ -48,17 +48,19 @@ export interface UserProviderStatus {
   updatedAt: number;
 }
 
-export function getUserProviderKey(userId: string, provider: UserProviderId): string | null {
-  const r = getDb()
-    .query("SELECT api_key FROM user_provider_keys WHERE user_id = ? AND provider = ?")
-    .get(userId, provider) as { api_key: string } | null;
+export async function getUserProviderKey(userId: string, provider: UserProviderId): Promise<string | null> {
+  const r = await db().get<{ api_key: string }>(
+    "SELECT api_key FROM user_provider_keys WHERE user_id = ? AND provider = ?",
+    userId, provider,
+  );
   return r?.api_key ?? null;
 }
 
-export function listUserProviders(userId: string): UserProviderStatus[] {
-  const rows = getDb()
-    .query("SELECT provider, api_key, updated_at FROM user_provider_keys WHERE user_id = ?")
-    .all(userId) as { provider: string; api_key: string; updated_at: number }[];
+export async function listUserProviders(userId: string): Promise<UserProviderStatus[]> {
+  const rows = await db().all<{ provider: string; api_key: string; updated_at: number }>(
+    "SELECT provider, api_key, updated_at FROM user_provider_keys WHERE user_id = ?",
+    userId,
+  );
   const byId = new Map(rows.map((r) => [r.provider, r]));
   return USER_PROVIDER_IDS.map((p) => {
     const r = byId.get(p);
@@ -72,16 +74,15 @@ export function listUserProviders(userId: string): UserProviderStatus[] {
   });
 }
 
-export function setUserProviderKey(userId: string, provider: UserProviderId, apiKey: string): void {
-  getDb()
-    .query(
-      "INSERT INTO user_provider_keys (user_id, provider, api_key, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, provider) DO UPDATE SET api_key = excluded.api_key, updated_at = excluded.updated_at",
-    )
-    .run(userId, provider, apiKey, Date.now());
+export async function setUserProviderKey(userId: string, provider: UserProviderId, apiKey: string): Promise<void> {
+  await db().run(
+    "INSERT INTO user_provider_keys (user_id, provider, api_key, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, provider) DO UPDATE SET api_key = excluded.api_key, updated_at = excluded.updated_at",
+    userId, provider, apiKey, Date.now(),
+  );
 }
 
-export function deleteUserProviderKey(userId: string, provider: UserProviderId): void {
-  getDb().query("DELETE FROM user_provider_keys WHERE user_id = ? AND provider = ?").run(userId, provider);
+export async function deleteUserProviderKey(userId: string, provider: UserProviderId): Promise<void> {
+  await db().run("DELETE FROM user_provider_keys WHERE user_id = ? AND provider = ?", userId, provider);
 }
 
 /** Build a per-user driver instance authenticated with the user's own key. */
@@ -107,7 +108,7 @@ export function buildUserProviderDriver(provider: UserProviderId, apiKey: string
 export async function listUserProviderModels(userId: string): Promise<DriverModel[]> {
   const out: DriverModel[] = [];
   const jobs = USER_PROVIDER_IDS.map(async (p) => {
-    const key = getUserProviderKey(userId, p);
+    const key = await getUserProviderKey(userId, p);
     if (!key) return;
     try {
       for (const m of await buildUserProviderDriver(p, key).listModels()) {

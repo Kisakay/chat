@@ -6,7 +6,8 @@ Read this before touching the code. Docs live in `docs/` (English).
 
 KisAssistant — private ChatGPT-like assistant. Bun backend (single process,
 serves API + static frontend), React 18 + Vite + Tailwind 3 + lucide-react
-frontend, SQLite persistence via Bun's native `bun:sqlite` driver.
+frontend, SQLite persistence by default via Bun's native `bun:sqlite` driver
+(Postgres fallback via native `bun:sql` when `POSTGRESQL_URL` is set).
 
 ## Commands (run from repo root unless noted)
 
@@ -45,7 +46,7 @@ flake.nix/module.nix NixOS packaging + service module
 - Frontend styling: Tailwind only, emerald accent, `rounded-2xl/3xl` everywhere, `dark:` variants on every surface. Inter Variable font (self-hosted, no CDN).
 - Icons: lucide-react only. **Never use native `<select>`** — use the `Picker` component in `frontend/src/components/ui.tsx` (also `Button`, `Modal`, `ConfirmDialog`, `ContextMenu`, `Avatar`, `CopyButton` live there).
 - Backend responses: `json()` helper, `{ error }` shape on failure, correct HTTP codes (400/401/403/404/409/429/502).
-- DB: synchronous `bun:sqlite` queries, prepared statements, `PRAGMA journal_mode=WAL`. Schema is created idempotently at boot — keep it that way (no migration framework).
+- DB: async store fns through the `DbClient` interface (`src/db/client.ts`) — SQLite default (`bun:sqlite`, `PRAGMA journal_mode=WAL`), Postgres when `POSTGRESQL_URL` is set (Bun native `bun:sql`). Write queries once with `?` placeholders (auto-rewritten to `$n` for pg), keep SQL portable (no bare `GROUP BY pk` — pg rejects it; quote `"window"`). Schema is created idempotently at boot — keep it that way (no migration framework).
 - Drivers: new LLM backends implement `LLMDriver` and register in `DriverRegistry` priority order. The arcaic browser driver is user-facing as "Arcaic-Technology" — never expose its scraping internals (no "puppeteer"/"crawler"/upstream-site names) in API responses, error strings, or UI labels.
 - Docs are in English. Update `docs/` + README when adding routes, tables, or env vars.
 

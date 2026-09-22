@@ -10,7 +10,8 @@ Copy `.env.example` to `.env`. Full list:
 | `PORT` / `HOST` | `3000` / `127.0.0.1` | listen address (keep localhost behind nginx) |
 | `APP_PASSWORD` | *(required)* | **admin** access key — generate with `openssl rand -base64 24` |
 | `SESSION_TTL_HOURS` | `720` | Bearer session lifetime (30 days) |
-| `DATA_DIR` | `./data` | holds `kisassistant.db` (SQLite) |
+| `DATA_DIR` | `./data` | holds `kisassistant.db` (SQLite — unused when `POSTGRESQL_URL` is set) |
+| `POSTGRESQL_URL` | *(empty)* | Postgres fallback, e.g. `postgres://kisassistant:secret@localhost:5432/kisassistant` (typically a docker container). Empty = local SQLite. Boot fails fast when unreachable. |
 | `CDN_DIR` | `./cdn` | local file CDN storage (avatars; NixOS: under state dir) |
 | `OCR_LANG` | `eng` | tesseract language(s) for the OCR tool |
 | `OCR_MAX_CHARS` | `100000` | transcription cap (longer results are truncated + flagged) |
@@ -41,6 +42,34 @@ Smoke tests: start the backend on a **free non-3000 port** with a throwaway
 `DATA_DIR` (port 3000 is the owner's dev server — do not touch it), then drive
 the API with curl/python: login → models → conversations → chat → share →
 unshare. See `AGENTS.md`.
+
+## Postgres fallback (docker)
+
+SQLite is the default. For Postgres, run a container and point the app at it:
+
+```bash
+docker run -d --name kisassistant-pg --restart unless-stopped \
+  -e POSTGRES_USER=kisassistant -e POSTGRES_PASSWORD=secret \
+  -e POSTGRES_DB=kisassistant -p 127.0.0.1:5432:5432 \
+  -v kisassistant-pgdata:/var/lib/postgresql/data \
+  postgres:17-alpine
+
+POSTGRESQL_URL=postgres://kisassistant:secret@127.0.0.1:5432/kisassistant \
+  DATA_DIR=/tmp/ka-pg-throwaway \
+  bun run src/index.ts
+```
+
+Notes:
+
+- The app uses Bun's native `bun:sql` driver — no extra dependency.
+- Schema is created idempotently at boot (same tables as SQLite; timestamps
+  are `BIGINT`, auto ids `BIGSERIAL`). A fresh database starts empty except
+  the bootstrapped `admin` row — **there is no SQLite→Postgres data
+  migration** (re-create accounts or keep SQLite).
+- Switching back is just unsetting `POSTGRESQL_URL` (the SQLite file is
+  untouched while Postgres is active).
+- Back up with `pg_dump` (SQLite: copy `kisassistant.db`, or
+  `.backup` while running under WAL).
 
 ## Managing accounts
 

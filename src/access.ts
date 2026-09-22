@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { getDb } from "./db.ts";
+import { db } from "./db.ts";
 
 /**
  * Access-request wishlist (registration approval queue) + minimal ticket
@@ -33,8 +33,40 @@ export interface AccessMessage {
   created_at: number;
 }
 
-export function initAccessTables(): void {
-  const d = getDb();
+export async function initAccessTables(): Promise<void> {
+  const d = db();
+  const autoId = d.kind === "postgres" ? "BIGSERIAL PRIMARY KEY" : "INTEGER PRIMARY KEY AUTOINCREMENT";
+  await d.exec(`CREATE TABLE IF NOT EXISTS access_requests (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'pending',
+    reason TEXT NOT NULL DEFAULT '',
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL
+  )`);
+  if (d.kind === "sqlite") {
+    await repairSqliteAccessTables();
+  }
+  await d.exec(`CREATE TABLE IF NOT EXISTS access_messages (
+    id ${autoId},
+    request_id TEXT NOT NULL REFERENCES access_requests(id) ON DELETE CASCADE,
+    author TEXT NOT NULL,
+    body TEXT NOT NULL,
+    created_at BIGINT NOT NULL
+  )`);
+  await d.exec(`CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests(status, updated_at DESC)`);
+  await d.exec(`CREATE INDEX IF NOT EXISTS idx_access_messages_req ON access_messages(request_id, id)`);
+}
+
+/**
+ * SQLite-only repairs for DBs shaped by older builds (PRAGMA / sqlite_master
+ * introspection + DROP COLUMN don't exist on Postgres; fresh Postgres tables
+ * are created clean above).
+ */
+async function repairSqliteAccessTables(): Promise<void> {
+  const d = db();
   const createRequests = `CREATE TABLE access_requests (
     id TEXT PRIMARY KEY,
     username TEXT NOT NULL,
@@ -52,16 +84,6 @@ export function initAccessTables(): void {
     body TEXT NOT NULL,
     created_at INTEGER NOT NULL
   )`;
-  d.query(`CREATE TABLE IF NOT EXISTS access_requests (
-    id TEXT PRIMARY KEY,
-    username TEXT NOT NULL,
-    email TEXT NOT NULL,
-    message TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'pending',
-    reason TEXT NOT NULL DEFAULT '',
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
-  )`).run();
   // Idempotent migration (must run BEFORE access_messages exists with an FK
   // on access_requests — SQLite rewrites dependent FKs on DROP COLUMN and
   // would otherwise poison access_messages with a dangling reference).
@@ -70,22 +92,22 @@ export function initAccessTables(): void {
   // CREATE TABLE IF NOT EXISTS won't fix existing DBs, and inserts without
   // token_hash then fail with SQLITE_CONSTRAINT_NOTNULL.
   try {
-    const cols = d.query("PRAGMA table_info(access_requests)").all() as { name: string }[];
+    const cols = await d.all<{ name: string }>("PRAGMA table_info(access_requests)");
     if (cols.some((c) => c.name === "token_hash")) {
       try {
-        d.query("PRAGMA foreign_keys=OFF").run();
+        await d.exec("PRAGMA foreign_keys=OFF");
         try {
-          d.query("ALTER TABLE access_requests DROP COLUMN token_hash").run();
+          await d.exec("ALTER TABLE access_requests DROP COLUMN token_hash");
         } catch {
           // SQLite builds without DROP COLUMN support: rebuild table.
-          d.query("ALTER TABLE access_requests RENAME TO access_requests_old").run();
-          d.query(createRequests).run();
-          d.query(`INSERT INTO access_requests (id, username, email, message, status, reason, created_at, updated_at)
-            SELECT id, username, email, message, status, reason, created_at, updated_at FROM access_requests_old`).run();
-          d.query("DROP TABLE access_requests_old").run();
+          await d.exec("ALTER TABLE access_requests RENAME TO access_requests_old");
+          await d.exec(createRequests);
+          await d.exec(`INSERT INTO access_requests (id, username, email, message, status, reason, created_at, updated_at)
+            SELECT id, username, email, message, status, reason, created_at, updated_at FROM access_requests_old`);
+          await d.exec("DROP TABLE access_requests_old");
         }
       } finally {
-        d.query("PRAGMA foreign_keys=ON").run();
+        await d.exec("PRAGMA foreign_keys=ON");
       }
     }
   } catch {
@@ -95,39 +117,30 @@ export function initAccessTables(): void {
   // created before the DROP COLUMN), leaving access_messages with
   // REFERENCES "access_requests_old". Rebuild it with the correct FK.
   try {
-    const row = d.query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'access_messages'").get() as { sql: string } | null;
+    const row = await d.get<{ sql: string }>("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'access_messages'");
     if (row?.sql?.includes("access_requests_old")) {
-      d.query("PRAGMA foreign_keys=OFF").run();
+      await d.exec("PRAGMA foreign_keys=OFF");
       try {
-        d.query("DROP TABLE IF EXISTS access_messages_old").run();
-        d.query("ALTER TABLE access_messages RENAME TO access_messages_old").run();
-        d.query(createMessages).run();
-        d.query(`INSERT INTO access_messages (id, request_id, author, body, created_at)
-          SELECT id, request_id, author, body, created_at FROM access_messages_old`).run();
-        d.query("DROP TABLE access_messages_old").run();
+        await d.exec("DROP TABLE IF EXISTS access_messages_old");
+        await d.exec("ALTER TABLE access_messages RENAME TO access_messages_old");
+        await d.exec(createMessages);
+        await d.exec(`INSERT INTO access_messages (id, request_id, author, body, created_at)
+          SELECT id, request_id, author, body, created_at FROM access_messages_old`);
+        await d.exec("DROP TABLE access_messages_old");
       } finally {
-        d.query("PRAGMA foreign_keys=ON").run();
+        await d.exec("PRAGMA foreign_keys=ON");
       }
     }
   } catch {
     // Leave schema as-is; errors will surface on write.
   }
-  d.query(`CREATE TABLE IF NOT EXISTS access_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    request_id TEXT NOT NULL REFERENCES access_requests(id) ON DELETE CASCADE,
-    author TEXT NOT NULL,
-    body TEXT NOT NULL,
-    created_at INTEGER NOT NULL
-  )`).run();
-  d.query(`CREATE INDEX IF NOT EXISTS idx_access_requests_status ON access_requests(status, updated_at DESC)`).run();
-  d.query(`CREATE INDEX IF NOT EXISTS idx_access_messages_req ON access_messages(request_id, id)`).run();
 }
 
-export function createAccessRequest(opts: {
+export async function createAccessRequest(opts: {
   username: string;
   email: string;
   message: string;
-}): AccessRequest {
+}): Promise<AccessRequest> {
   const now = Date.now();
   const row: AccessRequest = {
     id: randomUUID(),
@@ -139,43 +152,47 @@ export function createAccessRequest(opts: {
     created_at: now,
     updated_at: now,
   };
-  getDb().query(
+  await db().run(
     "INSERT INTO access_requests (id, username, email, message, status, reason, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-  ).run(row.id, row.username, row.email, row.message, row.status, row.reason, row.created_at, row.updated_at);
+    row.id, row.username, row.email, row.message, row.status, row.reason, row.created_at, row.updated_at,
+  );
   return row;
 }
 
-export function getAccessRequest(id: string): AccessRequest | null {
-  return getDb().query("SELECT * FROM access_requests WHERE id = ?").get(id) as AccessRequest | null;
+export async function getAccessRequest(id: string): Promise<AccessRequest | null> {
+  return db().get<AccessRequest>("SELECT * FROM access_requests WHERE id = ?", id);
 }
 
 /** Open (non-terminal) request already reserving this username or email. */
-export function findOpenAccessRequest(username: string, email: string): AccessRequest | null {
-  return getDb().query(
+export async function findOpenAccessRequest(username: string, email: string): Promise<AccessRequest | null> {
+  return db().get<AccessRequest>(
     "SELECT * FROM access_requests WHERE status IN ('pending','reviewing') AND (username = ? OR email = ?) ORDER BY created_at DESC LIMIT 1",
-  ).get(username, email) as AccessRequest | null;
+    username, email,
+  );
 }
 
-export function listAccessRequests(): (AccessRequest & { message_count: number })[] {
-  return getDb().query(
+export async function listAccessRequests(): Promise<(AccessRequest & { message_count: number })[]> {
+  return db().all<AccessRequest & { message_count: number }>(
     `SELECT r.*, (SELECT COUNT(*) FROM access_messages m WHERE m.request_id = r.id) AS message_count
      FROM access_requests r ORDER BY r.updated_at DESC`,
-  ).all() as (AccessRequest & { message_count: number })[];
+  );
 }
 
-export function setAccessStatus(id: string, status: AccessStatus, reason: string): AccessRequest | null {
-  getDb().query("UPDATE access_requests SET status = ?, reason = ?, updated_at = ? WHERE id = ?").run(status, reason, Date.now(), id);
+export async function setAccessStatus(id: string, status: AccessStatus, reason: string): Promise<AccessRequest | null> {
+  await db().run("UPDATE access_requests SET status = ?, reason = ?, updated_at = ? WHERE id = ?", status, reason, Date.now(), id);
   return getAccessRequest(id);
 }
 
-export function listAccessMessages(requestId: string): AccessMessage[] {
-  return getDb().query("SELECT * FROM access_messages WHERE request_id = ? ORDER BY id ASC").all(requestId) as AccessMessage[];
+export async function listAccessMessages(requestId: string): Promise<AccessMessage[]> {
+  return db().all<AccessMessage>("SELECT * FROM access_messages WHERE request_id = ? ORDER BY id ASC", requestId);
 }
 
-export function addAccessMessage(requestId: string, author: "user" | "admin", body: string): AccessMessage {
+export async function addAccessMessage(requestId: string, author: "user" | "admin", body: string): Promise<AccessMessage> {
   const now = Date.now();
-  getDb().query("INSERT INTO access_messages (request_id, author, body, created_at) VALUES (?, ?, ?, ?)").run(requestId, author, body, now);
-  getDb().query("UPDATE access_requests SET updated_at = ? WHERE id = ?").run(now, requestId);
-  const id = (getDb().query("SELECT last_insert_rowid() AS id").get() as { id: number }).id;
+  const id = await db().insertReturningId(
+    "INSERT INTO access_messages (request_id, author, body, created_at) VALUES (?, ?, ?, ?)",
+    requestId, author, body, now,
+  );
+  await db().run("UPDATE access_requests SET updated_at = ? WHERE id = ?", now, requestId);
   return { id, request_id: requestId, author, body, created_at: now };
 }
