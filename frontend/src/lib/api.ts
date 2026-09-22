@@ -188,9 +188,9 @@ export const api = {
   adminPatch: (id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
 
-  adminGetSettings: () => req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings"),
-  adminPatchSettings: (patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean }) =>
-    req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean } }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
+  adminGetSettings: () => req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean; reportsEnabled: boolean } }>("/api/admin/settings"),
+  adminPatchSettings: (patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean; reportsEnabled?: boolean }) =>
+    req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean; reportsEnabled: boolean } }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
 
   /** Admin: SMTP credentials viewer (password included, blur it by default) + connectivity. */
   adminMailStatus: () =>
@@ -328,7 +328,7 @@ export const api = {
   deleteProvider: (provider: string) =>
     req<{ providers: UserProvider[] }>(`/api/me/providers/${provider}`, { method: "DELETE" }),
 
-  tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[] }>("/api/tools"),
+  tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[]; reportsEnabled: boolean }>("/api/tools"),
 
   /** Send an image to the platform OCR tool. Returns editable text (never the raw image). */
   ocrImage: async (file: File): Promise<{ text: string; truncated: boolean; chars: number }> => {

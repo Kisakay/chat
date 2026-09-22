@@ -114,6 +114,7 @@ export function App() {
   const [filePreview, setFilePreview] = useState<FilePreview | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [ocrAvailable, setOcrAvailable] = useState(false);
+  const [reportsEnabled, setReportsEnabled] = useState(true);
   // Model-error retry: which trailing message is the error bubble (if any),
   // its conversation, and how many times this prompt was already retried.
   const [failed, setFailed] = useState<{ index: number; convId: string } | null>(null);
@@ -183,9 +184,11 @@ export function App() {
             .tools()
             .catch(() => ({
               tools: [] as { name: string; available: boolean }[],
+              reportsEnabled: true,
             })),
         ]);
         setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available));
+        setReportsEnabled(t.reportsEnabled ?? true);
         setModels(m.models);
         if (m.models.length > 0) setModel(m.models[0]!.id);
         setConvs(c.conversations);
@@ -306,9 +309,10 @@ export function App() {
       .catch(() => {});
     api
       .tools()
-      .then((t) =>
-        setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available)),
-      )
+      .then((t) => {
+        setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available));
+        setReportsEnabled(t.reportsEnabled ?? true);
+      })
       .catch(() => {});
     // Land directly on the latest conversation's own URL.
     refreshConvs().then((id) => {
@@ -681,6 +685,7 @@ export function App() {
         attachments={attachments}
         attachError={attachError}
         ocrAvailable={ocrAvailable}
+        reportsEnabled={reportsEnabled}
         onRemoveAttachment={(id) =>
           setAttachments((prev) => prev.filter((a) => a.id !== id))
         }

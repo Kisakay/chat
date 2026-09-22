@@ -339,6 +339,9 @@ const en = {
   "center.ocrTitle": "OCR tool",
   "center.ocrDesc":
     "Server-side image transcription for attachments. Requires the tesseract binary.",
+  "center.reportsTitle": "Message reports",
+  "center.reportsDesc":
+    "Flag button under assistant responses. Off = the flag turns grey with a “Report disabled” tooltip and new reports are rejected.",
   "center.mailTitle": "Key recovery emails",
   "center.mailChecking": "Checking…",
   "center.mailFrom": "Enabled — sent from {from}",
@@ -479,6 +482,7 @@ const en = {
   "msg.copy": "Copy message",
   "msg.search": "Search the web",
   "msg.report": "Report response",
+  "msg.reportDisabled": "Report disabled",
   "msg.retry": "Retry",
 
   "report.title": "Report this response",
@@ -900,6 +904,9 @@ const es: Dict = {
   "center.ocrTitle": "Herramienta OCR",
   "center.ocrDesc":
     "Transcripción de imágenes en el servidor. Requiere tesseract.",
+  "center.reportsTitle": "Denuncias de mensajes",
+  "center.reportsDesc":
+    "Botón de bandera bajo las respuestas. Off = bandera gris con aviso y se rechazan nuevas denuncias.",
   "center.mailTitle": "Emails de recuperación",
   "center.mailChecking": "Verificando…",
   "center.mailFrom": "Activado — enviados desde {from}",
@@ -1039,6 +1046,7 @@ const es: Dict = {
   "msg.copy": "Copiar mensaje",
   "msg.search": "Buscar en la web",
   "msg.report": "Denunciar respuesta",
+  "msg.reportDisabled": "Denuncias desactivadas",
   "msg.retry": "Reintentar",
   "report.title": "Denunciar esta respuesta",
   "report.reason": "Motivo",
@@ -1455,6 +1463,9 @@ const fr: Dict = {
     "Affiche Demander l'accès au login. Réservez un pseudo, plaidez votre cas ; tri dans l'onglet Accès.",
   "center.ocrTitle": "Outil OCR",
   "center.ocrDesc": "Transcription d'images côté serveur. Requiert tesseract.",
+  "center.reportsTitle": "Signalements de messages",
+  "center.reportsDesc":
+    "Bouton drapeau sous les réponses. Off = drapeau grisé avec infobulle et nouveaux signalements refusés.",
   "center.mailTitle": "Emails de récupération",
   "center.mailChecking": "Vérification…",
   "center.mailFrom": "Activé — envoyés depuis {from}",
@@ -1594,6 +1605,7 @@ const fr: Dict = {
   "msg.copy": "Copier le message",
   "msg.search": "Rechercher sur le web",
   "msg.report": "Signaler la réponse",
+  "msg.reportDisabled": "Signalements désactivés",
   "msg.retry": "Réessayer",
   "report.title": "Signaler cette réponse",
   "report.reason": "Motif",
@@ -2001,6 +2013,9 @@ const ru: Dict = {
     "Кнопка доступа на входе. Гости просят имя; разбор во вкладке.",
   "center.ocrTitle": "Инструмент OCR",
   "center.ocrDesc": "Распознавание картинок на сервере. Нужен tesseract.",
+  "center.reportsTitle": "Жалобы на сообщения",
+  "center.reportsDesc":
+    "Кнопка-флажок под ответами. Выкл = серый флажок с подсказкой, новые жалобы отклоняются.",
   "center.mailTitle": "Письма восстановления",
   "center.mailChecking": "Проверяем…",
   "center.mailFrom": "Включено — шлём от {from}",
@@ -2137,6 +2152,7 @@ const ru: Dict = {
   "msg.copy": "Скопировать сообщение",
   "msg.search": "Искать в интернете",
   "msg.report": "Пожаловаться на ответ",
+  "msg.reportDisabled": "Жалобы отключены",
   "msg.retry": "Повторить",
   "report.title": "Пожаловаться на этот ответ",
   "report.reason": "Причина",
@@ -2547,6 +2563,9 @@ const it: Dict = {
     "Mostra Richiedi accesso al login. Valuta nella scheda Accesso.",
   "center.ocrTitle": "Strumento OCR",
   "center.ocrDesc": "Trascrizione immagini sul server. Serve tesseract.",
+  "center.reportsTitle": "Segnalazioni messaggi",
+  "center.reportsDesc":
+    "Bandierina sotto le risposte. Off = bandierina grigia con tooltip e nuove segnalazioni rifiutate.",
   "center.mailTitle": "Email di recupero",
   "center.mailChecking": "Verifica…",
   "center.mailFrom": "Attivo — inviate da {from}",
@@ -2685,6 +2704,7 @@ const it: Dict = {
   "msg.copy": "Copia messaggio",
   "msg.search": "Cerca nel web",
   "msg.report": "Segnala risposta",
+  "msg.reportDisabled": "Segnalazioni disabilitate",
   "msg.retry": "Riprova",
   "report.title": "Segnala questa risposta",
   "report.reason": "Motivo",
@@ -3088,6 +3108,9 @@ const pt: Dict = {
   "center.accDescOff": "Mostra Pedir acesso no login. Triagem na aba Acesso.",
   "center.ocrTitle": "Ferramenta OCR",
   "center.ocrDesc": "Transcrição no servidor. Precisa tesseract.",
+  "center.reportsTitle": "Denúncias de mensagens",
+  "center.reportsDesc":
+    "Bandeira sob as respostas. Off = bandeira cinzenta com aviso e novas denúncias recusadas.",
   "center.mailTitle": "Emails de recuperação",
   "center.mailChecking": "A verificar…",
   "center.mailFrom": "Ativo — enviados de {from}",
@@ -3224,6 +3247,7 @@ const pt: Dict = {
   "msg.copy": "Copiar mensagem",
   "msg.search": "Pesquisar na web",
   "msg.report": "Denunciar resposta",
+  "msg.reportDisabled": "Denúncias desativadas",
   "msg.retry": "Tentar novamente",
   "report.title": "Denunciar esta resposta",
   "report.reason": "Motivo",

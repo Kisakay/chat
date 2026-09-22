@@ -24,7 +24,7 @@ export function AdminCenter() {
   const { t } = useT();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [tab, setTab] = useState<Tab>("accounts");
-  const [settings, setSettings] = useState<{ registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean } | null>(null);
+  const [settings, setSettings] = useState<{ registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean; reportsEnabled: boolean } | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [openAccessCount, setOpenAccessCount] = useState(0);
@@ -100,7 +100,7 @@ export function AdminCenter() {
     });
   }, [allowed]);
 
-  async function toggle(patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean }) {
+  async function toggle(patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean; reportsEnabled?: boolean }) {
     setSaving(true);
     setError("");
     try {
@@ -243,6 +243,13 @@ export function AdminCenter() {
                 <p className="text-sm opacity-60">{t("center.ocrDesc")}</p>
               </div>
               <Switch label={t("center.ocrTitle")} checked={settings?.ocrEnabled ?? false} onChange={(v) => toggle({ ocrEnabled: v })} />
+            </div>
+            <div className="flex items-center gap-4 rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{t("center.reportsTitle")}</p>
+                <p className="text-sm opacity-60">{t("center.reportsDesc")}</p>
+              </div>
+              <Switch label={t("center.reportsTitle")} checked={settings?.reportsEnabled ?? false} onChange={(v) => toggle({ reportsEnabled: v })} />
             </div>
             {saving && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("common.saving")}</p>}
             {!settings && !error && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("common.loading")}</p>}

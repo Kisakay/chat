@@ -11,7 +11,7 @@ import { useT, type StringKey } from "../lib/i18n.ts";
 
 const REPORT_REASONS: ReportReason[] = ["copyright", "gore", "falseinfo", "bug"];
 
-function MessageBubble({ msg, index, authorAvatar, authorName, onReport, isFailed, retryCount, maxRetries, retryDisabled, onRetry }: { msg: ChatMessage; index: number; authorAvatar?: string; authorName: string; onReport?: (index: number) => void; isFailed?: boolean; retryCount?: number; maxRetries?: number; retryDisabled?: boolean; onRetry?: () => void }) {
+function MessageBubble({ msg, index, authorAvatar, authorName, onReport, reportsEnabled = true, isFailed, retryCount, maxRetries, retryDisabled, onRetry }: { msg: ChatMessage; index: number; authorAvatar?: string; authorName: string; onReport?: (index: number) => void; reportsEnabled?: boolean; isFailed?: boolean; retryCount?: number; maxRetries?: number; retryDisabled?: boolean; onRetry?: () => void }) {
   const { t } = useT();
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
@@ -53,7 +53,11 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport, isFaile
                 <IconButton title={t("msg.search")} onClick={searchWeb}>
                   <Search size={14} />
                 </IconButton>
-                <IconButton title={t("msg.report")} onClick={() => onReport(index)}>
+                <IconButton
+                  title={reportsEnabled ? t("msg.report") : t("msg.reportDisabled")}
+                  onClick={() => onReport(index)}
+                  disabled={!reportsEnabled}
+                >
                   <Flag size={14} />
                 </IconButton>
               </>
@@ -194,6 +198,7 @@ export function Chat({
   attachments,
   attachError,
   ocrAvailable,
+  reportsEnabled = true,
   onRemoveAttachment,
   onPickFile,
   failedIndex,
@@ -220,6 +225,7 @@ export function Chat({
   attachments: Attachment[];
   attachError: string | null;
   ocrAvailable: boolean;
+  reportsEnabled?: boolean;
   onRemoveAttachment: (id: string) => void;
   onPickFile: (kind: "ocr" | "text", file: File) => void;
   /** Trailing model-error bubble index (retry arrow), if any. */
@@ -323,7 +329,7 @@ export function Chat({
             </div>
           )}
           {messages.filter((m) => m.role !== "system").map((m, i) => (
-            <MessageBubble key={i} msg={m} index={i} authorAvatar={user.avatarUrl} authorName={user.displayName} onReport={readOnly ? undefined : setReportIndex} isFailed={failedIndex === i} retryCount={retryCount} maxRetries={maxRetries} retryDisabled={sending} onRetry={failedIndex === i && retryCount < maxRetries ? onRetry : undefined} />
+            <MessageBubble key={i} msg={m} index={i} authorAvatar={user.avatarUrl} authorName={user.displayName} onReport={readOnly ? undefined : setReportIndex} reportsEnabled={reportsEnabled} isFailed={failedIndex === i} retryCount={retryCount} maxRetries={maxRetries} retryDisabled={sending} onRetry={failedIndex === i && retryCount < maxRetries ? onRetry : undefined} />
           ))}
           {streaming !== "" && (
             <div className="flex gap-2 sm:gap-3">

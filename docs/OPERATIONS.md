@@ -71,6 +71,9 @@ connectivity tester: `GET /api/admin/mail`, `POST /api/admin/mail/verify`,
   login page (wishlist). Only switchable on while public registration is off —
   the two are mutually exclusive (API answers 409 otherwise).
 - `tools_ocr_enabled` (default on): admin kill-switch for the OCR tool.
+- `reports_enabled` (default on): admin kill-switch for message reports —
+  the chat flag button turns grey with a "Report disabled" tooltip and
+  `POST /api/reports` answers 403. Surfaced to clients via `GET /api/tools`.
 - Flags live in the `settings` SQLite table, edited via
   `GET/PATCH /api/admin/settings` (admin Bearer only).
 

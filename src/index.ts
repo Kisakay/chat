@@ -33,6 +33,7 @@ import {
   getUserById,
   getUserByUsername,
   isRegistrationEnabled,
+  isReportsEnabled,
   listConversations,
   listArchivedConversations,
   listUsers,
@@ -831,6 +832,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             registrationEnabled: isRegistrationEnabled(),
             accessRequestEnabled: getSetting("registration_request_enabled", "1") === "1",
             ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
+            reportsEnabled: isReportsEnabled(),
           },
         });
       }
@@ -858,11 +860,16 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (typeof body.ocrEnabled !== "boolean") return json({ error: "ocrEnabled must be boolean" }, 400);
           setSetting("tools_ocr_enabled", body.ocrEnabled ? "1" : "0");
         }
+        if (body.reportsEnabled !== undefined) {
+          if (typeof body.reportsEnabled !== "boolean") return json({ error: "reportsEnabled must be boolean" }, 400);
+          setSetting("reports_enabled", body.reportsEnabled ? "1" : "0");
+        }
         return json({
           settings: {
             registrationEnabled: isRegistrationEnabled(),
             accessRequestEnabled: getSetting("registration_request_enabled", "1") === "1",
             ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
+            reportsEnabled: isReportsEnabled(),
           },
         });
       }
@@ -1010,6 +1017,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
       // --- content reports (flagged AI responses) ---
       if (path === "/api/reports" && req.method === "POST") {
+        if (!isReportsEnabled()) return json({ error: "reports are disabled" }, 403);
         const { ok, body } = await readJson(req);
         if (!ok) return json({ error: "invalid JSON" }, 400);
         const reason = body.reason as ReportReason | undefined;
@@ -1352,7 +1360,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
       // --- platform tools (uploads always go through tools) ---
       if (path === "/api/tools" && req.method === "GET") {
-        return json({ tools: tools.list() });
+        return json({ tools: tools.list(), reportsEnabled: isReportsEnabled() });
       }
 
       if (path === "/api/tools/ocr" && req.method === "POST") {

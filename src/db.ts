@@ -389,6 +389,11 @@ export function isOcrToolEnabled(): boolean {
   return getSetting("tools_ocr_enabled", "1") === "1";
 }
 
+/** Admin kill-switch for message reports / flag button (default on). */
+export function isReportsEnabled(): boolean {
+  return getSetting("reports_enabled", "1") === "1";
+}
+
 // --- public shares ---
 
 export function ensureShare(convId: string): string {
