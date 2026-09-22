@@ -439,7 +439,18 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
     e.preventDefault();
     if (!user) return;
     try {
-      await api.adminPatch(user.id, { username: username.trim().toLowerCase(), displayName: displayName.trim(), avatarUrl: avatarUrl.trim(), email: email.trim(), theme });
+      const patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
+      const normalizedUsername = username.trim().toLowerCase();
+      if (normalizedUsername !== (user.username ?? "").toLowerCase()) patch.username = normalizedUsername;
+      if (displayName.trim() !== (user.displayName ?? "")) patch.displayName = displayName.trim();
+      if (avatarUrl.trim() !== (user.avatarUrl ?? "")) patch.avatarUrl = avatarUrl.trim();
+      if (email.trim() !== (user.email ?? "")) patch.email = email.trim();
+      if (theme !== (user.theme ?? "auto")) patch.theme = theme;
+      if (Object.keys(patch).length === 0) {
+        onClose();
+        return;
+      }
+      await api.adminPatch(user.id, patch);
       onSaved();
       onClose();
     } catch (err) {

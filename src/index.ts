@@ -628,13 +628,19 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         if (!ok) return json({ error: "invalid JSON" }, 400);
         const patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
         if (body.username !== undefined) {
-          if (user.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
-          if (!await isUsernameChangeEnabled()) return json({ error: "username changes are disabled" }, 403);
-          const u = validUsername(body.username);
-          if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
-          const taken = await getUserByUsername(u);
-          if (taken && taken.id !== user.id) return json({ error: "username taken" }, 409);
-          patch.username = u;
+          // No-op when unchanged (settings forms send the whole profile):
+          // don't fail the entire save for the admin account when the
+          // username field just echoes the current value.
+          const raw = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
+          if (raw !== user.username) {
+            if (user.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
+            if (!await isUsernameChangeEnabled()) return json({ error: "username changes are disabled" }, 403);
+            const u = validUsername(body.username);
+            if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
+            const taken = await getUserByUsername(u);
+            if (taken && taken.id !== user.id) return json({ error: "username taken" }, 409);
+            patch.username = u;
+          }
         }
         if (body.displayName !== undefined) {
           const d = cleanStr(body.displayName, 60);
@@ -813,12 +819,15 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (!ok) return json({ error: "invalid JSON" }, 400);
           const patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
           if (body.username !== undefined) {
-            if (target.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
-            const u = validUsername(body.username);
-            if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
-            const taken = await getUserByUsername(u);
-            if (taken && taken.id !== target.id) return json({ error: "username taken" }, 409);
-            patch.username = u;
+            const raw = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
+            if (raw !== target.username) {
+              if (target.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
+              const u = validUsername(body.username);
+              if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
+              const taken = await getUserByUsername(u);
+              if (taken && taken.id !== target.id) return json({ error: "username taken" }, 409);
+              patch.username = u;
+            }
           }
           if (body.displayName !== undefined) {
             const d = cleanStr(body.displayName, 60);

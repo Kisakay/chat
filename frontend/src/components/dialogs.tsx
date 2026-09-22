@@ -388,7 +388,21 @@ export function SettingsModal({
         }
         discardStaged();
       }
-      const res = await api.updateMe({ username: username.trim().toLowerCase(), displayName: displayName.trim(), avatarUrl: url, email: email.trim(), theme });
+      const normalizedUsername = username.trim().toLowerCase();
+      // Only send fields that actually changed: this isolates a
+      // username error (e.g. admin rename guard) from the rest of the
+      // profile so one rejected field can't block the whole save.
+      const patch: { username?: string; displayName?: string; avatarUrl?: string; email?: string; theme?: string } = {};
+      if (normalizedUsername !== (user.username ?? "").toLowerCase()) patch.username = normalizedUsername;
+      if (displayName.trim() !== (user.displayName ?? "")) patch.displayName = displayName.trim();
+      if (url !== (user.avatarUrl ?? "")) patch.avatarUrl = url;
+      if (email.trim() !== (user.email ?? "")) patch.email = email.trim();
+      if (theme !== (user.theme ?? "auto")) patch.theme = theme;
+      if (Object.keys(patch).length === 0) {
+        onClose();
+        return;
+      }
+      const res = await api.updateMe(patch);
       onSaved(res.user);
       onClose();
     } catch (err) {
