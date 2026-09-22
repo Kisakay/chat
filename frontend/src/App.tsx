@@ -95,6 +95,12 @@ export function App() {
   useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+  // Id of the conversation currently receiving a streamed reply (null when
+  // idle). Set synchronously before any state update in send()/retryFailed
+  // so the route/message effects below never clobber a conversation that is
+  // being created or written to: the URL stays bare /chat until we navigate
+  // explicitly, and the server message list is still empty while streaming.
+  const sendingForRef = useRef<string | null>(null);
   // True once the conversation list was fetched at least once (so an
   // unknown /chat/<id> can be bounced instead of flashing empty).
   const [convsReady, setConvsReady] = useState(false);
@@ -241,10 +247,15 @@ export function App() {
   // Browser back/forward (or manual URL edit): the URL is the source of
   // truth for the selected conversation. Own navigations are no-ops here
   // (state already matches), so this never fights the handlers below.
+  // Exception: while the first reply of a new chat is being created/sent,
+  // the URL is still bare /chat but the selection already points at the new
+  // id — adopting the bare URL would drop the selection and the next
+  // follow-up would fork a brand new conversation.
   useEffect(() => {
     if (!user || checking || !isChatPath(path)) return;
     const id = chatIdFromPath(path);
     if (id === activeId) return;
+    if (id === null && sending && sendingForRef.current !== null && activeId === sendingForRef.current) return;
     // Back to bare /chat (id null): empty composer, unless an archived
     // chat is being viewed — archived views always live on bare /chat.
     if (id !== null || !archivedConv) {
@@ -252,14 +263,19 @@ export function App() {
       setActiveId(id);
       setMobileNav(false);
     }
-  }, [path, user, checking, activeId, archivedConv]);
+  }, [path, user, checking, activeId, archivedConv, sending]);
 
   // Unknown /chat/<id> (deleted elsewhere, typo): bounce to /chat once
   // the list is loaded. Archived views always live on bare /chat.
+  // Exception: a freshly created id may reach the URL before the sidebar
+  // list refresh caught up — never bounce the conversation being sent to.
   useEffect(() => {
     if (!user || checking || !convsReady || !isChatPath(path)) return;
     const id = chatIdFromPath(path);
-    if (id && !convs.some((c) => c.id === id)) navigate("/chat", true);
+    if (id && !convs.some((c) => c.id === id)) {
+      if (sendingForRef.current === id) return;
+      navigate("/chat", true);
+    }
   }, [path, user, checking, convsReady, convs]);
 
   // Load messages for active conversation
@@ -270,6 +286,10 @@ export function App() {
       setMessages([]);
       return;
     }
+    // The conversation being sent to owns its optimistic messages until the
+    // stream lands — the server list is still empty mid-flight, so a refetch
+    // here would blank the fresh exchange (displayed as a recreated chat).
+    if (sendingForRef.current === activeId) return;
     api
       .getConv(activeId)
       .then((res) => setMessages(res.messages))
@@ -366,11 +386,20 @@ export function App() {
       try {
         const res = await api.createConv({ model });
         convId = res.conversation.id;
+        // Claim the new conversation synchronously (before any awaited
+        // render): the URL is still bare /chat while the selection already
+        // points at the new id, and sendingForRef shields both until the
+        // stream lands. Then refresh the list and move the URL to /chat/<id>.
+        sendingForRef.current = convId;
+        setActiveId(convId);
         await refreshConvs(convId);
         navigate(`/chat/${convId}`);
       } catch (err) {
+        sendingForRef.current = null;
         return;
       }
+    } else {
+      sendingForRef.current = convId;
     }
     const userMsg: ChatMessage = { role: "user", content: text };
     // Attachments travel as reviewed text blocks appended to the message.
@@ -392,17 +421,28 @@ export function App() {
     setStreaming("");
     try {
       const full = await streamReply(history, convId!);
-      setMessages([...history, { role: "assistant", content: full }]);
+      // Only apply to the conversation still on screen: if the user
+      // switched chats mid-stream, the reply is already persisted
+      // server-side and the other view reloads it on selection.
+      if (activeIdRef.current === convId) {
+        setMessages([...history, { role: "assistant", content: full }]);
+      }
       setStreaming("");
-      await refreshConvs();
+      // Explicit select: never let the post-stream refresh drift the
+      // selection (or the URL) away from this conversation.
+      await refreshConvs(convId!);
+      if (activeIdRef.current === convId) navigate(`/chat/${convId}`);
     } catch {
-      setMessages([
-        ...history,
-        { role: "assistant", content: t("attach.chatError") },
-      ]);
-      setFailed({ index: history.length, convId: convId! });
+      if (activeIdRef.current === convId) {
+        setMessages([
+          ...history,
+          { role: "assistant", content: t("attach.chatError") },
+        ]);
+        setFailed({ index: history.length, convId: convId! });
+      }
       setStreaming("");
     } finally {
+      if (sendingForRef.current === convId) sendingForRef.current = null;
       setSending(false);
     }
   }
@@ -416,6 +456,7 @@ export function App() {
     if (sending || !failed || retryCount >= MAX_RETRIES || !model || archivedConv) return;
     const history = messages.slice(0, failed.index);
     const convId = failed.convId;
+    sendingForRef.current = convId;
     setMessages(history);
     setFailed(null);
     setRetryCount((c) => c + 1);
@@ -423,17 +464,23 @@ export function App() {
     setStreaming("");
     try {
       const full = await streamReply(history, convId);
-      setMessages([...history, { role: "assistant", content: full }]);
+      if (activeIdRef.current === convId) {
+        setMessages([...history, { role: "assistant", content: full }]);
+      }
       setRetryCount(0);
-      await refreshConvs();
+      await refreshConvs(convId);
+      if (activeIdRef.current === convId) navigate(`/chat/${convId}`);
     } catch {
-      setMessages([
-        ...history,
-        { role: "assistant", content: t("attach.chatError") },
-      ]);
-      setFailed({ index: history.length, convId });
+      if (activeIdRef.current === convId) {
+        setMessages([
+          ...history,
+          { role: "assistant", content: t("attach.chatError") },
+        ]);
+        setFailed({ index: history.length, convId });
+      }
       setStreaming("");
     } finally {
+      if (sendingForRef.current === convId) sendingForRef.current = null;
       setSending(false);
     }
   }
