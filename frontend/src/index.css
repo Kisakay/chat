@@ -171,8 +171,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .flower-petal, .flower-petal-inner, .flower-core, .loading-dots::after, .loading-enter, .typing-cursor::after,
-  .loader-title {
+  /* Brand flower intentionally exempt: it always animates, even when the
+     browser requests reduced motion (battery saver / eco mode). */
+  .typing-cursor::after,
+  .loading-dots::after {
     animation: none;
   }
 }
