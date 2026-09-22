@@ -162,7 +162,7 @@ export function AdminCenter() {
                   <span
                     role="status"
                     aria-label={`${t.label}: ${openAccessCount}`}
-                    className="absolute -right-0.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[11px] font-bold leading-5 text-white shadow"
+                    className="absolute -right-0.5 -top-0.5 z-10 grid min-h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-4 text-white shadow"
                   >
                     {openAccessCount > 99 ? "99+" : openAccessCount}
                   </span>
@@ -171,7 +171,7 @@ export function AdminCenter() {
                   <span
                     role="status"
                     aria-label={`${t.label}: ${openReportCount}`}
-                    className="absolute -right-0.5 -top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[11px] font-bold leading-5 text-white shadow"
+                    className="absolute -right-0.5 -top-0.5 z-10 grid min-h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-4 text-white shadow"
                   >
                     {openReportCount > 99 ? "99+" : openReportCount}
                   </span>

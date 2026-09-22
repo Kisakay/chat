@@ -867,7 +867,51 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         });
       }
 
-      // --- admin: Ollama model management (pull from the library, delete) ---
+      // --- admin: Ollama model management (connectivity probe, pull from the library, delete) ---
+      // Connectivity probe: is the Ollama host reachable, which version,
+      // and what sits on its disk (name + bytes + modification time).
+      // Always 200 for admins (reachability is data, not an error code).
+      if (path === "/api/admin/ollama/status" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const host = ollamaDriver.host;
+        if (!ollamaDriver.enabled) {
+          return json({ enabled: false, host, reachable: false, version: null, latencyMs: null, models: [], error: "ollama driver is disabled" });
+        }
+        const t0 = Date.now();
+        try {
+          const verRes = await fetch(`${host}/api/version`, { signal: AbortSignal.timeout(8000) });
+          if (!verRes.ok) {
+            return json({ enabled: true, host, reachable: false, version: null, latencyMs: Date.now() - t0, models: [], error: `ollama /api/version failed: ${verRes.status}` });
+          }
+          const ver = (await verRes.json().catch(() => ({}))) as { version?: unknown };
+          const tagsRes = await fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(8000) });
+          if (!tagsRes.ok) {
+            return json({ enabled: true, host, reachable: false, version: typeof ver.version === "string" ? ver.version : null, latencyMs: Date.now() - t0, models: [], error: `ollama /api/tags failed: ${tagsRes.status}` });
+          }
+          const tags = (await tagsRes.json().catch(() => ({}))) as { models?: { name?: unknown; size?: unknown; modified_at?: unknown }[] };
+          const models = Array.isArray(tags.models)
+            ? tags.models
+                .filter((m) => typeof m.name === "string")
+                .map((m) => ({
+                  name: m.name as string,
+                  size: typeof m.size === "number" ? m.size : 0,
+                  modifiedAt: typeof m.modified_at === "string" ? (m.modified_at as string) : null,
+                }))
+            : [];
+          return json({
+            enabled: true,
+            host,
+            reachable: true,
+            version: typeof ver.version === "string" ? ver.version : null,
+            latencyMs: Date.now() - t0,
+            models,
+            error: null,
+          });
+        } catch (e) {
+          return json({ enabled: true, host, reachable: false, version: null, latencyMs: Date.now() - t0, models: [], error: (e as Error).message });
+        }
+      }
+
       // Pull streams Ollama's NDJSON progress straight to the admin client.
       if (path === "/api/admin/ollama/pull" && req.method === "POST") {
         if (!admin) return json({ error: "forbidden" }, 403);

@@ -62,6 +62,22 @@ export interface PolicyModel extends DriverModel {
   daily: number;
 }
 
+export interface OllamaHostModel {
+  name: string;
+  size: number;
+  modifiedAt: string | null;
+}
+
+export interface OllamaStatus {
+  enabled: boolean;
+  host: string;
+  reachable: boolean;
+  version: string | null;
+  latencyMs: number | null;
+  models: OllamaHostModel[];
+  error: string | null;
+}
+
 const TOKEN_KEY = "kisassistant_token";
 
 export function getToken(): string | null {
@@ -298,6 +314,9 @@ export const api = {
 
   /** Admin: delete a local Ollama model (frees disk on the Ollama host). */
   ollamaDelete: (name: string) => req<{ ok: boolean }>(`/api/admin/ollama/models/${encodeURIComponent(name)}`, { method: "DELETE" }),
+
+  /** Admin: Ollama connectivity probe (reachability, version, on-disk models). */
+  ollamaStatus: () => req<OllamaStatus>("/api/admin/ollama/status"),
 
   /** Personal LLM providers (BYOK): presence + last4 only, keys never leave the server. */
   providers: () => req<{ providers: UserProvider[] }>("/api/me/providers"),

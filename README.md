@@ -63,6 +63,7 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | GET | `/api/conversations/search?q=` | Bearer | search titles, topics + old prompts (with snippet) |
 | POST | `/api/admin/ollama/pull` | admin | pull a model from the Ollama library (NDJSON progress) |
 | DELETE | `/api/admin/ollama/models/:name` | admin | remove a local Ollama model |
+| GET | `/api/admin/ollama/status` | admin | Ollama connectivity probe: reachability, version, on-disk models |
 | POST | `/api/access/request` | public | reserve username+email with a motivation → ticket (`/review/:id`) |
 | GET/POST | `/api/access/ticket/:id` (+`/message`) | ticket bearer | follow + reply on an access request |
 | WS | `/api/access/ws/:id` | ticket bearer | live ticket messages + status (ping/pong heartbeat) |

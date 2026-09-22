@@ -88,6 +88,10 @@ an **Enabled** switch and **hourly / daily** per-user request caps
   toward limits even when generation later fails; over-limit answers 429.
 - Routes: `GET /api/admin/model-policy[?refresh=1]`,
   `PATCH /api/admin/model-policy` (`{model, enabled?, hourly?, daily?}`).
+  Ollama library: `POST /api/admin/ollama/pull` (NDJSON progress),
+  `DELETE /api/admin/ollama/models/:name`, and the connectivity probe
+  `GET /api/admin/ollama/status` (reachability, version, on-disk models —
+  surfaced in Admin Center → Models).
 
 ## Personal providers (BYOK)
 
