@@ -622,7 +622,15 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       if (path === "/api/me" && req.method === "PATCH") {
         const { ok, body } = await readJson(req);
         if (!ok) return json({ error: "invalid JSON" }, 400);
-        const patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
+        const patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
+        if (body.username !== undefined) {
+          if (user.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
+          const u = validUsername(body.username);
+          if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
+          const taken = getUserByUsername(u);
+          if (taken && taken.id !== user.id) return json({ error: "username taken" }, 409);
+          patch.username = u;
+        }
         if (body.displayName !== undefined) {
           const d = cleanStr(body.displayName, 60);
           if (d === null) return json({ error: "displayName: 1-60 chars" }, 400);
@@ -810,7 +818,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             patch.avatarUrl = a;
           }
           if (body.theme !== undefined) {
-          if (!validTheme(body.theme)) return json({ error: "theme must be auto|light|dark|sunset|sunset" }, 400);
+          if (!validTheme(body.theme)) return json({ error: "theme must be auto|light|dark|sunset" }, 400);
             patch.theme = body.theme;
           }
           if (body.email !== undefined) {

@@ -275,6 +275,7 @@ export function SettingsModal({
   onProvidersChanged?: () => void;
 }) {
   const { t } = useT();
+  const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [email, setEmail] = useState("");
@@ -301,7 +302,7 @@ export function SettingsModal({
   // Two-column settings: categories on the left, content on the right.
   // Searching filters the category list and jumps to the first match.
   const CATS = [
-    { id: "profile", title: t("settings.profile"), icon: UserIcon, keywords: ["profile", "avatar", "picture", "photo", "name", "display", "email", "account"] },
+    { id: "profile", title: t("settings.profile"), icon: UserIcon, keywords: ["profile", "avatar", "picture", "photo", "name", "username", "login", "display", "email", "account"] },
     { id: "appearance", title: t("settings.appearance"), icon: Palette, keywords: ["appearance", "theme", "dark", "light", "color", "colour", "accent", "palette", "language", "langue", "idioma", "lingua", "язык"] },
     { id: "features", title: t("settings.features"), icon: Sparkles, keywords: ["features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable"] },
     { id: "security", title: t("settings.security"), icon: ShieldCheck, keywords: ["security", "key", "rotate", "password", "totp", "2fa", "two", "factor", "authenticator", "passkey", "webauthn"] },
@@ -320,6 +321,7 @@ export function SettingsModal({
 
   useEffect(() => {
     if (user) {
+      setUsername(user.username);
       setDisplayName(user.displayName);
       setAvatarUrl(user.avatarUrl);
       setEmail(user.email);
@@ -384,7 +386,7 @@ export function SettingsModal({
         }
         discardStaged();
       }
-      const res = await api.updateMe({ displayName: displayName.trim(), avatarUrl: url, email: email.trim(), theme });
+      const res = await api.updateMe({ username: username.trim().toLowerCase(), displayName: displayName.trim(), avatarUrl: url, email: email.trim(), theme });
       onSaved(res.user);
       onClose();
     } catch (err) {
@@ -531,6 +533,9 @@ export function SettingsModal({
               />
               {uploadError && <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
             </div>
+            <Field label={t("settings.username")} hint={t("settings.usernameHint")}>
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={32} required autoComplete="username" disabled={user?.username === "admin"} />
+            </Field>
             <Field label={t("common.displayName")}>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required autoComplete="nickname" />
             </Field>

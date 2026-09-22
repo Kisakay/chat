@@ -187,10 +187,11 @@ export function createUser(opts: { username: string; displayName: string; avatar
   return row;
 }
 
-export function updateUser(id: string, patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string; keyHash?: string }): UserRow | null {
+export function updateUser(id: string, patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string; keyHash?: string }): UserRow | null {
   const d = getDb();
   const sets: string[] = [];
   const vals: (string | number)[] = [];
+  if (patch.username !== undefined) { sets.push("username = ?"); vals.push(patch.username); }
   if (patch.displayName !== undefined) { sets.push("display_name = ?"); vals.push(patch.displayName); }
   if (patch.avatarUrl !== undefined) { sets.push("avatar_url = ?"); vals.push(patch.avatarUrl); }
   if (patch.theme !== undefined) { sets.push("theme = ?"); vals.push(patch.theme); }
@@ -198,6 +199,10 @@ export function updateUser(id: string, patch: { displayName?: string; avatarUrl?
   if (patch.keyHash !== undefined) { sets.push("key_hash = ?"); vals.push(patch.keyHash); }
   if (sets.length > 0) {
     d.query(`UPDATE users SET ${sets.join(", ")} WHERE id = ?`).run(...vals, id);
+  }
+  if (patch.username !== undefined) {
+    // Username is denormalized onto past reports — keep the triage list consistent.
+    d.query("UPDATE reports SET reporter_name = ? WHERE reporter_id = ?").run(patch.username, id);
   }
   return getUserById(id);
 }

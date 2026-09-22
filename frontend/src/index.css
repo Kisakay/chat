@@ -31,8 +31,9 @@ html, body, #root {
 
 body {
   @apply bg-stone-100 text-stone-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
-  /* Kill the 300ms tap delay, keep gestures app-like. */
-  touch-action: manipulation;
+  /* App-like viewport: pan + scroll only — no double-tap or pinch zoom.
+     (Kills the 300ms tap delay as a side effect, keeps gestures app-like.) */
+  touch-action: pan-x pan-y;
   overscroll-behavior-y: none;
 }
 

@@ -138,7 +138,7 @@ export const api = {
   resetConsume: (token: string) => req<{ key: string }>(`/api/auth/reset/${token}`, { method: "POST" }, false),
 
   me: () => req<{ user: User }>("/api/me"),
-  updateMe: (patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
+  updateMe: (patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>("/api/me", { method: "PATCH", body: JSON.stringify(patch) }),
 
   /** Rotate your own access key (old sessions revoked, key shown once). */

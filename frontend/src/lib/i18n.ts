@@ -185,6 +185,9 @@ const en = {
   "settings.dropActive": "Drop it!",
   "settings.uploading": "Uploading…",
   "settings.avatarHint": "jpg · png · webp — max 5MB — 5 changes per 2h",
+  "settings.username": "Username",
+  "settings.usernameHint":
+    "Login name. 2–32 chars: lowercase letters, digits, . _ -. Takes effect immediately.",
   "settings.email": "Recovery email",
   "settings.emailHint":
     "Optional. Used only to send you a fresh access key if you lose it.",
@@ -751,6 +754,9 @@ const es: Dict = {
   "settings.dropActive": "¡Suéltala!",
   "settings.uploading": "Subiendo…",
   "settings.avatarHint": "jpg · png · webp — máx. 5MB — 5 cambios por 2h",
+  "settings.username": "Nombre de usuario",
+  "settings.usernameHint":
+    "Nombre de acceso. 2–32 caracteres: minúsculas, dígitos, . _ -. Efecto inmediato.",
   "settings.email": "Email de recuperación",
   "settings.emailHint":
     "Opcional. Solo para enviarte una clave nueva si la pierdes.",
@@ -1313,6 +1319,9 @@ const fr: Dict = {
   "settings.dropActive": "Lâchez !",
   "settings.uploading": "Envoi…",
   "settings.avatarHint": "jpg · png · webp — 5 Mo max — 5 changements par 2 h",
+  "settings.username": "Nom d'utilisateur",
+  "settings.usernameHint":
+    "Identifiant de connexion. 2–32 car. : minuscules, chiffres, . _ -. Effet immédiat.",
   "settings.email": "Email de récupération",
   "settings.emailHint": "Optionnel. Sert uniquement à vous renvoyer une clé.",
   "settings.accent": "Couleur d'accent",
@@ -1868,6 +1877,9 @@ const ru: Dict = {
   "settings.dropActive": "Отпускайте!",
   "settings.uploading": "Загрузка…",
   "settings.avatarHint": "jpg · png · webp — до 5 МБ — 5 смен за 2 ч",
+  "settings.username": "Имя пользователя",
+  "settings.usernameHint":
+    "Логин. 2–32 символа: строчные буквы, цифры, . _ -. Вступает в силу сразу.",
   "settings.email": "Email для восстановления",
   "settings.emailHint": "Необязательно. Только для отправки нового ключа.",
   "settings.accent": "Акцентный цвет",
@@ -2415,6 +2427,9 @@ const it: Dict = {
   "settings.dropActive": "Lascia!",
   "settings.uploading": "Caricamento…",
   "settings.avatarHint": "jpg · png · webp — max 5MB — 5 cambi per 2h",
+  "settings.username": "Nome utente",
+  "settings.usernameHint":
+    "Nome di accesso. 2–32 caratteri: minuscole, cifre, . _ -. Effetto immediato.",
   "settings.email": "Email di recupero",
   "settings.emailHint": "Opzionale. Solo per inviarti una chiave nuova.",
   "settings.accent": "Colore accento",
@@ -2966,6 +2981,9 @@ const pt: Dict = {
   "settings.dropActive": "Larga!",
   "settings.uploading": "A enviar…",
   "settings.avatarHint": "jpg · png · webp — máx. 5MB — 5 mudanças por 2h",
+  "settings.username": "Nome de utilizador",
+  "settings.usernameHint":
+    "Nome de acesso. 2–32 caracteres: minúsculas, dígitos, . _ -. Efeito imediato.",
   "settings.email": "Email de recuperação",
   "settings.emailHint": "Opcional. Só para te enviar uma chave nova.",
   "settings.accent": "Cor de destaque",
