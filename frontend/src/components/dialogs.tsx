@@ -550,6 +550,7 @@ export function SettingsModal({
                 align="left"
                 options={[
                   { value: "auto", label: t("common.themeAutoFull") },
+                  { value: "sunset", label: t("common.themeSunsetFull") },
                   { value: "light", label: t("common.light") },
                   { value: "dark", label: t("common.dark") },
                 ]}

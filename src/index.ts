@@ -183,7 +183,7 @@ function cleanOptionalStr(v: unknown, max: number): string | null {
 }
 
 function validTheme(v: unknown): v is string {
-  return v === "auto" || v === "light" || v === "dark";
+  return v === "auto" || v === "light" || v === "dark" || v === "sunset";
 }
 
 function validAvatar(v: unknown): string | null {
@@ -633,7 +633,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           patch.avatarUrl = a;
         }
         if (body.theme !== undefined) {
-          if (!validTheme(body.theme)) return json({ error: "theme must be auto|light|dark" }, 400);
+          if (!validTheme(body.theme)) return json({ error: "theme must be auto|light|dark|sunset" }, 400);
           patch.theme = body.theme;
         }
         if (body.email !== undefined) {
@@ -763,7 +763,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         const avatarUrl = body.avatarUrl === undefined ? "" : validAvatar(body.avatarUrl);
         if (avatarUrl === null) return json({ error: "avatarUrl must be an http(s) URL or empty" }, 400);
         const theme = body.theme === undefined ? "auto" : body.theme;
-        if (!validTheme(theme)) return json({ error: "theme must be auto|light|dark" }, 400);
+        if (!validTheme(theme)) return json({ error: "theme must be auto|light|dark|sunset" }, 400);
         const email = body.email === undefined ? "" : validEmail(body.email);
         if (email === null) return json({ error: "invalid email address" }, 400);
         const key = newAccessKey();
@@ -809,7 +809,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             patch.avatarUrl = a;
           }
           if (body.theme !== undefined) {
-            if (!validTheme(body.theme)) return json({ error: "theme must be auto|light|dark" }, 400);
+          if (!validTheme(body.theme)) return json({ error: "theme must be auto|light|dark|sunset|sunset" }, 400);
             patch.theme = body.theme;
           }
           if (body.email !== undefined) {

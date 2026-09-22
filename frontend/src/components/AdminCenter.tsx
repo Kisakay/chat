@@ -8,13 +8,14 @@ import { ReportsPanel } from "./ReportsPanel.tsx";
 import { ModelsPanel } from "./ModelsPanel.tsx";
 import { Button, CopyButton, FlowerMark, Input, LoadingScreen, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
+import { msUntilNextSolarSwitch, resolveThemeDark } from "../lib/solarTheme.ts";
 import { useT } from "../lib/i18n.ts";
 
 type Tab = "accounts" | "access" | "reports" | "models" | "features" | "mail";
 
 function applyTheme(theme: string) {
   const root = document.documentElement;
-  const dark = theme === "dark" || (theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const dark = resolveThemeDark(theme);
   root.classList.toggle("dark", dark);
   root.style.colorScheme = dark ? "dark" : "light";
 }
@@ -39,6 +40,7 @@ export function AdminCenter() {
   ];
 
   useEffect(() => {
+    let timer: number | undefined;
     api.verify()
       .then((r) => {
         if (!r.user.isAdmin) {
@@ -47,9 +49,19 @@ export function AdminCenter() {
         }
         setAllowed(true);
         applyTheme(r.user.theme);
+        if (r.user.theme === "sunset") {
+          const schedule = (): void => {
+            timer = window.setTimeout(() => {
+              applyTheme("sunset");
+              schedule();
+            }, msUntilNextSolarSwitch());
+          };
+          schedule();
+        }
         api.adminGetSettings().then((s) => setSettings(s.settings)).catch((e) => setError(e instanceof Error ? e.message : t("admin.loadFailed")));
       })
       .catch(() => setAllowed(false));
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Live badges on the Access/Reports tabs: the admin firehose pushes every access

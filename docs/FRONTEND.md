@@ -85,7 +85,9 @@ No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
 
 Tailwind `darkMode: "class"`. `applyTheme()` in `App.tsx` toggles the `dark`
 class from the account theme (`auto` follows `prefers-color-scheme` with a
-live media-query listener). Accent: emerald; shapes: `rounded-2xl/3xl`
+live media-query listener; `sunset` follows the browser's local time —
+light 07:00–19:00, dark otherwise — re-applied at each boundary via
+`lib/solarTheme.ts`). Accent: emerald; shapes: `rounded-2xl/3xl`
 everywhere; every surface needs a `dark:` variant. UI text is English only.
 
 ## Mobile

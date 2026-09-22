@@ -459,6 +459,7 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
             align="left"
             options={[
               { value: "auto", label: t("common.themeAuto") },
+              { value: "sunset", label: t("common.themeSunset") },
               { value: "light", label: t("common.light") },
               { value: "dark", label: t("common.dark") },
             ]}

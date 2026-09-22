@@ -27,6 +27,7 @@ import { ReviewPage } from "./components/ReviewPage.tsx";
 import { ConfirmDialog, LoadingScreen } from "./components/ui.tsx";
 import { Toasts } from "./components/Toasts.tsx";
 import { pushToast } from "./lib/toasts.ts";
+import { msUntilNextSolarSwitch, resolveThemeDark } from "./lib/solarTheme.ts";
 import { useT } from "./lib/i18n.ts";
 
 function shareIdFromPath(): string | null {
@@ -65,10 +66,7 @@ const MAX_RETRIES = 3;
 
 function applyTheme(theme: string) {
   const root = document.documentElement;
-  const dark =
-    theme === "dark" ||
-    (theme !== "light" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const dark = resolveThemeDark(theme);
   root.classList.toggle("dark", dark);
   root.style.colorScheme = dark ? "dark" : "light";
 }
@@ -272,8 +270,20 @@ export function App() {
       .catch(() => setMessages([]));
   }, [activeId]);
 
-  // Follow OS theme when account theme is auto
+  // Follow OS theme when account theme is auto; follow local time (07:00–19:00)
+  // when account theme is sunset — re-applied at each day/night boundary.
   useEffect(() => {
+    if (user?.theme === "sunset") {
+      let timer: number | undefined;
+      const schedule = () => {
+        timer = window.setTimeout(() => {
+          applyTheme("sunset");
+          schedule();
+        }, msUntilNextSolarSwitch());
+      };
+      schedule();
+      return () => window.clearTimeout(timer);
+    }
     if (user?.theme !== "auto") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const h = () => applyTheme("auto");
