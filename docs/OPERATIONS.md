@@ -74,6 +74,10 @@ connectivity tester: `GET /api/admin/mail`, `POST /api/admin/mail/verify`,
 - `reports_enabled` (default on): admin kill-switch for message reports —
   the chat flag button turns grey with a "Report disabled" tooltip and
   `POST /api/reports` answers 403. Surfaced to clients via `GET /api/tools`.
+- `username_change_enabled` (default on): lets users rename themselves
+  (`PATCH /api/me` `username`); off answers 403 and locks the Settings field.
+  Admins bypass it (`PATCH /api/admin/users/:id` still works). Surfaced to
+  clients via `GET /api/tools`.
 - Flags live in the `settings` SQLite table, edited via
   `GET/PATCH /api/admin/settings` (admin Bearer only).
 

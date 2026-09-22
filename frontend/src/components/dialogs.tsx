@@ -259,6 +259,7 @@ export function ShareModal({ conv, onClose }: { conv: Conversation | null; onClo
 
 export function SettingsModal({
   user,
+  usernameChangeEnabled = true,
   onClose,
   onSaved,
   onKeyRotated,
@@ -267,6 +268,7 @@ export function SettingsModal({
   onProvidersChanged,
 }: {
   user: User | null;
+  usernameChangeEnabled?: boolean;
   onClose: () => void;
   onSaved: (u: User) => void;
   onKeyRotated?: () => void;
@@ -533,8 +535,8 @@ export function SettingsModal({
               />
               {uploadError && <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">{uploadError}</p>}
             </div>
-            <Field label={t("settings.username")} hint={t("settings.usernameHint")}>
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={32} required autoComplete="username" disabled={user?.username === "admin"} />
+            <Field label={t("settings.username")} hint={usernameChangeEnabled ? t("settings.usernameHint") : t("settings.usernameDisabled")}>
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={32} required autoComplete="username" disabled={user?.username === "admin" || !usernameChangeEnabled} />
             </Field>
             <Field label={t("common.displayName")}>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required autoComplete="nickname" />

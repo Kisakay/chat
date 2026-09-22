@@ -34,6 +34,7 @@ import {
   getUserByUsername,
   isRegistrationEnabled,
   isReportsEnabled,
+  isUsernameChangeEnabled,
   listConversations,
   listArchivedConversations,
   listUsers,
@@ -625,6 +626,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         const patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
         if (body.username !== undefined) {
           if (user.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
+          if (!isUsernameChangeEnabled()) return json({ error: "username changes are disabled" }, 403);
           const u = validUsername(body.username);
           if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
           const taken = getUserByUsername(u);
@@ -806,7 +808,15 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         if (req.method === "PATCH" && !adminUserMatch[2]) {
           const { ok, body } = await readJson(req);
           if (!ok) return json({ error: "invalid JSON" }, 400);
-          const patch: { displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
+          const patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string } = {};
+          if (body.username !== undefined) {
+            if (target.username === "admin") return json({ error: "the admin account cannot be renamed" }, 403);
+            const u = validUsername(body.username);
+            if (!u) return json({ error: "username: 2-32 chars [a-z0-9._-], 'admin' reserved" }, 400);
+            const taken = getUserByUsername(u);
+            if (taken && taken.id !== target.id) return json({ error: "username taken" }, 409);
+            patch.username = u;
+          }
           if (body.displayName !== undefined) {
             const d = cleanStr(body.displayName, 60);
             if (d === null) return json({ error: "displayName: 1-60 chars" }, 400);
@@ -841,6 +851,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             accessRequestEnabled: getSetting("registration_request_enabled", "1") === "1",
             ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
             reportsEnabled: isReportsEnabled(),
+            usernameChangeEnabled: isUsernameChangeEnabled(),
           },
         });
       }
@@ -872,12 +883,17 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (typeof body.reportsEnabled !== "boolean") return json({ error: "reportsEnabled must be boolean" }, 400);
           setSetting("reports_enabled", body.reportsEnabled ? "1" : "0");
         }
+        if (body.usernameChangeEnabled !== undefined) {
+          if (typeof body.usernameChangeEnabled !== "boolean") return json({ error: "usernameChangeEnabled must be boolean" }, 400);
+          setSetting("username_change_enabled", body.usernameChangeEnabled ? "1" : "0");
+        }
         return json({
           settings: {
             registrationEnabled: isRegistrationEnabled(),
             accessRequestEnabled: getSetting("registration_request_enabled", "1") === "1",
             ocrEnabled: getSetting("tools_ocr_enabled", "1") === "1",
             reportsEnabled: isReportsEnabled(),
+            usernameChangeEnabled: isUsernameChangeEnabled(),
           },
         });
       }
@@ -1368,7 +1384,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
       // --- platform tools (uploads always go through tools) ---
       if (path === "/api/tools" && req.method === "GET") {
-        return json({ tools: tools.list(), reportsEnabled: isReportsEnabled() });
+        return json({ tools: tools.list(), reportsEnabled: isReportsEnabled(), usernameChangeEnabled: isUsernameChangeEnabled() });
       }
 
       if (path === "/api/tools/ocr" && req.method === "POST") {

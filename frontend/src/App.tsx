@@ -115,6 +115,7 @@ export function App() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [ocrAvailable, setOcrAvailable] = useState(false);
   const [reportsEnabled, setReportsEnabled] = useState(true);
+  const [usernameChangeEnabled, setUsernameChangeEnabled] = useState(true);
   // Model-error retry: which trailing message is the error bubble (if any),
   // its conversation, and how many times this prompt was already retried.
   const [failed, setFailed] = useState<{ index: number; convId: string } | null>(null);
@@ -185,10 +186,12 @@ export function App() {
             .catch(() => ({
               tools: [] as { name: string; available: boolean }[],
               reportsEnabled: true,
+              usernameChangeEnabled: true,
             })),
         ]);
         setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available));
         setReportsEnabled(t.reportsEnabled ?? true);
+        setUsernameChangeEnabled(t.usernameChangeEnabled ?? true);
         setModels(m.models);
         if (m.models.length > 0) setModel(m.models[0]!.id);
         setConvs(c.conversations);
@@ -312,6 +315,7 @@ export function App() {
       .then((t) => {
         setOcrAvailable(t.tools.some((x) => x.name === "ocr" && x.available));
         setReportsEnabled(t.reportsEnabled ?? true);
+        setUsernameChangeEnabled(t.usernameChangeEnabled ?? true);
       })
       .catch(() => {});
     // Land directly on the latest conversation's own URL.
@@ -722,6 +726,7 @@ export function App() {
       />
       <SettingsModal
         user={settingsOpen ? user : null}
+        usernameChangeEnabled={usernameChangeEnabled}
         onClose={() => setSettingsOpen(false)}
         onSaved={(u) => {
           if (u.theme !== user?.theme) {

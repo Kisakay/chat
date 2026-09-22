@@ -399,6 +399,11 @@ export function isReportsEnabled(): boolean {
   return getSetting("reports_enabled", "1") === "1";
 }
 
+/** Admin kill-switch for self-service username changes (default on; admins bypass). */
+export function isUsernameChangeEnabled(): boolean {
+  return getSetting("username_change_enabled", "1") === "1";
+}
+
 // --- public shares ---
 
 export function ensureShare(convId: string): string {

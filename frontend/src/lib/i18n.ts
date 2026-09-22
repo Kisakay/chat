@@ -345,6 +345,10 @@ const en = {
   "center.reportsTitle": "Message reports",
   "center.reportsDesc":
     "Flag button under assistant responses. Off = the flag turns grey with a “Report disabled” tooltip and new reports are rejected.",
+  "center.usernameChangeTitle": "Username changes",
+  "center.usernameChangeDesc":
+    "Lets users rename themselves in Settings → Profile. Off = the field is locked (admins can still rename accounts).",
+  "settings.usernameDisabled": "Username changes are disabled by the administrator.",
   "center.mailTitle": "Key recovery emails",
   "center.mailChecking": "Checking…",
   "center.mailFrom": "Enabled — sent from {from}",
@@ -913,6 +917,10 @@ const es: Dict = {
   "center.reportsTitle": "Denuncias de mensajes",
   "center.reportsDesc":
     "Botón de bandera bajo las respuestas. Off = bandera gris con aviso y se rechazan nuevas denuncias.",
+  "center.usernameChangeTitle": "Cambios de nombre",
+  "center.usernameChangeDesc":
+    "Permite renombrarse en Ajustes → Perfil. Off = campo bloqueado (el admin aún puede renombrar).",
+  "settings.usernameDisabled": "El administrador ha desactivado los cambios de nombre.",
   "center.mailTitle": "Emails de recuperación",
   "center.mailChecking": "Verificando…",
   "center.mailFrom": "Activado — enviados desde {from}",
@@ -1475,6 +1483,10 @@ const fr: Dict = {
   "center.reportsTitle": "Signalements de messages",
   "center.reportsDesc":
     "Bouton drapeau sous les réponses. Off = drapeau grisé avec infobulle et nouveaux signalements refusés.",
+  "center.usernameChangeTitle": "Changements de pseudo",
+  "center.usernameChangeDesc":
+    "Permet de se renommer dans Réglages → Profil. Off = champ verrouillé (l'admin peut toujours renommer).",
+  "settings.usernameDisabled": "Changements de pseudo désactivés par l'administrateur.",
   "center.mailTitle": "Emails de récupération",
   "center.mailChecking": "Vérification…",
   "center.mailFrom": "Activé — envoyés depuis {from}",
@@ -2028,6 +2040,10 @@ const ru: Dict = {
   "center.reportsTitle": "Жалобы на сообщения",
   "center.reportsDesc":
     "Кнопка-флажок под ответами. Выкл = серый флажок с подсказкой, новые жалобы отклоняются.",
+  "center.usernameChangeTitle": "Смена имени",
+  "center.usernameChangeDesc":
+    "Позволяет переименоваться в Настройки → Профиль. Выкл = поле закрыто (админ всё равно может).",
+  "settings.usernameDisabled": "Смена имени отключена администратором.",
   "center.mailTitle": "Письма восстановления",
   "center.mailChecking": "Проверяем…",
   "center.mailFrom": "Включено — шлём от {from}",
@@ -2581,6 +2597,10 @@ const it: Dict = {
   "center.reportsTitle": "Segnalazioni messaggi",
   "center.reportsDesc":
     "Bandierina sotto le risposte. Off = bandierina grigia con tooltip e nuove segnalazioni rifiutate.",
+  "center.usernameChangeTitle": "Cambi di nome",
+  "center.usernameChangeDesc":
+    "Permette di rinominarsi in Impostazioni → Profilo. Off = campo bloccato (l'admin può ancora rinominare).",
+  "settings.usernameDisabled": "Cambi di nome disabilitati dall'amministratore.",
   "center.mailTitle": "Email di recupero",
   "center.mailChecking": "Verifica…",
   "center.mailFrom": "Attivo — inviate da {from}",
@@ -3129,6 +3149,10 @@ const pt: Dict = {
   "center.reportsTitle": "Denúncias de mensagens",
   "center.reportsDesc":
     "Bandeira sob as respostas. Off = bandeira cinzenta com aviso e novas denúncias recusadas.",
+  "center.usernameChangeTitle": "Mudanças de nome",
+  "center.usernameChangeDesc":
+    "Permite renomear-se em Definições → Perfil. Off = campo bloqueado (o admin continua a poder renomear).",
+  "settings.usernameDisabled": "Mudanças de nome desativadas pelo administrador.",
   "center.mailTitle": "Emails de recuperação",
   "center.mailChecking": "A verificar…",
   "center.mailFrom": "Ativo — enviados de {from}",

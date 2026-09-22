@@ -417,6 +417,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
 
 function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose: () => void; onSaved: () => void }) {
   const { t } = useT();
+  const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [email, setEmail] = useState("");
@@ -425,6 +426,7 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
 
   useEffect(() => {
     if (user) {
+      setUsername(user.username);
       setDisplayName(user.displayName);
       setAvatarUrl(user.avatarUrl);
       setEmail(user.email);
@@ -437,7 +439,7 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
     e.preventDefault();
     if (!user) return;
     try {
-      await api.adminPatch(user.id, { displayName: displayName.trim(), avatarUrl: avatarUrl.trim(), email: email.trim(), theme });
+      await api.adminPatch(user.id, { username: username.trim().toLowerCase(), displayName: displayName.trim(), avatarUrl: avatarUrl.trim(), email: email.trim(), theme });
       onSaved();
       onClose();
     } catch (err) {
@@ -448,6 +450,9 @@ function EditUserDialog({ user, onClose, onSaved }: { user: User | null; onClose
   return (
     <Modal open={user !== null} onClose={onClose} title={t("admin.editUserTitle", { user: user?.username ?? "" })} icon={Pencil}>
       <form onSubmit={save} className="space-y-4">
+        <Field label={t("settings.username")} hint={t("settings.usernameHint")}>
+          <Input value={username} onChange={(e) => setUsername(e.target.value)} maxLength={32} required autoComplete="username" disabled={user?.username === "admin"} />
+        </Field>
         <Field label={t("common.displayName")}><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={60} required /></Field>
         <Field label={t("admin.avatarUrl")}><Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" /></Field>
         <Field label={t("admin.email")}><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="alice@example.com" inputMode="email" /></Field>
