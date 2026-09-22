@@ -570,15 +570,17 @@ export function FlowerMark({ size, className, dynamic = true }: { size?: number;
   );
 }
 
-/** Assistant identity: static flower mark on a soft circle (message avatars). */
-export function AssistantAvatar({ size = 32 }: { size?: number }) {
+/** Assistant identity: flower mark on a soft circle (message avatars).
+ *  Pass `dynamic` while the assistant is thinking/streaming so the logo
+ *  blooms, then back to static once the reply is done. */
+export function AssistantAvatar({ size = 32, dynamic = false }: { size?: number; dynamic?: boolean }) {
   return (
     <span
       className="grid shrink-0 place-items-center rounded-full bg-accent-600/10"
       style={{ width: size, height: size }}
       aria-label="KisAssistant"
     >
-      <FlowerMark size={Math.round(size * 0.78)} dynamic={false} />
+      <FlowerMark size={Math.round(size * 0.78)} dynamic={dynamic} />
     </span>
   );
 }

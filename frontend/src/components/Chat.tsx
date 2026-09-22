@@ -295,7 +295,7 @@ export function Chat({
           </span>
         )}
         <span className="hidden items-center gap-2 font-semibold sm:flex">
-          <FlowerMark size={24} dynamic={false} />
+          <FlowerMark size={24} dynamic={sending} />
           {conv?.title || t("sidebar.newChat")}
         </span>
         {conv?.topic && (
@@ -333,7 +333,7 @@ export function Chat({
           ))}
           {streaming !== "" && (
             <div className="flex gap-2 sm:gap-3">
-              <AssistantAvatar size={32} />
+              <AssistantAvatar size={32} dynamic />
               <div className="min-w-0 max-w-[88%] sm:max-w-[85%]">
                 <div className="mb-1 text-xs opacity-60">KisAssistant</div>
                 <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
@@ -343,7 +343,10 @@ export function Chat({
             </div>
           )}
           {sending && streaming === "" && (
-            <div className="flex items-center gap-2 opacity-60"><Spinner size={15} /><span className="text-sm">{t("chat.thinking")}</span></div>
+            <div className="flex items-center gap-2.5 opacity-80">
+              <AssistantAvatar size={32} dynamic />
+              <span className="flex items-center gap-2 text-sm opacity-60"><Spinner size={15} />{t("chat.thinking")}</span>
+            </div>
           )}
         </div>
       </div>
