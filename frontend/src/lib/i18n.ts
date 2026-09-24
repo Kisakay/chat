@@ -225,6 +225,7 @@ const en = {
   "accent.preset.orange": "Orange",
   "accent.preset.teal": "Teal",
   "accent.preset.pink": "Pink",
+  "accent.hexLabel": "Hex color",
 
   "feat.thinking.label": "Thinking",
   "feat.thinking.hint":
@@ -948,6 +949,7 @@ const es: Dict = {
   "accent.preset.orange": "Naranja",
   "accent.preset.teal": "Turquesa",
   "accent.preset.pink": "Rosa fuerte",
+  "accent.hexLabel": "Hex color",
 
   "feat.thinking.label": "Razonamiento",
   "feat.thinking.hint":
@@ -1664,6 +1666,7 @@ const fr: Dict = {
   "accent.preset.orange": "Orange",
   "accent.preset.teal": "Sarcelle",
   "accent.preset.pink": "Rose vif",
+  "accent.hexLabel": "Hex color",
 
   "feat.thinking.label": "Réflexion",
   "feat.thinking.hint": "Demande au modèle de raisonner étape par étape.",
@@ -2375,6 +2378,7 @@ const ru: Dict = {
   "accent.preset.orange": "Оранжевый",
   "accent.preset.teal": "Бирюза",
   "accent.preset.pink": "Розовый",
+  "accent.hexLabel": "Hex color",
 
   "feat.thinking.label": "Размышление",
   "feat.thinking.hint": "Просить модель рассуждать шаг за шагом.",
@@ -3078,6 +3082,7 @@ const it: Dict = {
   "accent.preset.orange": "Arancione",
   "accent.preset.teal": "Teal",
   "accent.preset.pink": "Rosa shocking",
+  "accent.hexLabel": "Hex color",
 
   "feat.thinking.label": "Ragionamento",
   "feat.thinking.hint": "Chiedi al modello di ragionare passo passo.",
@@ -3784,6 +3789,7 @@ const pt: Dict = {
   "accent.preset.orange": "Laranja",
   "accent.preset.teal": "Turquesa",
   "accent.preset.pink": "Rosa choque",
+  "accent.hexLabel": "Hex color",
 
   "feat.thinking.label": "Raciocínio",
   "feat.thinking.hint": "Pede ao modelo para raciocinar passo a passo.",

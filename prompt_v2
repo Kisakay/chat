@@ -53,3 +53,11 @@ like <model> <button>
 
 
 ---- pouvoir dans admin centers, sur users, envoyez un lien mdp reset à un user
+
+
+--- <input type="color" aria-label="Custom accent color" class="absolute inset-0 cursor-pointer opacity-0" value="#10b981">
+
+Ajouter un vrai composant pour pouvoir chosisir la couleur accentique sans dépendre du système.
+Utiliser un vrai copiosant come shadcdn.
+
+Avec un vrai accent color picket etpouvoir mettre sontpropr e code hex pour la couleur.

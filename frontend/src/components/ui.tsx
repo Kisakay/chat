@@ -633,6 +633,28 @@ export function Toggle({
   );
 }
 
+/** Clipboard write with legacy fallback (non-secure contexts lack the async API). */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 export function CopyButton({ text, label }: { text: string; label?: string }) {
   const { t } = useT();
   const [done, setDone] = useState(false);
@@ -640,7 +662,8 @@ export function CopyButton({ text, label }: { text: string; label?: string }) {
     <button
       type="button"
       onClick={() => {
-        navigator.clipboard.writeText(text).then(() => {
+        copyText(text).then((ok) => {
+          if (!ok) return;
           setDone(true);
           setTimeout(() => setDone(false), 1500);
         });

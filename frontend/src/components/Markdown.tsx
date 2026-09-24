@@ -4,6 +4,16 @@ import remarkGfm from "remark-gfm";
 import { CopyButton } from "./ui.tsx";
 import { highlightCode } from "../lib/highlight.tsx";
 
+/** Raw source text of a react-markdown <code> element (children may be split). */
+export function extractCodeText(children: unknown): string {
+  if (children === null || children === undefined) return "";
+  if (typeof children === "string" || typeof children === "number") return String(children);
+  if (Array.isArray(children)) return children.map(extractCodeText).join("");
+  const props = (children as { props?: { children?: unknown } })?.props;
+  if (props && typeof props === "object" && "children" in props) return extractCodeText(props.children);
+  return "";
+}
+
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   const nodes = useMemo(() => highlightCode(code, lang), [code, lang]);
   return (
@@ -31,9 +41,10 @@ export function Markdown({ text }: { text: string }) {
             // react-markdown nests <code> inside <pre>; render our block instead.
             const child = Array.isArray(children) ? children[0] : children;
             const props = (child as { props?: { className?: string; children?: unknown } })?.props;
-            const className = props?.className || "";
+            if (!props || typeof props !== "object") return <pre>{children}</pre>;
+            const className = typeof props.className === "string" ? props.className : "";
             const lang = className.replace("language-", "");
-            const code = String(props?.children ?? "").replace(/\n$/, "");
+            const code = extractCodeText(props.children).replace(/\n$/, "");
             return <CodeBlock code={code} lang={lang} />;
           },
           code({ children }) {

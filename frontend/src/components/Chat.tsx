@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Archive, ArchiveRestore, BookOpen, Bot, Check, Copy, Cpu, FileText, Flag, Menu, Mic, PanelLeftOpen, Paperclip, RotateCcw, ScanText, Search, SendHorizontal, Share2, Square, User as UserIcon, Volume2, VolumeX, X } from "lucide-react";
 import type { Attachment, ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
 import { api, ApiError, type ReportReason } from "../lib/api.ts";
-import { AssistantAvatar, Avatar, Button, Field, FlowerMark, IconButton, Modal, Picker, type PickerGroup, Spinner } from "./ui.tsx";
+import { AssistantAvatar, Avatar, Button, copyText, Field, FlowerMark, IconButton, Modal, Picker, type PickerGroup, Spinner } from "./ui.tsx";
 import { Markdown } from "./Markdown.tsx";
 import { UserMessageContent } from "./MessageContent.tsx";
 import { cn } from "../lib/cn.ts";
@@ -17,10 +17,11 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport, reports
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
   function copy() {
-    navigator.clipboard.writeText(msg.content).then(() => {
+    copyText(msg.content).then((ok) => {
+      if (!ok) return;
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
+    });
   }
   function searchWeb() {
     window.open(`https://duckduckgo.com/?q=${encodeURIComponent(msg.content.slice(0, 400))}`, "_blank", "noopener,noreferrer");

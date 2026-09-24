@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Mic, Palette, Pencil, Play, Plug, ScanText, Search, Settings2, Share2, ShieldCheck, Sparkles, Square, Tag, Trash2, Unplug, User as UserIcon, Volume2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Mic, Palette, Pencil, Pipette, Play, Plug, ScanText, Search, Settings2, Share2, ShieldCheck, Sparkles, Square, Tag, Trash2, Unplug, User as UserIcon, Volume2, X } from "lucide-react";
 import { api, type UserProvider, type VoicePreview } from "../lib/api.ts";
 import { pushToast } from "../lib/toasts.ts";
 import { cn } from "../lib/cn.ts";
-import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
+import { ACCENT_PRESETS, applyAccent, currentAccent, hexToHsv, hsvToHex, previewAccent, type AccentState } from "../lib/accent.ts";
 import { detectLang, getVoicePrefs, listTtsVoices, OPENAI_STATIC_VOICES, pickVoice, playText, setVoicePrefs, stopPlayback, ttsSupported, type VoicePrefs } from "../lib/voice.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
 import type { Conversation, FilePreview, User } from "../lib/types.ts";
@@ -794,18 +794,12 @@ function ArchivedSection({ onView, onChanged }: { onView: (c: Conversation) => v
 function AccentSection() {
   const { t } = useT();
   const [state, setState] = useState<AccentState>(() => currentAccent());
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   function pick(presetId: string) {
     const next = { ...state, presetId };
     setState(next);
     applyAccent(next);
-    pushToast(t("toast.accentChanged"), { icon: "accent", tag: "accent" });
-  }
-
-  function pickCustom(hex: string) {
-    const next = { presetId: "custom", customHex: hex };
-    setState(next);
-    previewAccent(hex);
     pushToast(t("toast.accentChanged"), { icon: "accent", tag: "accent" });
   }
 
@@ -830,26 +824,213 @@ function AccentSection() {
             style={{ backgroundColor: p.base }}
           />
         ))}
-        <label
+        <button
+          type="button"
+          onClick={() => setPickerOpen((o) => !o)}
+          aria-expanded={pickerOpen}
+          aria-label={t("settings.customAria")}
+          title={t("settings.customColor")}
           className={cn(
-            "relative grid h-8 w-8 cursor-pointer place-items-center overflow-hidden rounded-full border-2 transition active:scale-90",
-            state.presetId === "custom"
+            "grid h-8 w-8 place-items-center rounded-full border-2 transition active:scale-90",
+            state.presetId === "custom" || pickerOpen
               ? "border-stone-900 dark:border-white"
               : "border-transparent hover:scale-110",
           )}
-          style={{ background: state.presetId === "custom" ? state.customHex : undefined }}
-          title={t("settings.customColor")}
+          style={{ background: "conic-gradient(#f43f5e,#f59e0b,#84cc16,#14b8a6,#3b82f6,#8b5cf6,#f43f5e)" }}
         >
-          <Sparkles size={14} className={cn("text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]", state.presetId === "custom" && "opacity-0")} />
-          <input
-            type="color"
-            aria-label={t("settings.customAria")}
-            value={state.presetId === "custom" ? state.customHex : "#10b981"}
-            onChange={(e) => pickCustom(e.target.value)}
-            onBlur={() => applyAccent(state)} // persist the last previewed value
-            className="absolute inset-0 cursor-pointer opacity-0"
+          <Pipette size={14} className="text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]" />
+        </button>
+      </div>
+      {pickerOpen && (
+        <AccentCustomPanel
+          initialHex={state.presetId === "custom" ? state.customHex : (ACCENT_PRESETS.find((p) => p.id === state.presetId)?.base ?? "#10b981")}
+          onPreview={(hex) => {
+            setState({ presetId: "custom", customHex: hex });
+            previewAccent(hex);
+          }}
+          onCommit={(hex) => {
+            const next = { presetId: "custom", customHex: hex };
+            setState(next);
+            applyAccent(next);
+            pushToast(t("toast.accentChanged"), { icon: "accent", tag: "accent" });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ---------- Custom accent picker: SV square + hue slider + hex field ---------- */
+
+function AccentCustomPanel({ initialHex, onPreview, onCommit }: {
+  initialHex: string;
+  onPreview: (hex: string) => void;
+  onCommit: (hex: string) => void;
+}) {
+  const { t } = useT();
+  const start = hexToHsv(initialHex) ?? { h: 160, s: 84, v: 73 };
+  const [h, setH] = useState(start.h);
+  const [s, setS] = useState(start.s);
+  const [v, setV] = useState(start.v);
+  const [hexInput, setHexInput] = useState(() => hsvToHex(start.h, start.s, start.v));
+  const [hexError, setHexError] = useState(false);
+  const [drag, setDrag] = useState<null | "sv" | "hue">(null);
+  const svRef = useRef<HTMLDivElement>(null);
+  const hueRef = useRef<HTMLDivElement>(null);
+  // Synchronous mirror (pointerup fires before setState flushes).
+  const hsvRef = useRef({ h: start.h, s: start.s, v: start.v });
+
+  const currentHex = useMemo(() => hsvToHex(h, s, v), [h, s, v]);
+
+  function applyHsv(nh: number, ns: number, nv: number) {
+    const c = {
+      h: Math.min(359.99, Math.max(0, nh)),
+      s: Math.min(100, Math.max(0, ns)),
+      v: Math.min(100, Math.max(0, nv)),
+    };
+    hsvRef.current = c;
+    setH(c.h);
+    setS(c.s);
+    setV(c.v);
+    const hex = hsvToHex(c.h, c.s, c.v);
+    setHexInput(hex);
+    setHexError(false);
+    onPreview(hex);
+  }
+
+  function posToSv(e: React.PointerEvent): void {
+    const el = svRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    applyHsv(hsvRef.current.h, ((e.clientX - r.left) / r.width) * 100, (1 - (e.clientY - r.top) / r.height) * 100);
+  }
+
+  function posToHue(e: React.PointerEvent): void {
+    const el = hueRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const nh = ((e.clientX - r.left) / r.width) * 360;
+    const c = hsvRef.current;
+    applyHsv(nh, c.s, c.v);
+  }
+
+  function begin(kind: "sv" | "hue", e: React.PointerEvent) {
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    setDrag(kind);
+    if (kind === "sv") posToSv(e);
+    else posToHue(e);
+  }
+
+  function commitHex(raw: string) {
+    const m = /^#?([0-9a-fA-F]{6})$/.exec(raw.trim());
+    if (!m) {
+      setHexError(true);
+      setHexInput(currentHex);
+      return;
+    }
+    const hex = `#${m[1]!.toLowerCase()}`;
+    const c = hexToHsv(hex);
+    if (c) {
+      hsvRef.current = c;
+      setH(c.h);
+      setS(c.s);
+      setV(c.v);
+      setHexInput(hex);
+      setHexError(false);
+      onPreview(hex);
+      onCommit(hex);
+    }
+  }
+
+  return (
+    <div className="mt-3 space-y-3 rounded-2xl border border-stone-200/70 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+      <div
+        ref={svRef}
+        role="slider"
+        aria-label={t("settings.customAria")}
+        aria-valuetext={currentHex}
+        tabIndex={0}
+        onPointerDown={(e) => begin("sv", e)}
+        onPointerMove={(e) => { if (drag === "sv") posToSv(e); }}
+        onPointerUp={() => { if (drag === "sv") { setDrag(null); onCommit(hsvToHex(hsvRef.current.h, hsvRef.current.s, hsvRef.current.v)); } }}
+        onPointerCancel={() => setDrag(null)}
+        onKeyDown={(e) => {
+          const step = e.shiftKey ? 10 : 2;
+          const c = hsvRef.current;
+          if (e.key === "ArrowLeft") { applyHsv(c.h, c.s - step, c.v); onCommit(hsvToHex(Math.min(359.99, Math.max(0, c.h)), Math.min(100, Math.max(0, c.s - step)), c.v)); }
+          else if (e.key === "ArrowRight") { applyHsv(c.h, c.s + step, c.v); onCommit(hsvToHex(Math.min(359.99, Math.max(0, c.h)), Math.min(100, Math.max(0, c.s + step)), c.v)); }
+          else if (e.key === "ArrowUp") { applyHsv(c.h, c.s, c.v + step); onCommit(hsvToHex(Math.min(359.99, Math.max(0, c.h)), c.s, Math.min(100, Math.max(0, c.v + step)))); }
+          else if (e.key === "ArrowDown") { applyHsv(c.h, c.s, c.v - step); onCommit(hsvToHex(Math.min(359.99, Math.max(0, c.h)), c.s, Math.min(100, Math.max(0, c.v - step)))); }
+          else return;
+          e.preventDefault();
+        }}
+        className="relative h-40 w-full cursor-crosshair touch-none select-none overflow-hidden rounded-2xl"
+        style={{ background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${h}, 100%, 50%))` }}
+      >
+        <span
+          aria-hidden
+          className="absolute h-4 w-4 rounded-full border-2 border-white shadow-md"
+          style={{ left: `${s}%`, top: `${100 - v}%`, transform: "translate(-50%, -50%)", backgroundColor: currentHex }}
+        />
+      </div>
+      <div
+        ref={hueRef}
+        role="slider"
+        aria-label={t("settings.accent")}
+        aria-valuetext={String(Math.round(h))}
+        tabIndex={0}
+        onPointerDown={(e) => begin("hue", e)}
+        onPointerMove={(e) => { if (drag === "hue") posToHue(e); }}
+        onPointerUp={() => { if (drag === "hue") { setDrag(null); onCommit(hsvToHex(hsvRef.current.h, hsvRef.current.s, hsvRef.current.v)); } }}
+        onPointerCancel={() => setDrag(null)}
+        onKeyDown={(e) => {
+          if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+          const nh = hsvRef.current.h + (e.key === "ArrowRight" ? 4 : -4);
+          const c = hsvRef.current;
+          applyHsv(nh, c.s, c.v);
+          onCommit(hsvToHex(nh, c.s, c.v));
+          e.preventDefault();
+        }}
+        className="relative h-3 w-full cursor-pointer touch-none select-none rounded-full"
+        style={{ background: "linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)" }}
+      >
+        <span
+          aria-hidden
+          className="absolute top-1/2 h-5 w-5 rounded-full border-2 border-white bg-transparent shadow-md"
+          style={{ left: `calc(${(h / 360) * 100}% - 10px)`, transform: "translateY(-50%)", backgroundColor: currentHex }}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="h-9 w-9 shrink-0 rounded-full border border-stone-200 dark:border-zinc-700" style={{ backgroundColor: currentHex }} aria-hidden />
+        <Field label={t("accent.hexLabel")}>
+          <Input
+            value={hexInput}
+            onChange={(e) => {
+              setHexInput(e.target.value);
+              const m = /^#?([0-9a-fA-F]{6})$/.exec(e.target.value.trim());
+              if (m) {
+                const hex = `#${m[1]!.toLowerCase()}`;
+                const c = hexToHsv(hex);
+                if (c) {
+                  hsvRef.current = c;
+                  setH(c.h);
+                  setS(c.s);
+                  setV(c.v);
+                  setHexError(false);
+                  onPreview(hex);
+                }
+              } else {
+                setHexError(e.target.value.trim().length > 0);
+              }
+            }}
+            onBlur={(e) => commitHex(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") commitHex((e.target as HTMLInputElement).value); }}
+            maxLength={7}
+            spellCheck={false}
+            autoComplete="off"
+            className={cn("font-mono uppercase", hexError && "!border-red-500")}
           />
-        </label>
+        </Field>
       </div>
     </div>
   );
