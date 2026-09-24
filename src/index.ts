@@ -143,6 +143,7 @@ import {
   writeCdnFile,
 } from "./cdn.ts";
 import { OCR_MAX_BYTES, ocrAllowed, recordOcrJob } from "./tools/ocr.ts";
+import { TTS_MAX_CHARS, recordTtsJob, ttsAllowed } from "./tools/tts.ts";
 import { tools } from "./tools/registry.ts";
 import { initOllamaNodes } from "./ollamaNodes.ts";
 
@@ -236,13 +237,15 @@ export interface VoicePreview {
   rate: number;
   pitch: number;
   timbre: "masculine" | "feminine" | "any";
+  /** Server neural voice id (ElevenLabs voice_id / OpenAI voice name). Empty = provider default. */
+  voice: string;
 }
 
 const DEFAULT_VOICE_PREVIEWS: VoicePreview[] = [
-  { text: "Salut, euhm, comment je peux t'aider aujourd'hui ?", lang: "fr", rate: 0.85, pitch: 0.75, timbre: "masculine" },
-  { text: "5 sur 5 je recois ! Que veux-tu ?", lang: "fr", rate: 1, pitch: 0.8, timbre: "masculine" },
-  { text: "Owww, ce chat est trop mignon, oops, pardon. Je me concentre, que puis-je faire pour toi ?", lang: "fr", rate: 1.05, pitch: 1.35, timbre: "feminine" },
-  { text: "Hey, que puis-je faire pour toi ?", lang: "fr", rate: 1, pitch: 1.1, timbre: "feminine" },
+  { text: "Salut, euhm, comment je peux t'aider aujourd'hui ?", lang: "fr", rate: 0.85, pitch: 0.75, timbre: "masculine", voice: "" },
+  { text: "5 sur 5 je recois ! Que veux-tu ?", lang: "fr", rate: 1, pitch: 0.8, timbre: "masculine", voice: "" },
+  { text: "Owww, ce chat est trop mignon, oops, pardon. Je me concentre, que puis-je faire pour toi ?", lang: "fr", rate: 1.05, pitch: 1.35, timbre: "feminine", voice: "" },
+  { text: "Hey, que puis-je faire pour toi ?", lang: "fr", rate: 1, pitch: 1.1, timbre: "feminine", voice: "" },
 ];
 
 function sanitizePreviewLine(v: unknown): VoicePreview | null {
@@ -250,7 +253,7 @@ function sanitizePreviewLine(v: unknown): VoicePreview | null {
   if (typeof v === "string") {
     const text = v.trim();
     if (text.length === 0 || text.length > 500) return null;
-    return { text, lang: "auto", rate: 1, pitch: 1, timbre: "any" };
+    return { text, lang: "auto", rate: 1, pitch: 1, timbre: "any", voice: "" };
   }
   if (!v || typeof v !== "object") return null;
   const o = v as Record<string, unknown>;
@@ -261,7 +264,8 @@ function sanitizePreviewLine(v: unknown): VoicePreview | null {
   const rate = typeof o.rate === "number" && o.rate >= 0.5 && o.rate <= 2 ? o.rate : 1;
   const pitch = typeof o.pitch === "number" && o.pitch >= 0.5 && o.pitch <= 2 ? o.pitch : 1;
   const timbre = o.timbre === "masculine" || o.timbre === "feminine" ? o.timbre : "any";
-  return { text, lang, rate, pitch, timbre };
+  const voice = typeof o.voice === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(o.voice.trim()) ? o.voice.trim() : "";
+  return { text, lang, rate, pitch, timbre, voice };
 }
 
 async function getVoicePreviews(): Promise<VoicePreview[]> {
@@ -1031,6 +1035,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             recoveryLimitMax: await recoveryLimitMax(),
             recoveryLimitWindowMin: Math.round(await recoveryLimitWindowMs() / 60_000),
             voicePreviews: await getVoicePreviews(),
+            ttsEnabled: (await getSetting("tools_tts_enabled", "1")) === "1",
           },
         });
       }
@@ -1096,9 +1101,13 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             await setSetting("voice_previews", "");
           } else {
             const clean = sanitizeVoicePreviews(body.voicePreviews);
-            if (!clean) return json({ error: "voicePreviews must be 1-6 lines {text, lang?, rate?, pitch?, timbre?}, or [] to reset" }, 400);
+            if (!clean) return json({ error: "voicePreviews must be 1-6 lines {text, lang?, rate?, pitch?, timbre?, voice?}, or [] to reset" }, 400);
             await setSetting("voice_previews", JSON.stringify(clean));
           }
+        }
+        if (body.ttsEnabled !== undefined) {
+          if (typeof body.ttsEnabled !== "boolean") return json({ error: "ttsEnabled must be boolean" }, 400);
+          await setSetting("tools_tts_enabled", body.ttsEnabled ? "1" : "0");
         }
         return json({
           settings: {
@@ -1112,6 +1121,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             recoveryLimitMax: await recoveryLimitMax(),
             recoveryLimitWindowMin: Math.round(await recoveryLimitWindowMs() / 60_000),
             voicePreviews: await getVoicePreviews(),
+            ttsEnabled: (await getSetting("tools_tts_enabled", "1")) === "1",
           },
         });
       }
@@ -1811,6 +1821,39 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         } catch (e) {
           const msg = (e as Error).message;
           if (/not available|failed to start/i.test(msg)) return json({ error: msg }, 501);
+          return json({ error: msg }, 502);
+        }
+      }
+
+      // --- platform tools: neural TTS (natural voices, cached) ---
+      if (path === "/api/tools/tts/info" && req.method === "GET") {
+        const tts = tools.tts;
+        return json({ ...(await tts.providerInfo()), available: await tts.isAvailable(), reason: await tts.unavailableReason() });
+      }
+
+      if (path === "/api/tools/tts" && req.method === "POST") {
+        const tts = tools.tts;
+        if (!await tts.isAvailable()) return json({ error: (await tts.unavailableReason()) ?? "tts unavailable" }, 501);
+        const { ok, body } = await readJson(req);
+        if (!ok || typeof body.text !== "string") return json({ error: "expected { text, voice? }" }, 400);
+        const text = body.text.trim();
+        if (text.length === 0 || text.length > TTS_MAX_CHARS) {
+          return json({ error: `text: 1-${TTS_MAX_CHARS} chars` }, 400);
+        }
+        const rl = ttsAllowed(user.id);
+        if (!rl.ok) {
+          return json({ error: "tts rate limited: 30 jobs per hour", retryAfterSec: rl.retryAfterSec }, 429);
+        }
+        recordTtsJob(user.id);
+        try {
+          const { audio, contentType } = await tts.synthesize(text, typeof body.voice === "string" ? body.voice : undefined);
+          const bytes = audio.buffer.slice(audio.byteOffset, audio.byteOffset + audio.byteLength) as ArrayBuffer;
+          return new Response(bytes, {
+            headers: { "Content-Type": contentType, "Cache-Control": "private, max-age=86400" },
+          });
+        } catch (e) {
+          const msg = (e as Error).message;
+          if (/not available|disabled|failed to start/i.test(msg)) return json({ error: msg }, 501);
           return json({ error: msg }, 502);
         }
       }

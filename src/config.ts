@@ -80,6 +80,14 @@ export const config = {
   ocrLang: env("OCR_LANG", "eng"),
   ocrMaxChars: envInt("OCR_MAX_CHARS", 100_000),
 
+  // Neural TTS tool (ElevenLabs / OpenAI / local piper, first configured
+  // wins unless TTS_PROVIDER forces one). Without any of these the tool
+  // reports unavailable and clients fall back to browser speech.
+  elevenlabsApiKey: env("ELEVENLABS_API_KEY", ""),
+  elevenlabsVoice: env("ELEVENLABS_VOICE", ""),
+  piperModel: env("PIPER_MODEL", ""),
+  ttsVoice: env("TTS_VOICE", "alloy"),
+
   // Key recovery via email (optional — empty SMTP_HOST disables it).
   smtpHost: env("SMTP_HOST", ""),
   smtpPort: envInt("SMTP_PORT", 587),

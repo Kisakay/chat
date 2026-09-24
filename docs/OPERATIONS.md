@@ -193,15 +193,31 @@ Disk meters are intentionally absent (models live on the Ollama hosts).
   it away. Unsupported browsers get a disabled mic with an explanatory
   tooltip. No audio leaves the browser (no server STT endpoint yet —
   whisper.cpp via `WHISPER_BIN` is the documented next step).
-- **Message playback**: every assistant bubble has a Listen button
-  (speechSynthesis, Siri-style breathing glow while speaking, click again to
-  stop; playback stops on send / new message / conversation switch).
-- **Settings → Voice** (per browser, localStorage): language (auto-detect
-  per message via `detectLang`, or forced), voice picker grouped by locale,
-  speed, pitch, and one-tap previews of the admin-set lines.
+- **Message playback**: every assistant bubble has a Listen button with a
+  Siri-style breathing glow while speaking (click again to stop; playback
+  stops on send / new message / conversation switch). Engine per user
+  (Settings → Voice): **auto** (neural server voice when available, browser
+  fallback), **browser**, or **server**.
+- **Neural server TTS** (`POST /api/tools/tts` `{text, voice?}` → audio
+  bytes, `GET /api/tools/tts/info` → provider + voices): ElevenLabs
+  (any voice_id, most natural) → OpenAI `tts-1` (6 stock voices, reuses the
+  LLM key) → local piper (`PIPER_BIN` + `PIPER_MODEL`, offline WAV).
+  `TTS_PROVIDER` forces one; `TTS_VOICE` / `ELEVENLABS_VOICE` set defaults.
+  Output is cached on disk (sha of provider|voice|text, 200 files cap),
+  rate-limited to 30 jobs/hour/account (429), kill-switched via
+  `tools_tts_enabled` (Admin Center → Features). Test overrides:
+  `ELEVENLABS_BASE_URL` / `OPENAI_BASE_URL`.
+- **Settings → Voice** (per browser, localStorage): engine, language
+  (auto-detect per message or forced), browser voice/rate/pitch, neural
+  voice id, and one-tap previews of the admin-set lines.
 - **Admin Center → Features → Voice previews**: the default playback lines
-  (`voice_previews` setting, 1–6 lines; empty list resets to the built-ins),
-  also served to users via `GET /api/tools`.
+  (`voice_previews` setting, 1–6 lines `{text, lang, rate, pitch, timbre,
+  voice}`, each with its OWN voice character — masculine/feminine/any
+  timbre hint, speed, pitch, optional server voice id — so previews sound
+  different from each other; timbre matching is best-effort over the
+  browser's voice names, rate/pitch always apply; empty list resets to the
+  built-ins), also served to users via `GET /api/tools`. Users can adopt
+  any preview's character as their own playback voice from Settings → Voice.
 
 ## Personal providers (BYOK)
 

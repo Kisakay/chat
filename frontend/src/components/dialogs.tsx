@@ -4,7 +4,7 @@ import { api, type UserProvider, type VoicePreview } from "../lib/api.ts";
 import { pushToast } from "../lib/toasts.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
-import { detectLang, getVoicePrefs, listTtsVoices, pickVoice, setVoicePrefs, speakPreview, stopSpeak, ttsSupported, type VoicePrefs } from "../lib/voice.ts";
+import { detectLang, getVoicePrefs, listTtsVoices, pickVoice, playText, setVoicePrefs, stopPlayback, ttsSupported, type VoicePrefs } from "../lib/voice.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
 import type { Conversation, FilePreview, User } from "../lib/types.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
@@ -877,12 +877,14 @@ function VoiceSection() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [previews, setPreviews] = useState<VoicePreview[]>([]);
   const [playing, setPlaying] = useState<number | null>(null);
+  const [ttsServer, setTtsServer] = useState<{ available: boolean; provider: string | null; voices: string[] } | null>(null);
 
   useEffect(() => {
     let alive = true;
     listTtsVoices().then((v) => { if (alive) setVoices(v); });
     api.tools().then((r) => { if (alive) setPreviews(r.voicePreviews); }).catch(() => {});
-    return () => { alive = false; stopSpeak(); };
+    api.ttsInfo().then((r) => { if (alive) setTtsServer({ available: r.available, provider: r.provider, voices: r.voices }); }).catch(() => {});
+    return () => { alive = false; stopPlayback(); };
   }, []);
 
   function update(p: Partial<VoicePrefs>) {
@@ -893,17 +895,23 @@ function VoiceSection() {
 
   function preview(i: number, line: VoicePreview) {
     if (playing === i) {
-      stopSpeak();
+      stopPlayback();
       setPlaying(null);
       return;
     }
-    // Each line plays with ITS OWN character (timbre/rate/pitch/lang) —
-    // never the global playback prefs.
-    const pick = speakPreview(line.text, line, voices, {
+    // Each line plays with ITS OWN character; the neural server engine is
+    // used when selected and available (line.server voice or user default).
+    playText({
+      text: line.text,
+      engine: prefs.engine,
+      browser: { voices, lang: line.lang, rate: line.rate, pitch: line.pitch, timbre: line.timbre },
+      serverVoice: line.voice || prefs.serverVoice || undefined,
+      serverAvailable: ttsServer?.available ?? false,
+      fetchAudio: (text, voice) => api.ttsSpeak(text, voice),
       onend: () => setPlaying(null),
       onerror: () => setPlaying(null),
     });
-    if (pick || ttsSupported()) setPlaying(i);
+    setPlaying(i);
   }
 
   /** Adopt a preview's character as the global playback voice. */
@@ -911,6 +919,7 @@ function VoiceSection() {
     const lang = line.lang === "auto" ? detectLang(line.text) : line.lang;
     const pick = pickVoice(voices, { lang, timbre: line.timbre });
     const next: VoicePrefs = {
+      ...prefs,
       voiceURI: pick?.voiceURI ?? prefs.voiceURI,
       rate: line.rate,
       pitch: line.pitch,
@@ -954,6 +963,49 @@ function VoiceSection() {
           options={VOICE_LANGS.map((l) => ({ value: l, label: l === "auto" ? t("voice.auto") : l }))}
         />
       </Field>
+      <Field label={t("voice.engine")} hint={ttsServer?.available ? t("voice.engineHintOn", { provider: ttsServer.provider ?? "?" }) : t("voice.engineHintOff")}>
+        <Picker
+          ariaLabel={t("voice.engine")}
+          icon={Volume2}
+          value={prefs.engine}
+          onChange={(v) => update({ engine: v as VoicePrefs["engine"] })}
+          align="left"
+          options={[
+            { value: "auto", label: t("voice.engineAuto") },
+            { value: "browser", label: t("voice.engineBrowser") },
+            { value: "server", label: t("voice.engineServer") },
+          ]}
+        />
+      </Field>
+      {(prefs.engine !== "browser") && (
+        ttsServer?.available ? (
+          ttsServer.provider === "openai" ? (
+            <Field label={t("voice.serverVoice")}>
+              <Picker
+                ariaLabel={t("voice.serverVoice")}
+                icon={Volume2}
+                value={prefs.serverVoice ?? ""}
+                onChange={(v) => update({ serverVoice: v || null })}
+                align="left"
+                options={[{ value: "", label: t("voice.defaultVoice") }, ...ttsServer.voices.map((v) => ({ value: v, label: v }))]}
+              />
+            </Field>
+          ) : ttsServer.provider === "elevenlabs" ? (
+            <Field label={t("voice.serverVoice")} hint={t("voice.serverVoiceHint")}>
+              <Input
+                value={prefs.serverVoice ?? ""}
+                onChange={(e) => update({ serverVoice: e.target.value.trim() || null })}
+                placeholder="pNInz6obpgDQGcFmaJgB"
+                maxLength={64}
+              />
+            </Field>
+          ) : (
+            <p className="rounded-2xl bg-stone-100 px-4 py-2.5 text-sm opacity-70 dark:bg-zinc-800">{t("voice.piperNote")}</p>
+          )
+        ) : (
+          <p className="rounded-2xl bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400">{t("voice.noServer")}</p>
+        )
+      )}
       <Field label={t("voice.voice")}>
         <Picker
           ariaLabel={t("voice.voice")}

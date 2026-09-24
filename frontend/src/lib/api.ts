@@ -74,6 +74,7 @@ export interface VoicePreview {
   rate: number;
   pitch: number;
   timbre: "masculine" | "feminine" | "any";
+  voice: string;
 }
 
 export interface PlatformInfo {
@@ -102,6 +103,7 @@ export interface AdminSettings {
   recoveryLimitMax: number;
   recoveryLimitWindowMin: number;
   voicePreviews: VoicePreview[];
+  ttsEnabled: boolean;
 }
 
 export interface AdminSettingsPatch {
@@ -115,6 +117,7 @@ export interface AdminSettingsPatch {
   recoveryLimitMax?: number;
   recoveryLimitWindowMin?: number;
   voicePreviews?: VoicePreview[];
+  ttsEnabled?: boolean;
 }
 
 export interface OllamaNode {
@@ -442,6 +445,27 @@ export const api = {
 
   tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[]; reportsEnabled: boolean; usernameChangeEnabled: boolean; voicePreviews: VoicePreview[] }>("/api/tools"),
 
+  /** Neural TTS provider status (null = browser speech fallback). */
+  ttsInfo: () => req<{ provider: "elevenlabs" | "openai" | "piper" | null; voices: string[]; available: boolean; reason: string | null }>("/api/tools/tts/info"),
+
+  /** Synthesize text server-side (neural voice). Returns audio bytes. */
+  ttsSpeak: async (text: string, voice?: string): Promise<Blob> => {
+    const res = await fetch("/api/tools/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ text, ...(voice ? { voice } : {}) }),
+    });
+    if (res.status === 401) {
+      clearToken();
+      window.location.reload();
+      throw new ApiError(401, "Session expired.");
+    }
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new ApiError(res.status, data.error || `TTS failed (${res.status})`);
+    }
+    return await res.blob();
+  },
   /** Send an image to the platform OCR tool. Returns editable text (never the raw image). */
   ocrImage: async (file: File): Promise<{ text: string; truncated: boolean; chars: number }> => {
     const res = await fetch("/api/tools/ocr", {

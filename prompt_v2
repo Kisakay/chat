@@ -40,3 +40,13 @@ Le modèle doit détecter la langue par le texte/etc. l'user peut customiser l'a
 
 Ces exemples sont les default voix preview . dans l'admin center , l'utilisateur peut les modifier /revenir à défaut
 L'utilisateur doit pouvoir configurée ces ai,vocaux,voix,langue dans une sous-section dédier dans ces paramètres.
+
+--- actually the favicon have an background svg as the same color of the accenthique theme. should be indepandant .
+white = day theme
+black / night theme
+witht the flower itself following thr accentic color
+
+
+-- in specify
+specify the model used in each footer of assistant message
+like <model> <button>

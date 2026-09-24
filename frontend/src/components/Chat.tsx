@@ -7,7 +7,7 @@ import { Markdown } from "./Markdown.tsx";
 import { UserMessageContent } from "./MessageContent.tsx";
 import { cn } from "../lib/cn.ts";
 import { useFeatures } from "../lib/features.ts";
-import { fmtDuration, getVoicePrefs, listTtsVoices, recognizerCtor, speak, stopSpeak, sttSupported, type Recognizer } from "../lib/voice.ts";
+import { fmtDuration, getVoicePrefs, listTtsVoices, playText, recognizerCtor, stopPlayback, sttSupported, type Recognizer } from "../lib/voice.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
 
 const REPORT_REASONS: ReportReason[] = ["copyright", "gore", "falseinfo", "bug"];
@@ -279,6 +279,7 @@ export function Chat({
   // TTS playback: which assistant bubble is speaking (null = silent).
   const [speakingKey, setSpeakingKey] = useState<number | null>(null);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const ttsServerRef = useRef(false);
   // Voice input: live recording session (null = composer idle).
   const [rec, setRec] = useState<{
     stream: MediaStream;
@@ -296,12 +297,13 @@ export function Chat({
 
   useEffect(() => {
     listTtsVoices().then((v) => { voicesRef.current = v; });
-    return () => stopSpeak();
+    api.ttsInfo().then((r) => { ttsServerRef.current = r.available; }).catch(() => {});
+    return () => stopPlayback();
   }, []);
 
   // New message / conversation: stop any playback (never leak speech).
   useEffect(() => {
-    stopSpeak();
+    stopPlayback();
     setSpeakingKey(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conv?.id]);
@@ -309,22 +311,29 @@ export function Chat({
   useEffect(() => {
     return () => {
       cancelRec(false);
-      stopSpeak();
+      stopPlayback();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function toggleSpeak(index: number, text: string) {
     if (speakingKey === index) {
-      stopSpeak();
+      stopPlayback();
       setSpeakingKey(null);
       return;
     }
-    const ok = speak(text, getVoicePrefs(), voicesRef.current, {
+    const prefs = getVoicePrefs();
+    playText({
+      text,
+      engine: prefs.engine,
+      browser: { voices: voicesRef.current, lang: prefs.lang, rate: prefs.rate, pitch: prefs.pitch, voiceURI: prefs.voiceURI },
+      serverVoice: prefs.serverVoice ?? undefined,
+      serverAvailable: ttsServerRef.current,
+      fetchAudio: (t, v) => api.ttsSpeak(t, v),
       onend: () => setSpeakingKey(null),
       onerror: () => setSpeakingKey(null),
     });
-    if (ok) setSpeakingKey(index);
+    setSpeakingKey(index);
   }
 
   function cleanupRec(r: NonNullable<typeof rec>) {
@@ -446,7 +455,7 @@ export function Chat({
   // A fresh message ends any playback (the glow never sticks to a stale row).
   const msgCount = messages.length;
   useEffect(() => {
-    stopSpeak();
+    stopPlayback();
     setSpeakingKey(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [msgCount]);
@@ -464,7 +473,7 @@ export function Chat({
     if (readOnly) return;
     const text = draft.trim();
     if (!text || sending) return;
-    stopSpeak();
+    stopPlayback();
     setSpeakingKey(null);
     setDraft("");
     requestAnimationFrame(autoGrow);

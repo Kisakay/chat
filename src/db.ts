@@ -311,6 +311,11 @@ export async function isOcrToolEnabled(): Promise<boolean> {
   return (await getSetting("tools_ocr_enabled", "1")) === "1";
 }
 
+/** Admin kill-switch for the neural TTS platform tool (default on). */
+export async function isTtsToolEnabled(): Promise<boolean> {
+  return (await getSetting("tools_tts_enabled", "1")) === "1";
+}
+
 /** Admin kill-switch for message reports / flag button (default on). */
 export async function isReportsEnabled(): Promise<boolean> {
   return (await getSetting("reports_enabled", "1")) === "1";

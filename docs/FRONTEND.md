@@ -92,7 +92,9 @@ No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
   also repaints the SVG favicon (data URL) so the tab icon matches the dress.
 - Voice (`lib/voice.ts`, no dependency): `Chat.tsx` composer mic with live
   waveform + speech-recognition transcript (editable before send), per-bubble
-  TTS playback with glow, `Settings → Voice` prefs (voice/lang/speed/pitch,
+  playback with glow through a unified player (`playText`: neural server
+  audio via `POST /api/tools/tts` with browser-synthesis fallback),
+  `Settings → Voice` prefs (engine/lang/voice/speed/pitch/neural voice,
   localStorage), admin-editable preview lines.
 
 ## Theming

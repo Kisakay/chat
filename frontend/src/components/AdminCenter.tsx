@@ -321,6 +321,13 @@ export function AdminCenter({ initialTab }: { initialTab?: string | null }) {
               </div>
               <Switch label={t("center.usernameChangeTitle")} checked={settings?.usernameChangeEnabled ?? false} onChange={(v) => toggle({ usernameChangeEnabled: v })} />
             </div>
+            <div className="flex items-center gap-4 rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{t("center.ttsTitle")}</p>
+                <p className="text-sm opacity-60">{t("center.ttsDesc")}</p>
+              </div>
+              <Switch label={t("center.ttsTitle")} checked={settings?.ttsEnabled ?? false} onChange={(v) => toggle({ ttsEnabled: v })} />
+            </div>
             {saving && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("common.saving")}</p>}
             {!settings && !error && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("common.loading")}</p>}
             <VoicePreviewsCard />
@@ -444,6 +451,20 @@ function VoicePreviewsCard() {
                   />
                 </Field>
               </span>
+              <span className="w-40">
+                <Field label={t("vfeat.voice")} hint={t("vfeat.voiceHint")}>
+                  <Input
+                    value={line.voice}
+                    disabled={busy}
+                    maxLength={64}
+                    placeholder={t("vfeat.voicePh")}
+                    aria-label={t("vfeat.voice")}
+                    onChange={(e) => patch(i, { voice: e.target.value })}
+                    onBlur={() => commit(i)}
+                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                  />
+                </Field>
+              </span>
               <label className="min-w-32 flex-1 text-xs opacity-80">
                 <span className="mb-1 block font-medium">{t("voice.rate")} · {line.rate.toFixed(2)}×</span>
                 <input
@@ -478,7 +499,7 @@ function VoicePreviewsCard() {
             variant="secondary"
             size="sm"
             disabled={busy}
-            onClick={() => setLines((prev) => [...prev, { text: "", lang: "auto", rate: 1, pitch: 1, timbre: "any" as const }])}
+            onClick={() => setLines((prev) => [...prev, { text: "", lang: "auto", rate: 1, pitch: 1, timbre: "any" as const, voice: "" }])}
           >
             <Plus size={14} /> {t("vfeat.add")}
           </Button>
