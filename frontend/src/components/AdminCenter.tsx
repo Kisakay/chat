@@ -14,6 +14,7 @@ import { Button, CopyButton, Field, FlowerMark, Input, LoadingScreen, Picker, Sp
 import { cn } from "../lib/cn.ts";
 import { msUntilNextSolarSwitch, resolveThemeDark } from "../lib/solarTheme.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
+import { OPENAI_STATIC_VOICES } from "../lib/voice.ts";
 
 type Tab = "accounts" | "access" | "reports" | "models" | "stats" | "features" | "mail";
 
@@ -349,6 +350,8 @@ function VoicePreviewsCard() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [serverVoices, setServerVoices] = useState<{ id: string; name: string }[]>([]);
+  const [ttsProvider, setTtsProvider] = useState<string | null>(null);
+  const [ttsAvailable, setTtsAvailable] = useState(false);
 
   useEffect(() => {
     api.adminGetSettings()
@@ -357,7 +360,13 @@ function VoicePreviewsCard() {
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
-    api.ttsInfo().then((r) => setServerVoices(r.voices)).catch(() => {});
+    api.ttsInfo()
+      .then((r) => {
+        setServerVoices(r.voices);
+        setTtsProvider(r.provider);
+        setTtsAvailable(r.available);
+      })
+      .catch(() => {});
   }, []);
 
   async function save(next: VoicePreview[]) {
@@ -454,8 +463,8 @@ function VoicePreviewsCard() {
                 </Field>
               </span>
               <span className="w-40">
-                <Field label={t("vfeat.voice")} hint={t("vfeat.voiceHint")}>
-                  {serverVoices.length > 0 ? (
+                <Field label={t("vfeat.voice")} hint={ttsAvailable ? (ttsProvider ? `${ttsProvider} · ${t("vfeat.voiceHint")}` : t("vfeat.voiceHint")) : t("vfeat.noProvider")}>
+                  {serverVoices.length > 0 || ttsProvider !== "elevenlabs" ? (
                     <Picker
                       ariaLabel={t("vfeat.voice")}
                       value={line.voice}
@@ -465,7 +474,12 @@ function VoicePreviewsCard() {
                         if (next[i]!.text.trim() !== "") void save(next);
                       }}
                       align="left"
-                      options={[{ value: "", label: t("vfeat.voicePh") }, ...serverVoices.map((v) => ({ value: v.id, label: v.name }))]}
+                      options={[
+                        { value: "", label: t("vfeat.voicePh") },
+                        ...(serverVoices.length > 0
+                          ? serverVoices.map((v) => ({ value: v.id, label: v.name }))
+                          : OPENAI_STATIC_VOICES.map((v) => ({ value: v, label: v }))),
+                      ]}
                     />
                   ) : (
                     <Input

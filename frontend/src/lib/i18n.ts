@@ -608,6 +608,8 @@ const en = {
   "vfeat.voice": "Server voice",
   "vfeat.voiceHint": "ElevenLabs id / OpenAI name, empty = default",
   "vfeat.voicePh": "auto",
+  "vfeat.noProvider": "No neural provider yet — add ELEVENLABS_API_KEY or OPENAI_API_KEY to activate.",
+
   "center.ttsTitle": "Neural voice playback",
   "center.ttsDesc": "Server text-to-speech for message playback (ElevenLabs / OpenAI / piper). Off = browser speech only.",
   "voice.engine": "Playback engine",
@@ -1316,6 +1318,8 @@ const es: Dict = {
   "vfeat.voice": "Server voice",
   "vfeat.voiceHint": "ElevenLabs id / OpenAI name, empty = default",
   "vfeat.voicePh": "auto",
+  "vfeat.noProvider": "No neural provider yet — add ELEVENLABS_API_KEY or OPENAI_API_KEY to activate.",
+
   "center.ttsTitle": "Neural voice playback",
   "center.ttsDesc": "Server text-to-speech for message playback (ElevenLabs / OpenAI / piper). Off = browser speech only.",
   "voice.engine": "Playback engine",
@@ -2019,6 +2023,8 @@ const fr: Dict = {
   "vfeat.voice": "Server voice",
   "vfeat.voiceHint": "ElevenLabs id / OpenAI name, empty = default",
   "vfeat.voicePh": "auto",
+  "vfeat.noProvider": "No neural provider yet — add ELEVENLABS_API_KEY or OPENAI_API_KEY to activate.",
+
   "center.ttsTitle": "Neural voice playback",
   "center.ttsDesc": "Server text-to-speech for message playback (ElevenLabs / OpenAI / piper). Off = browser speech only.",
   "voice.engine": "Playback engine",
@@ -2710,6 +2716,8 @@ const ru: Dict = {
   "vfeat.voice": "Server voice",
   "vfeat.voiceHint": "ElevenLabs id / OpenAI name, empty = default",
   "vfeat.voicePh": "auto",
+  "vfeat.noProvider": "No neural provider yet — add ELEVENLABS_API_KEY or OPENAI_API_KEY to activate.",
+
   "center.ttsTitle": "Neural voice playback",
   "center.ttsDesc": "Server text-to-speech for message playback (ElevenLabs / OpenAI / piper). Off = browser speech only.",
   "voice.engine": "Playback engine",
@@ -3406,6 +3414,8 @@ const it: Dict = {
   "vfeat.voice": "Server voice",
   "vfeat.voiceHint": "ElevenLabs id / OpenAI name, empty = default",
   "vfeat.voicePh": "auto",
+  "vfeat.noProvider": "No neural provider yet — add ELEVENLABS_API_KEY or OPENAI_API_KEY to activate.",
+
   "center.ttsTitle": "Neural voice playback",
   "center.ttsDesc": "Server text-to-speech for message playback (ElevenLabs / OpenAI / piper). Off = browser speech only.",
   "voice.engine": "Playback engine",
@@ -4093,6 +4103,8 @@ const pt: Dict = {
   "vfeat.voice": "Server voice",
   "vfeat.voiceHint": "ElevenLabs id / OpenAI name, empty = default",
   "vfeat.voicePh": "auto",
+  "vfeat.noProvider": "No neural provider yet — add ELEVENLABS_API_KEY or OPENAI_API_KEY to activate.",
+
   "center.ttsTitle": "Neural voice playback",
   "center.ttsDesc": "Server text-to-speech for message playback (ElevenLabs / OpenAI / piper). Off = browser speech only.",
   "voice.engine": "Playback engine",

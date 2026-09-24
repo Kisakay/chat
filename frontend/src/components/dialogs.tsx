@@ -4,7 +4,7 @@ import { api, type UserProvider, type VoicePreview } from "../lib/api.ts";
 import { pushToast } from "../lib/toasts.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
-import { detectLang, getVoicePrefs, listTtsVoices, pickVoice, playText, setVoicePrefs, stopPlayback, ttsSupported, type VoicePrefs } from "../lib/voice.ts";
+import { detectLang, getVoicePrefs, listTtsVoices, OPENAI_STATIC_VOICES, pickVoice, playText, setVoicePrefs, stopPlayback, ttsSupported, type VoicePrefs } from "../lib/voice.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
 import type { Conversation, FilePreview, User } from "../lib/types.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
@@ -978,8 +978,11 @@ function VoiceSection() {
         />
       </Field>
       {(prefs.engine !== "browser") && (
-        ttsServer?.available ? (
-          ttsServer.voices.length > 0 ? (
+        <>
+          {!ttsServer?.available && (
+            <p className="rounded-2xl bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400">{t("voice.noServer")}</p>
+          )}
+          {ttsServer && ttsServer.voices.length > 0 ? (
             <Field label={t("voice.serverVoice")}>
               <Picker
                 ariaLabel={t("voice.serverVoice")}
@@ -990,7 +993,7 @@ function VoiceSection() {
                 options={[{ value: "", label: t("voice.defaultVoice") }, ...ttsServer.voices.map((v) => ({ value: v.id, label: v.name }))]}
               />
             </Field>
-          ) : ttsServer.provider === "elevenlabs" ? (
+          ) : ttsServer?.provider === "elevenlabs" ? (
             <Field label={t("voice.serverVoice")} hint={t("voice.serverVoiceHint")}>
               <Input
                 value={prefs.serverVoice ?? ""}
@@ -999,12 +1002,21 @@ function VoiceSection() {
                 maxLength={64}
               />
             </Field>
-          ) : (
+          ) : ttsServer?.provider === "piper" ? (
             <p className="rounded-2xl bg-stone-100 px-4 py-2.5 text-sm opacity-70 dark:bg-zinc-800">{t("voice.piperNote")}</p>
-          )
-        ) : (
-          <p className="rounded-2xl bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400">{t("voice.noServer")}</p>
-        )
+          ) : (
+            <Field label={t("voice.serverVoice")} hint={t("vfeat.noProvider")}>
+              <Picker
+                ariaLabel={t("voice.serverVoice")}
+                icon={Volume2}
+                value={prefs.serverVoice ?? ""}
+                onChange={(v) => update({ serverVoice: v || null })}
+                align="left"
+                options={[{ value: "", label: t("voice.defaultVoice") }, ...OPENAI_STATIC_VOICES.map((v) => ({ value: v, label: v }))]}
+              />
+            </Field>
+          )}
+        </>
       )}
       <Field label={t("voice.voice")}>
         <Picker

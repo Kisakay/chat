@@ -90,6 +90,9 @@ export interface SpeakOpts {
 
 export type VoiceTimbre = "masculine" | "feminine" | "any";
 
+/** Stock OpenAI voices (static catalog — selectable even before any key). */
+export const OPENAI_STATIC_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+
 // Name fragments hinting a masculine / feminine voice (Chrome, Edge,
 // Safari and Android voices carry such markers; absence falls back to
 // any same-language voice — never an error).
