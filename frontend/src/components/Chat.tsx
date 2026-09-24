@@ -627,6 +627,15 @@ export function Chat({
             <p className="min-w-0 flex-1 text-sm opacity-70">{t("archived.readonly")}</p>
             <button
               type="button"
+              onClick={onShare}
+              aria-label={t("sidebar.share")}
+              title={t("sidebar.share")}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-stone-200/70 active:scale-95 dark:hover:bg-zinc-700"
+            >
+              <Share2 size={16} className="opacity-70" />
+            </button>
+            <button
+              type="button"
               onClick={onUnarchive}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-500 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400"
             >

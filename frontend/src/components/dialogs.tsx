@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Mic, Palette, Pencil, Play, Plug, ScanText, Search, Settings2, ShieldCheck, Sparkles, Square, Tag, Trash2, Unplug, User as UserIcon, Volume2, X } from "lucide-react";
+import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Mic, Palette, Pencil, Play, Plug, ScanText, Search, Settings2, Share2, ShieldCheck, Sparkles, Square, Tag, Trash2, Unplug, User as UserIcon, Volume2, X } from "lucide-react";
 import { api, type UserProvider, type VoicePreview } from "../lib/api.ts";
 import { pushToast } from "../lib/toasts.ts";
 import { cn } from "../lib/cn.ts";
@@ -229,10 +229,17 @@ export function ShareModal({ conv, onClose }: { conv: Conversation | null; onClo
 
   async function unshare() {
     if (!conv) return;
-    await api.unshare(conv.id);
-    pushToast(t("toast.unshared"), { icon: "unshare" });
-    onClose();
+    setError("");
+    try {
+      await api.unshare(conv.id);
+      pushToast(t("toast.unshared"), { icon: "unshare" });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("dlg.reqFailed"));
+    }
   }
+
+  const archived = (conv?.archived_at ?? 0) !== 0;
 
   return (
     <Modal open={conv !== null} onClose={onClose} title={t("dlg.shareTitle")} icon={Globe}>
@@ -246,8 +253,13 @@ export function ShareModal({ conv, onClose }: { conv: Conversation | null; onClo
             <span className="min-w-0 flex-1 truncate">{url}</span>
             <CopyButton text={url} />
           </div>
+          {archived && <p className="text-xs opacity-60">{t("dlg.unshareBlocked")}</p>}
           <div className="flex justify-between">
-            <Button variant="ghost" size="sm" onClick={unshare}><Unplug size={15} /> {t("dlg.unshare")}</Button>
+            {!archived ? (
+              <Button variant="ghost" size="sm" onClick={unshare}><Unplug size={15} /> {t("dlg.unshare")}</Button>
+            ) : (
+              <span />
+            )}
             <Button size="sm" onClick={onClose}>{t("common.done")}</Button>
           </div>
         </div>
@@ -651,6 +663,7 @@ function ArchivedSection({ onView, onChanged }: { onView: (c: Conversation) => v
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
+  const [shareTarget, setShareTarget] = useState<Conversation | null>(null);
 
   async function refresh() {
     try {
@@ -740,6 +753,16 @@ function ArchivedSection({ onView, onChanged }: { onView: (c: Conversation) => v
                 </button>
                 <button
                   type="button"
+                  title={t("sidebar.share")}
+                  aria-label={`${t("sidebar.share")}: ${c.title}`}
+                  disabled={busyId === c.id}
+                  onClick={() => setShareTarget(c)}
+                  className="rounded-full p-2 transition hover:bg-stone-100 disabled:opacity-50 dark:hover:bg-zinc-800"
+                >
+                  <Share2 size={15} />
+                </button>
+                <button
+                  type="button"
                   title={t("common.delete")}
                   aria-label={`${t("common.delete")}: ${c.title}`}
                   disabled={busyId === c.id}
@@ -753,6 +776,7 @@ function ArchivedSection({ onView, onChanged }: { onView: (c: Conversation) => v
           ))}
         </ul>
       )}
+      <ShareModal conv={shareTarget} onClose={() => setShareTarget(null)} />
       <ConfirmDialog
         open={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}

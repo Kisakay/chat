@@ -1751,6 +1751,8 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             return publicId ? json({ publicId, url: `/share/${publicId}` }) : json({ shared: false });
           }
           if (req.method === "DELETE") {
+            // Archived public chats stay public: unarchive first to go private.
+            if (conv.archived_at) return json({ error: "conversation is archived (read-only) — unarchive it to remove the public link" }, 403);
             await deleteShare(conv.id);
             return json({ ok: true });
           }

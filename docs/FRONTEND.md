@@ -60,11 +60,13 @@ No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
   share button), message list (`Markdown` for assistant, emerald bubble for
   user), rounded composer with paperclip attach menu, attachment chips
   (Enter to send, Shift+Enter for newline). With `readOnly` (archived chat)
-  the composer and share button are replaced by an unarchive banner.
+  the composer is replaced by an unarchive banner with a share button
+  (archived chats stay shareable, but an archived public chat cannot go
+  private again — `DELETE …/share` answers 403 until unarchived).
 - `dialogs.tsx` — `ConvEditDialog` (title + topic), `ShareModal` (public link,
   copy, unshare), `SettingsModal` (display name, avatar upload box with
   drag & drop, avatar URL, theme, plus an "Archived chats" category to
-  view / unarchive / delete archived conversations).
+  view / unarchive / delete / share archived conversations).
 - `AdminPanel.tsx` — No-KYC account management: create (key shown once),
   regenerate (revokes sessions), edit, delete with confirm, plus server-side
   search / sort (newest, oldest, A–Z, Z–A) / email filter / pagination.
