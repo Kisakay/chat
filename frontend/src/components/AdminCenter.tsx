@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Boxes, Eye, EyeOff, Flag, Inbox, LayoutDashboard, Mail, Send, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
+import { ArrowLeft, Boxes, Eye, EyeOff, Flag, Inbox, LayoutDashboard, Mail, Plus, Send, ShieldAlert, SlidersHorizontal, Trash2, TrendingUp, Users } from "lucide-react";
 import { api, getToken, type AccessStatus, type AdminSettings, type AdminSettingsPatch, type ReportStatus } from "../lib/api.ts";
 import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import { navigate } from "../lib/route.ts";
@@ -7,6 +7,7 @@ import { AdminPanel } from "./AdminPanel.tsx";
 import { AccessRequestsPanel } from "./AccessRequests.tsx";
 import { ReportsPanel } from "./ReportsPanel.tsx";
 import { ModelsPanel } from "./ModelsPanel.tsx";
+import { StatsSection } from "./StatsSection.tsx";
 import { Toasts } from "./Toasts.tsx";
 import { pushToast } from "../lib/toasts.ts";
 import { Button, CopyButton, Field, FlowerMark, Input, LoadingScreen, Spinner, Switch } from "./ui.tsx";
@@ -14,9 +15,9 @@ import { cn } from "../lib/cn.ts";
 import { msUntilNextSolarSwitch, resolveThemeDark } from "../lib/solarTheme.ts";
 import { useT } from "../lib/i18n.ts";
 
-type Tab = "accounts" | "access" | "reports" | "models" | "features" | "mail";
+type Tab = "accounts" | "access" | "reports" | "models" | "stats" | "features" | "mail";
 
-const VALID_TABS: readonly string[] = ["accounts", "access", "reports", "models", "features", "mail"];
+const VALID_TABS: readonly string[] = ["accounts", "access", "reports", "models", "stats", "features", "mail"];
 
 function validTab(v: string | null | undefined): Tab {
   return v !== null && v !== undefined && (VALID_TABS as readonly string[]).includes(v) ? (v as Tab) : "accounts";
@@ -60,6 +61,7 @@ export function AdminCenter({ initialTab }: { initialTab?: string | null }) {
     { id: "access", label: t("center.tabAccess"), icon: Inbox },
     { id: "reports", label: t("center.tabReports"), icon: Flag },
     { id: "models", label: t("center.tabModels"), icon: Boxes },
+    { id: "stats", label: t("center.tabStats"), icon: TrendingUp },
     { id: "features", label: t("center.tabFeatures"), icon: SlidersHorizontal },
     { id: "mail", label: t("center.tabMail"), icon: Mail },
   ];
@@ -268,6 +270,8 @@ export function AdminCenter({ initialTab }: { initialTab?: string | null }) {
           </section>
         )}
 
+        {tab === "stats" && <StatsSection />}
+
         {tab === "features" && (
           <section className="space-y-3">
             <div className="flex items-center gap-4 rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -319,12 +323,121 @@ export function AdminCenter({ initialTab }: { initialTab?: string | null }) {
             </div>
             {saving && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("common.saving")}</p>}
             {!settings && !error && <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("common.loading")}</p>}
+            <VoicePreviewsCard />
           </section>
         )}
 
         {tab === "mail" && <MailPanel />}
       </main>
       <Toasts />
+    </div>
+  );
+}
+
+/** Admin voice-preview lines (Settings → Voice for users). Empty = reset. */
+function VoicePreviewsCard() {
+  const { t } = useT();
+  const [lines, setLines] = useState<string[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    api.adminGetSettings()
+      .then((r) => {
+        setLines(r.settings.voicePreviews);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  async function save(next: string[]) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await api.adminPatchSettings({ voicePreviews: next });
+      setLines(res.settings.voicePreviews);
+      setMsg({ ok: true, text: t("vfeat.saved") });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : t("vfeat.invalid") });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function commit(i: number, v: string) {
+    const trimmed = v.trim();
+    if (trimmed === "") {
+      // Emptied line: drop the row locally (server needs 1+ lines).
+      const next = lines.filter((_, j) => j !== i);
+      if (next.length === 0) {
+        setMsg({ ok: false, text: t("vfeat.invalid") });
+        void refreshLines();
+        return;
+      }
+      void save(next);
+      return;
+    }
+    void save(lines.map((l, j) => (j === i ? trimmed : l)));
+  }
+
+  async function refreshLines() {
+    try {
+      const r = await api.adminGetSettings();
+      setLines(r.settings.voicePreviews);
+    } catch {
+      // keep current
+    }
+  }
+
+  if (!loaded) return null;
+
+  return (
+    <div className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="text-sm font-medium">{t("vfeat.title")}</p>
+      <p className="mb-3 mt-0.5 text-sm opacity-60">{t("vfeat.desc")}</p>
+      <ul className="space-y-2">
+        {lines.map((line, i) => (
+          <li key={i} className="flex items-center gap-2">
+            <span className="w-40 shrink-0">
+              <Input
+                value={line}
+                disabled={busy}
+                maxLength={500}
+                aria-label={t("vfeat.line", { n: i + 1 })}
+                onChange={(e) => setLines((prev) => prev.map((l, j) => (j === i ? e.target.value : l)))}
+                onBlur={(e) => { if (e.target.value !== line) commit(i, e.target.value); }}
+                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm opacity-60">{line}</span>
+            <button
+              type="button"
+              disabled={busy || lines.length <= 1}
+              onClick={() => void save(lines.filter((_, j) => j !== i))}
+              aria-label={t("vfeat.remove", { n: i + 1 })}
+              className="shrink-0 rounded-full p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-30 dark:text-red-400 dark:hover:bg-red-950/40"
+            >
+              <Trash2 size={14} />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {lines.length < 6 && (
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => setLines((prev) => [...prev, ""])}>
+            <Plus size={14} /> {t("vfeat.add")}
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" disabled={busy} onClick={() => void save([])}>
+          {t("vfeat.reset")}
+        </Button>
+      </div>
+      {msg && (
+        <p role={msg.ok ? "status" : "alert"} className={cn("mt-3 rounded-2xl px-4 py-2.5 text-sm", msg.ok ? "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400" : "bg-red-500/10 text-red-600 dark:text-red-400")}>
+          {msg.text}
+        </p>
+      )}
     </div>
   );
 }

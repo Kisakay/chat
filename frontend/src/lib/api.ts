@@ -68,6 +68,21 @@ export interface OllamaHostModel {
   modifiedAt: string | null;
 }
 
+export interface PlatformInfo {
+  hostname: string;
+  kernel: string;
+  arch: string;
+  uptimeS: number;
+  appUptimeS: number;
+  loadavg: number[];
+  cpus: number;
+  cpuModel: string | null;
+  memTotal: number;
+  memFree: number;
+  runtime: string;
+  nets: { name: string; address: string; family: string; internal: boolean }[];
+}
+
 export interface AdminSettings {
   registrationEnabled: boolean;
   accessRequestEnabled: boolean;
@@ -78,6 +93,7 @@ export interface AdminSettings {
   ollamaDefaultWeight: number;
   recoveryLimitMax: number;
   recoveryLimitWindowMin: number;
+  voicePreviews: string[];
 }
 
 export interface AdminSettingsPatch {
@@ -90,6 +106,7 @@ export interface AdminSettingsPatch {
   ollamaDefaultWeight?: number;
   recoveryLimitMax?: number;
   recoveryLimitWindowMin?: number;
+  voicePreviews?: string[];
 }
 
 export interface OllamaNode {
@@ -397,6 +414,8 @@ export const api = {
     req<OllamaNodeStatus>(`/api/admin/ollama/nodes/${encodeURIComponent(id)}/status`),
   ollamaNodeProbe: (host: string) =>
     req<OllamaNodeStatus>(`/api/admin/ollama/probe?host=${encodeURIComponent(host)}`),
+  /** Admin: platform host facts (hostname, kernel, uptime, network…). */
+  platform: () => req<{ platform: PlatformInfo }>("/api/admin/platform"),
   ollamaNodeStats: (id: string, window: string) =>
     req<{ stats: OllamaNodeStats }>(`/api/admin/ollama/nodes/${encodeURIComponent(id)}/stats?window=${encodeURIComponent(window)}`),
 
@@ -413,7 +432,7 @@ export const api = {
   deleteProvider: (provider: string) =>
     req<{ providers: UserProvider[] }>(`/api/me/providers/${provider}`, { method: "DELETE" }),
 
-  tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[]; reportsEnabled: boolean; usernameChangeEnabled: boolean }>("/api/tools"),
+  tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[]; reportsEnabled: boolean; usernameChangeEnabled: boolean; voicePreviews: string[] }>("/api/tools"),
 
   /** Send an image to the platform OCR tool. Returns editable text (never the raw image). */
   ocrImage: async (file: File): Promise<{ text: string; truncated: boolean; chars: number }> => {

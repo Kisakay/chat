@@ -223,6 +223,37 @@ async function probeOllamaHost(host: string): Promise<{
   }
 }
 
+/**
+ * Default TTS voice-preview lines (admin-editable, resettable). Short,
+ * varied lines that show off grave/hesitant, grave/serious, cute feminine
+ * and medium feminine deliveries.
+ */
+const DEFAULT_VOICE_PREVIEWS = [
+  "Salut, euhm, comment je peux t'aider aujourd'hui ?",
+  "5 sur 5 je recois ! Que veux-tu ?",
+  "Owww, ce chat est trop mignon, oops, pardon. Je me concentre, que puis-je faire pour toi ?",
+  "Hey, que puis-je faire pour toi ?",
+];
+
+async function getVoicePreviews(): Promise<string[]> {
+  try {
+    const raw = await getSetting("voice_previews", "");
+    if (!raw) return [...DEFAULT_VOICE_PREVIEWS];
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return [...DEFAULT_VOICE_PREVIEWS];
+    const clean = arr.filter((s): s is string => typeof s === "string").map((s) => s.trim()).filter((s) => s.length > 0 && s.length <= 500).slice(0, 6);
+    return clean.length > 0 ? clean : [...DEFAULT_VOICE_PREVIEWS];
+  } catch {
+    return [...DEFAULT_VOICE_PREVIEWS];
+  }
+}
+
+function sanitizeVoicePreviews(v: unknown): string[] | null {
+  if (!Array.isArray(v) || v.length === 0 || v.length > 6) return null;
+  const clean = v.map((s) => (typeof s === "string" ? s.trim() : "")).filter((s) => s.length > 0 && s.length <= 500);
+  return clean.length > 0 ? clean.slice(0, 6) : null;
+}
+
 function clientIp(req: Request, server: { requestIP?: (r: Request) => { address: string } | null }): string {
   try {
     const info = server.requestIP?.(req);
@@ -970,6 +1001,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             ollamaDefaultWeight: await getOllamaDefaultWeight(),
             recoveryLimitMax: await recoveryLimitMax(),
             recoveryLimitWindowMin: Math.round(await recoveryLimitWindowMs() / 60_000),
+            voicePreviews: await getVoicePreviews(),
           },
         });
       }
@@ -1029,6 +1061,16 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           }
           await setSetting("recovery_limit_window_min", String(body.recoveryLimitWindowMin));
         }
+        if (body.voicePreviews !== undefined) {
+          if (Array.isArray(body.voicePreviews) && body.voicePreviews.length === 0) {
+            // Empty array = reset to the built-in default lines.
+            await setSetting("voice_previews", "");
+          } else {
+            const clean = sanitizeVoicePreviews(body.voicePreviews);
+            if (!clean) return json({ error: "voicePreviews must be 1-6 non-empty strings (max 500 chars each), or [] to reset" }, 400);
+            await setSetting("voice_previews", JSON.stringify(clean));
+          }
+        }
         return json({
           settings: {
             registrationEnabled: await isRegistrationEnabled(),
@@ -1040,6 +1082,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             ollamaDefaultWeight: await getOllamaDefaultWeight(),
             recoveryLimitMax: await recoveryLimitMax(),
             recoveryLimitWindowMin: Math.round(await recoveryLimitWindowMs() / 60_000),
+            voicePreviews: await getVoicePreviews(),
           },
         });
       }
@@ -1483,6 +1526,41 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         return json({ error: "not found" }, 404);
       }
 
+      // --- admin: platform host facts (hostname, kernel, uptime, net, ips) ---
+      // This box only (Ollama hosts expose no such API — see node probes).
+      if (path === "/api/admin/platform" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        try {
+          const os = await import("node:os");
+          const nets: { name: string; address: string; family: string; internal: boolean }[] = [];
+          for (const [name, list] of Object.entries(os.networkInterfaces())) {
+            for (const ni of list ?? []) {
+              if (ni.family === "IPv4" || ni.family === "IPv6") {
+                nets.push({ name, address: ni.address, family: ni.family, internal: ni.internal });
+              }
+            }
+          }
+          return json({
+            platform: {
+              hostname: os.hostname(),
+              kernel: `${os.type()} ${os.release()}`,
+              arch: os.arch(),
+              uptimeS: Math.floor(os.uptime()),
+              appUptimeS: Math.floor(process.uptime()),
+              loadavg: os.loadavg(),
+              cpus: os.cpus().length,
+              cpuModel: os.cpus()[0]?.model ?? null,
+              memTotal: os.totalmem(),
+              memFree: os.freemem(),
+              runtime: `bun ${Bun.version}`,
+              nets,
+            },
+          });
+        } catch (e) {
+          return json({ error: (e as Error).message }, 502);
+        }
+      }
+
       // --- admin: SMTP connectivity (viewer + tester) ---
       if (path === "/api/admin/mail" && req.method === "GET") {
         if (!admin) return json({ error: "forbidden" }, 403);
@@ -1673,6 +1751,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           tools: await tools.list(),
           reportsEnabled: await isReportsEnabled(),
           usernameChangeEnabled: await isUsernameChangeEnabled(),
+          voicePreviews: await getVoicePreviews(),
         });
       }
 

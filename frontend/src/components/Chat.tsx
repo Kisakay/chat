@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, BookOpen, Bot, Check, Copy, Cpu, FileText, Flag, Menu, PanelLeftOpen, Paperclip, RotateCcw, ScanText, Search, SendHorizontal, Share2, User as UserIcon, X } from "lucide-react";
+import { Archive, ArchiveRestore, BookOpen, Bot, Check, Copy, Cpu, FileText, Flag, Menu, Mic, PanelLeftOpen, Paperclip, RotateCcw, ScanText, Search, SendHorizontal, Share2, Square, User as UserIcon, Volume2, VolumeX, X } from "lucide-react";
 import type { Attachment, ChatMessage, Conversation, DriverModel, User } from "../lib/types.ts";
 import { api, ApiError, type ReportReason } from "../lib/api.ts";
 import { AssistantAvatar, Avatar, Button, Field, FlowerMark, IconButton, Modal, Picker, type PickerGroup, Spinner } from "./ui.tsx";
@@ -7,11 +7,12 @@ import { Markdown } from "./Markdown.tsx";
 import { UserMessageContent } from "./MessageContent.tsx";
 import { cn } from "../lib/cn.ts";
 import { useFeatures } from "../lib/features.ts";
+import { fmtDuration, getVoicePrefs, listTtsVoices, recognizerCtor, speak, stopSpeak, sttSupported, type Recognizer } from "../lib/voice.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
 
 const REPORT_REASONS: ReportReason[] = ["copyright", "gore", "falseinfo", "bug"];
 
-function MessageBubble({ msg, index, authorAvatar, authorName, onReport, reportsEnabled = true, isFailed, retryCount, maxRetries, retryDisabled, onRetry }: { msg: ChatMessage; index: number; authorAvatar?: string; authorName: string; onReport?: (index: number) => void; reportsEnabled?: boolean; isFailed?: boolean; retryCount?: number; maxRetries?: number; retryDisabled?: boolean; onRetry?: () => void }) {
+function MessageBubble({ msg, index, authorAvatar, authorName, onReport, reportsEnabled = true, isFailed, retryCount, maxRetries, retryDisabled, onRetry, speaking, onToggleSpeak }: { msg: ChatMessage; index: number; authorAvatar?: string; authorName: string; onReport?: (index: number) => void; reportsEnabled?: boolean; isFailed?: boolean; retryCount?: number; maxRetries?: number; retryDisabled?: boolean; onRetry?: () => void; speaking?: boolean; onToggleSpeak?: () => void }) {
   const { t } = useT();
   const isUser = msg.role === "user";
   const [copied, setCopied] = useState(false);
@@ -39,12 +40,17 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport, reports
             <UserMessageContent content={msg.content} />
           </div>
         ) : (
-          <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className={cn("rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-3.5 dark:border-zinc-800 dark:bg-zinc-900", speaking && "speaking-glow")}>
             <Markdown text={msg.content} />
           </div>
         )}
-        {!isUser && (onReport || (isFailed && onRetry)) && (
+        {!isUser && (onReport || onToggleSpeak || (isFailed && onRetry)) && (
           <div className="mt-1.5 flex items-center gap-0.5 opacity-70 transition hover:opacity-100">
+            {onToggleSpeak && (
+              <IconButton title={speaking ? t("voice.stopSpeak") : t("voice.speak")} onClick={onToggleSpeak}>
+                {speaking ? <VolumeX size={14} className="speaking-orb text-accent-500" /> : <Volume2 size={14} />}
+              </IconButton>
+            )}
             {onReport && (
               <>
                 <IconButton title={copied ? t("common.copied") : t("msg.copy")} onClick={copy}>
@@ -74,6 +80,33 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport, reports
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Live voice waveform: mirrored gradient bars glowing with the input level. */
+function Waveform({ levels }: { levels: number[] }) {
+  const BARS = 48;
+  const padded = [...Array(Math.max(0, BARS - levels.length)).fill(0), ...levels].slice(-BARS) as number[];
+  return (
+    <div className="flex h-12 items-center gap-[3px] px-2 pt-1" aria-hidden>
+      {padded.map((lv, i) => {
+        const mid = (BARS - 1) / 2;
+        const edge = 1 - Math.abs(i - mid) / mid; // taller in the middle
+        const h = Math.max(6, Math.min(100, (8 + lv * 92) * (0.35 + edge * 0.65)));
+        return (
+          <span
+            key={i}
+            className="wave-bar w-full rounded-full"
+            style={{
+              height: `${h}%`,
+              opacity: 0.35 + lv * 0.65,
+              background: "linear-gradient(to top, rgb(var(--ka-accent-600)), rgb(var(--ka-accent-300)))",
+              boxShadow: lv > 0.12 ? "0 0 8px rgb(var(--ka-accent-500) / 0.55)" : "none",
+            }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -243,6 +276,153 @@ export function Chat({
   const taRef = useRef<HTMLTextAreaElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
   const txtRef = useRef<HTMLInputElement>(null);
+  // TTS playback: which assistant bubble is speaking (null = silent).
+  const [speakingKey, setSpeakingKey] = useState<number | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  // Voice input: live recording session (null = composer idle).
+  const [rec, setRec] = useState<{
+    stream: MediaStream;
+    audioCtx: AudioContext;
+    analyser: AnalyserNode;
+    recog: Recognizer | null;
+    startTs: number;
+  } | null>(null);
+  const [recLevels, setRecLevels] = useState<number[]>([]);
+  const [recElapsed, setRecElapsed] = useState(0);
+  const [recText, setRecText] = useState("");
+  const recRaf = useRef(0);
+  const recTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const micOn = sttSupported();
+
+  useEffect(() => {
+    listTtsVoices().then((v) => { voicesRef.current = v; });
+    return () => stopSpeak();
+  }, []);
+
+  // New message / conversation: stop any playback (never leak speech).
+  useEffect(() => {
+    stopSpeak();
+    setSpeakingKey(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conv?.id]);
+
+  useEffect(() => {
+    return () => {
+      cancelRec(false);
+      stopSpeak();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function toggleSpeak(index: number, text: string) {
+    if (speakingKey === index) {
+      stopSpeak();
+      setSpeakingKey(null);
+      return;
+    }
+    const ok = speak(text, getVoicePrefs(), voicesRef.current, {
+      onend: () => setSpeakingKey(null),
+      onerror: () => setSpeakingKey(null),
+    });
+    if (ok) setSpeakingKey(index);
+  }
+
+  function cleanupRec(r: NonNullable<typeof rec>) {
+    cancelAnimationFrame(recRaf.current);
+    if (recTimer.current) clearInterval(recTimer.current);
+    recTimer.current = null;
+    try { r.recog?.abort(); } catch { /* ignore */ }
+    try { r.audioCtx.close(); } catch { /* ignore */ }
+    for (const tr of r.stream.getTracks()) {
+      try { tr.stop(); } catch { /* ignore */ }
+    }
+  }
+
+  function cancelRec(reset = true) {
+    setRec((cur) => {
+      if (cur) cleanupRec(cur);
+      return null;
+    });
+    if (reset) {
+      setRecLevels([]);
+      setRecElapsed(0);
+      setRecText("");
+    }
+  }
+
+  async function startRec() {
+    if (rec || sending || readOnly || !micOn) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioCtx = new AudioContext();
+      const src = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      src.connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+      const Ctor = recognizerCtor();
+      const recog: Recognizer | null = Ctor ? new Ctor() : null;
+      let finals = "";
+      if (recog) {
+        recog.lang = navigator.language || "fr-FR";
+        recog.interimResults = true;
+        recog.continuous = true;
+        recog.onresult = (ev) => {
+          let interim = "";
+          for (const res of Array.from(ev.results)) {
+            if (res.isFinal) finals += res[0]!.transcript;
+            else interim += res[0]!.transcript;
+          }
+          setRecText((finals + " " + interim).trim());
+        };
+        recog.onerror = () => {};
+        try { recog.start(); } catch { /* already started */ }
+      }
+      const startTs = Date.now();
+      const session = { stream, audioCtx, analyser, recog, startTs };
+      setRec(session);
+      setRecLevels([]);
+      setRecText("");
+      setRecElapsed(0);
+      let lastPush = 0;
+      const loop = () => {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i]! - 128) / 128;
+          sum += v * v;
+        }
+        const level = Math.min(1, Math.sqrt(sum / data.length) * 2.4);
+        const now = performance.now();
+        if (now - lastPush > 90) {
+          lastPush = now;
+          setRecLevels((prev) => [...prev.slice(-47), level]);
+        }
+        recRaf.current = requestAnimationFrame(loop);
+      };
+      recRaf.current = requestAnimationFrame(loop);
+      recTimer.current = setInterval(() => setRecElapsed((Date.now() - startTs) / 1000), 500);
+    } catch {
+      // Mic denied / unavailable: stay on the text composer.
+      cancelRec();
+    }
+  }
+
+  function stopRec() {
+    const clean = recText.trim();
+    setRec((cur) => {
+      if (cur) cleanupRec(cur);
+      return null;
+    });
+    // Transcript lands in the composer, editable before sending.
+    if (clean) {
+      setDraft((d) => (d ? `${d.trimEnd()}\n${clean}` : clean));
+      requestAnimationFrame(autoGrow);
+    }
+    setRecText("");
+    setRecLevels([]);
+    setRecElapsed(0);
+  }
 
   const modelGroups: PickerGroup[] = (() => {
     const byDriver = new Map<string, { value: string; label: string; hint: string }[]>();
@@ -263,6 +443,14 @@ export function Chat({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, streaming]);
 
+  // A fresh message ends any playback (the glow never sticks to a stale row).
+  const msgCount = messages.length;
+  useEffect(() => {
+    stopSpeak();
+    setSpeakingKey(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgCount]);
+
   function autoGrow() {
     const ta = taRef.current;
     if (ta) {
@@ -276,6 +464,8 @@ export function Chat({
     if (readOnly) return;
     const text = draft.trim();
     if (!text || sending) return;
+    stopSpeak();
+    setSpeakingKey(null);
     setDraft("");
     requestAnimationFrame(autoGrow);
     onSend(text);
@@ -329,7 +519,7 @@ export function Chat({
             </div>
           )}
           {messages.filter((m) => m.role !== "system").map((m, i) => (
-            <MessageBubble key={i} msg={m} index={i} authorAvatar={user.avatarUrl} authorName={user.displayName} onReport={readOnly ? undefined : setReportIndex} reportsEnabled={reportsEnabled} isFailed={failedIndex === i} retryCount={retryCount} maxRetries={maxRetries} retryDisabled={sending} onRetry={failedIndex === i && retryCount < maxRetries ? onRetry : undefined} />
+            <MessageBubble key={i} msg={m} index={i} authorAvatar={user.avatarUrl} authorName={user.displayName} onReport={readOnly ? undefined : setReportIndex} reportsEnabled={reportsEnabled} isFailed={failedIndex === i} retryCount={retryCount} maxRetries={maxRetries} retryDisabled={sending} onRetry={failedIndex === i && retryCount < maxRetries ? onRetry : undefined} speaking={speakingKey === i} onToggleSpeak={m.role === "assistant" ? () => toggleSpeak(i, m.content) : undefined} />
           ))}
           {streaming !== "" && (
             <div className="flex gap-2 sm:gap-3">
@@ -422,6 +612,35 @@ export function Chat({
               {t("archived.unarchive")}
             </button>
           </div>
+        ) : rec ? (
+        <div className="voice-recorder mx-auto w-full max-w-3xl rounded-[1.75rem] border border-accent-500/40 bg-white p-3 shadow-lg dark:border-accent-500/30 dark:bg-zinc-900">
+          <div className="flex items-center gap-2 px-1">
+            <span className="rec-dot" aria-hidden />
+            <span className="font-mono text-xs opacity-70">{fmtDuration(recElapsed)}</span>
+            <span className="min-w-0 flex-1 truncate text-sm opacity-80" aria-live="polite">
+              {recText || t("voice.listening")}
+            </span>
+            <button
+              type="button"
+              onClick={() => cancelRec()}
+              aria-label={t("voice.cancel")}
+              title={t("voice.cancel")}
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full transition hover:bg-stone-100 active:scale-95 dark:hover:bg-zinc-800"
+            >
+              <X size={16} className="opacity-70" />
+            </button>
+            <button
+              type="button"
+              onClick={stopRec}
+              aria-label={t("voice.stop")}
+              title={t("voice.stop")}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-600 text-white shadow transition hover:bg-accent-500 active:scale-95 dark:bg-accent-500 dark:text-zinc-950 dark:hover:bg-accent-400"
+            >
+              <Square size={15} />
+            </button>
+          </div>
+          <Waveform levels={recLevels} />
+        </div>
         ) : (
         <form onSubmit={submit} className={`mx-auto flex w-full max-w-3xl items-end gap-2 rounded-[1.75rem] border border-stone-200 bg-white p-2 shadow-lg dark:border-zinc-700 dark:bg-zinc-900 ${features.attachments ? "pl-2" : "pl-5"}`}>
           {features.attachments && (
@@ -437,6 +656,16 @@ export function Chat({
           )}
           <input ref={imgRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile("ocr", f); e.target.value = ""; }} />
           <input ref={txtRef} type="file" accept=".txt,.md,text/plain,text/markdown" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile("text", f); e.target.value = ""; }} />
+          <button
+            type="button"
+            onClick={startRec}
+            disabled={!micOn || sending}
+            aria-label={t("voice.mic")}
+            title={micOn ? t("voice.mic") : t("voice.micOff")}
+            className="grid h-10 w-10 shrink-0 -translate-y-[2px] place-items-center rounded-full transition hover:bg-stone-100 active:scale-95 disabled:opacity-40 dark:hover:bg-zinc-800"
+          >
+            <Mic size={17} className="opacity-70" />
+          </button>
           <textarea
             ref={taRef}
             rows={1}

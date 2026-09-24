@@ -99,6 +99,7 @@ export function applyAccent(state: AccentState): void {
   const shades = shadesFor(base);
   const root = document.documentElement;
   for (const k of SHADE_KEYS) root.style.setProperty(`--ka-accent-${k}`, shades[k]);
+  paintFavicon(base);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch { /* ignore */ }
@@ -109,6 +110,47 @@ export function previewAccent(baseHex: string): void {
   const shades = shadesFor(baseHex);
   const root = document.documentElement;
   for (const k of SHADE_KEYS) root.style.setProperty(`--ka-accent-${k}`, shades[k]);
+  paintFavicon(baseHex);
+}
+
+function mixHex(hex: string, target: number, amount: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  const n = m ? parseInt(m[1]!, 16) : 0x10b981;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const mix = (v: number) => Math.round(v + (target - v) * amount);
+  const to = (v: number) => mix(v).toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+/**
+ * Favicon follows the accent: a mini flower (petals in the accent ramp,
+ * amber core like the logo) swapped in as an SVG data URL, so the tab icon
+ * always matches the platform dress.
+ */
+export function paintFavicon(baseHex: string): void {
+  if (typeof document === "undefined") return;
+  const base = /^#?[0-9a-f]{6}$/i.test(baseHex.trim()) ? baseHex.trim().replace(/^#?/, "#") : "#10b981";
+  const dark = mixHex(base, 0, 0.35);
+  const light = mixHex(base, 255, 0.55);
+  const petals = [8, 80, 151, 223, 295].map(
+    (a) => `<ellipse cx="50" cy="28" rx="13" ry="20" fill="${base}" transform="rotate(${a} 50 50)"/>`,
+  ).join("");
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
+    `<rect width="100" height="100" rx="22" fill="${dark}"/>${petals}` +
+    `<ellipse cx="50" cy="28" rx="13" ry="20" fill="${light}" opacity="0.45" transform="rotate(8 50 50)"/>` +
+    `<circle cx="50" cy="50" r="10" fill="#fbbf24"/></svg>`;
+  const url = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  for (const rel of ["icon", "apple-touch-icon"]) {
+    let link = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = rel;
+      document.head.appendChild(link);
+    }
+    link.type = rel === "icon" ? "image/svg+xml" : link.type;
+    link.href = url;
+  }
 }
 
 // Restore the saved accent on load.

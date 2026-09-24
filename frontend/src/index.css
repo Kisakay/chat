@@ -180,6 +180,54 @@ body {
   }
 }
 
+/* Voice: Siri-style glow on the bubble being read aloud. */
+.speaking-glow {
+  position: relative;
+  border-color: rgb(var(--ka-accent-500) / 0.55) !important;
+  box-shadow:
+    0 0 0 1px rgb(var(--ka-accent-500) / 0.25),
+    0 0 22px rgb(var(--ka-accent-500) / 0.28),
+    0 8px 30px rgb(var(--ka-accent-500) / 0.12);
+  animation: speak-breathe 2.2s ease-in-out infinite;
+}
+@keyframes speak-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px rgb(var(--ka-accent-500) / 0.25), 0 0 14px rgb(var(--ka-accent-500) / 0.2), 0 8px 30px rgb(var(--ka-accent-500) / 0.1); }
+  50% { box-shadow: 0 0 0 1px rgb(var(--ka-accent-500) / 0.4), 0 0 30px rgb(var(--ka-accent-500) / 0.38), 0 8px 30px rgb(var(--ka-accent-500) / 0.16); }
+}
+.speaking-orb {
+  animation: orb-pulse 1.1s ease-in-out infinite;
+}
+@keyframes orb-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.86); }
+}
+
+/* Voice recorder: pulsing REC dot, buttery bars, soft entrance. */
+.rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #ef4444;
+  box-shadow: 0 0 10px rgb(239 68 68 / 0.8);
+  animation: rec-blink 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+.wave-bar {
+  transition: height 90ms linear, opacity 90ms linear;
+  min-width: 2px;
+}
+.voice-recorder {
+  animation: recorder-in 0.25s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+}
+@keyframes recorder-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* Kill Chrome's yellow autofill background (login / password fields) */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

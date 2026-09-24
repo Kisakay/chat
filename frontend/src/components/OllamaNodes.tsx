@@ -8,6 +8,7 @@ import {
   type OllamaNodeStatus,
 } from "../lib/api.ts";
 import { Button, ConfirmDialog, Field, Input, Modal, Picker, Spinner, Switch } from "./ui.tsx";
+import { navigate } from "../lib/route.ts";
 import { useT } from "../lib/i18n.ts";
 import { cn } from "../lib/cn.ts";
 
@@ -413,6 +414,11 @@ function NodeDetailModal({ nodeId, onClose }: { nodeId: string; onClose: () => v
 
   return (
     <Modal open onClose={onClose} title={t("nodes.detail")} icon={Activity} wide>
+      <div className="mb-3 flex justify-end">
+        <Button variant="secondary" size="sm" onClick={() => { onClose(); navigate("/admin/stats"); }}>
+          <Activity size={14} /> {t("stats.openFull")}
+        </Button>
+      </div>
       {!status ? (
         <p className="flex items-center gap-2 text-sm opacity-60"><Spinner size={14} /> {t("common.loading")}</p>
       ) : (

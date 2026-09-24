@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Palette, Pencil, Plug, ScanText, Search, Settings2, ShieldCheck, Sparkles, Tag, Trash2, Unplug, User as UserIcon, X } from "lucide-react";
+import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Mic, Palette, Pencil, Play, Plug, ScanText, Search, Settings2, ShieldCheck, Sparkles, Square, Tag, Trash2, Unplug, User as UserIcon, Volume2, X } from "lucide-react";
 import { api, type UserProvider } from "../lib/api.ts";
 import { pushToast } from "../lib/toasts.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
+import { detectLang, getVoicePrefs, listTtsVoices, setVoicePrefs, speak, stopSpeak, ttsSupported, type VoicePrefs } from "../lib/voice.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
 import type { Conversation, FilePreview, User } from "../lib/types.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
@@ -307,6 +308,7 @@ export function SettingsModal({
     { id: "profile", title: t("settings.profile"), icon: UserIcon, keywords: ["profile", "avatar", "picture", "photo", "name", "username", "login", "display", "email", "account"] },
     { id: "appearance", title: t("settings.appearance"), icon: Palette, keywords: ["appearance", "theme", "dark", "light", "color", "colour", "accent", "palette", "language", "langue", "idioma", "lingua", "язык"] },
     { id: "features", title: t("settings.features"), icon: Sparkles, keywords: ["features", "thinking", "attachments", "search", "deep", "upload", "ocr", "capabilities", "enable", "disable"] },
+    { id: "voice", title: t("voice.title"), icon: Mic, keywords: ["voice", "voix", "voz", "speech", "tts", "audio", "speak", "listen", "language", "langue", "accent", "parler"] },
     { id: "security", title: t("settings.security"), icon: ShieldCheck, keywords: ["security", "key", "rotate", "password", "totp", "2fa", "two", "factor", "authenticator", "passkey", "webauthn"] },
     { id: "providers", title: t("settings.providers"), icon: Plug, keywords: ["providers", "provider", "api", "keys", "openai", "anthropic", "deepseek", "gemini", "byok", "model", "fournisseur", "proveedor", "провайдер"] },
     { id: "archived", title: t("archived.title"), icon: Archive, keywords: ["archived", "archive", "old", "hidden", "read-only", "readonly", "archiv"] },
@@ -591,6 +593,12 @@ export function SettingsModal({
               </SettingsPane>
             )}
 
+            {activeCat === "voice" && (
+              <SettingsPane>
+                <VoiceSection />
+              </SettingsPane>
+            )}
+
             {activeCat === "security" && (
               <SettingsPane>
                 <SecuritySection onKeyRotated={onKeyRotated} />
@@ -855,6 +863,132 @@ function FeaturesSection() {
           </label>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ---------- Voice (settings): playback voice, language, previews ---------- */
+
+const VOICE_LANGS = ["auto", "fr", "en", "es", "de", "it", "pt", "ru"];
+
+function VoiceSection() {
+  const { t } = useT();
+  const [prefs, setPrefs] = useState<VoicePrefs>(() => getVoicePrefs());
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [playing, setPlaying] = useState<number | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    listTtsVoices().then((v) => { if (alive) setVoices(v); });
+    api.tools().then((r) => { if (alive) setPreviews(r.voicePreviews); }).catch(() => {});
+    return () => { alive = false; stopSpeak(); };
+  }, []);
+
+  function update(p: Partial<VoicePrefs>) {
+    const next = { ...prefs, ...p };
+    setPrefs(next);
+    setVoicePrefs(next);
+  }
+
+  function preview(i: number, text: string) {
+    if (playing === i) {
+      stopSpeak();
+      setPlaying(null);
+      return;
+    }
+    const ok = speak(text, prefs, voices, {
+      onend: () => setPlaying(null),
+      onerror: () => setPlaying(null),
+    });
+    if (ok) setPlaying(i);
+  }
+
+  const supported = ttsSupported();
+  const groups = (() => {
+    const byLang = new Map<string, SpeechSynthesisVoice[]>();
+    for (const v of voices) {
+      const lang = (v.lang || "?").split("-")[0]!.toLowerCase();
+      const list = byLang.get(lang) ?? [];
+      list.push(v);
+      byLang.set(lang, list);
+    }
+    return [...byLang.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([group, options]) => ({
+      group,
+      options: options.map((v) => ({ value: v.voiceURI, label: v.name + (v.default ? " ★" : "") })),
+    }));
+  })();
+
+  return (
+    <div className="space-y-4">
+      <p className="-mb-2 text-xs opacity-60">{t("voice.desc")}</p>
+      {!supported && (
+        <p className="rounded-2xl bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400" role="alert">
+          {t("voice.noVoices")}
+        </p>
+      )}
+      <Field label={t("voice.language")}>
+        <Picker
+          ariaLabel={t("voice.language")}
+          icon={Globe}
+          value={prefs.lang}
+          onChange={(v) => update({ lang: v, voiceURI: null })}
+          align="left"
+          options={VOICE_LANGS.map((l) => ({ value: l, label: l === "auto" ? t("voice.auto") : l }))}
+        />
+      </Field>
+      <Field label={t("voice.voice")}>
+        <Picker
+          ariaLabel={t("voice.voice")}
+          icon={Volume2}
+          value={prefs.voiceURI ?? ""}
+          onChange={(v) => update({ voiceURI: v || null })}
+          align="left"
+          groups={[{ group: "—", options: [{ value: "", label: t("voice.defaultVoice") }] }, ...groups]}
+        />
+      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label={`${t("voice.rate")} · ${prefs.rate.toFixed(2)}×`}>
+          <input
+            type="range" min={0.5} max={1.5} step={0.05} value={prefs.rate}
+            onChange={(e) => update({ rate: Number(e.target.value) })}
+            className="w-full accent-[rgb(var(--ka-accent-600))]"
+            aria-label={t("voice.rate")}
+          />
+        </Field>
+        <Field label={`${t("voice.pitch")} · ${prefs.pitch.toFixed(2)}×`}>
+          <input
+            type="range" min={0.5} max={1.5} step={0.05} value={prefs.pitch}
+            onChange={(e) => update({ pitch: Number(e.target.value) })}
+            className="w-full accent-[rgb(var(--ka-accent-600))]"
+            aria-label={t("voice.pitch")}
+          />
+        </Field>
+      </div>
+      {previews.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider opacity-50">{t("voice.previews")}</p>
+          <ul className="space-y-1.5">
+            {previews.map((line, i) => (
+              <li key={i} className="flex items-center gap-2 rounded-2xl border border-stone-200/70 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+                <button
+                  type="button"
+                  onClick={() => preview(i, line)}
+                  disabled={!supported}
+                  aria-label={`${t("voice.preview")} ${i + 1}`}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-600 text-white transition hover:bg-accent-500 disabled:opacity-40 dark:bg-accent-500 dark:text-zinc-950"
+                >
+                  {playing === i ? <Square size={13} /> : <Play size={13} className="translate-x-[1px]" />}
+                </button>
+                <span className="min-w-0 flex-1 truncate text-sm">{line}</span>
+                <span className="hidden shrink-0 text-xs opacity-40 sm:block">
+                  {prefs.lang === "auto" ? detectLang(line) : prefs.lang} · {prefs.rate.toFixed(2)}×
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
