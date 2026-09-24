@@ -207,33 +207,39 @@ export function AdminCenter({ initialTab }: { initialTab?: string | null }) {
         </div>
         <div className="mx-auto w-full max-w-4xl px-4 pb-3">
           <div className="flex gap-1 overflow-x-auto rounded-full border border-stone-200/70 bg-stone-100/70 p-1 dark:border-zinc-800 dark:bg-zinc-900">
-            {TABS.map((t) => (
+            {TABS.map((tb) => (
               <button
-                key={t.id}
-                onClick={() => selectTab(t.id)}
+                key={tb.id}
+                onClick={() => selectTab(tb.id)}
                 className={cn(
                   "relative flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
-                  tab === t.id
+                  tab === tb.id
                     ? "bg-white text-stone-900 shadow dark:bg-zinc-800 dark:text-zinc-100"
                     : "opacity-60 hover:opacity-100",
                 )}
               >
-                <t.icon size={15} />
-                {t.label}
-                {t.id === "access" && openAccessCount > 0 && (
+                <tb.icon size={15} />
+                {tb.label}
+                {tb.id === "access" && (
                   <span
                     role="status"
-                    aria-label={`${t.label}: ${openAccessCount}`}
-                    className="absolute -right-0.5 -top-0.5 z-10 grid min-h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-4 text-white shadow"
+                    aria-label={`${tb.label}: ${openAccessCount}`}
+                    className={cn(
+                      "absolute -right-0.5 -top-0.5 z-10 grid min-h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold leading-4 text-white shadow",
+                      openAccessCount > 0 ? "bg-red-500" : "bg-stone-400 dark:bg-zinc-600",
+                    )}
                   >
                     {openAccessCount > 99 ? "99+" : openAccessCount}
                   </span>
                 )}
-                {t.id === "reports" && openReportCount > 0 && (
+                {tb.id === "reports" && (
                   <span
                     role="status"
-                    aria-label={`${t.label}: ${openReportCount}`}
-                    className="absolute -right-0.5 -top-0.5 z-10 grid min-h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-4 text-white shadow"
+                    aria-label={`${tb.label}: ${openReportCount}`}
+                    className={cn(
+                      "absolute -right-0.5 -top-0.5 z-10 grid min-h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-bold leading-4 text-white shadow",
+                      openReportCount > 0 ? "bg-red-500" : "bg-stone-400 dark:bg-zinc-600",
+                    )}
                   >
                     {openReportCount > 99 ? "99+" : openReportCount}
                   </span>

@@ -76,27 +76,29 @@ export function RegisterPage() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={submit} className="mt-4 space-y-2.5">
+            <form onSubmit={submit} autoComplete="off" className="mt-4 space-y-2.5">
               <div className="grid grid-cols-2 gap-2.5">
                 <Field label={t("common.username")}>
                   <Input
                     variant="soft"
+                    name="ka-register-username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="alice"
                     maxLength={32}
-                    autoComplete="username"
+                    autoComplete="off"
                     required
                   />
                 </Field>
                 <Field label={t("common.displayName")}>
                   <Input
                     variant="soft"
+                    name="ka-register-displayname"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Alice"
                     maxLength={60}
-                    autoComplete="nickname"
+                    autoComplete="off"
                   />
                 </Field>
               </div>

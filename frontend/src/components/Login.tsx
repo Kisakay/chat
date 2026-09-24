@@ -10,7 +10,7 @@ import { AccessRequestModal } from "./ReviewPage.tsx";
 
 export function Login({ onLogin }: { onLogin: (user: UserType) => void }) {
   const { t } = useT();
-  const [username, setUsername] = useState("admin");
+  const [username, setUsername] = useState("");
   const [key, setKey] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
