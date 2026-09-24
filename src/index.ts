@@ -453,7 +453,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         authorAvatarUrl: s.authorAvatarUrl,
         archived: s.archived,
         sharedAt: s.sharedAt,
-        messages: s.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: s.messages.map((m) => ({ role: m.role, content: m.content, model: m.model || undefined })),
       });
     }
 
@@ -980,7 +980,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         return json({ user: toPublicUser(created), key }, 201);
       }
 
-      const adminUserMatch = path.match(/^\/api\/admin\/users\/([0-9a-f-]{10,50})(\/regenerate|\/shadowban)?$/);
+      const adminUserMatch = path.match(/^\/api\/admin\/users\/([0-9a-f-]{10,50})(\/regenerate|\/shadowban|\/reset-link)?$/);
       if (adminUserMatch) {
         if (!admin) return json({ error: "forbidden" }, 403);
         const target = await getUserById(adminUserMatch[1]!);
@@ -1001,6 +1001,16 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             return json({ error: "expected { shadowbanned: boolean }" }, 400);
           }
           return json({ shadowbanned: (await setReportShadowbanned(target.id, body.shadowbanned)) === 1 });
+        }
+        // Admin-initiated key recovery: email a one-time reset link to the
+        // user (same flow as self-service /api/auth/recover, but targeted).
+        if (req.method === "POST" && adminUserMatch[2] === "/reset-link") {
+          if (!target.email) return json({ error: "user has no email address — key recovery needs one" }, 409);
+          if (!mailEnabled()) return json({ error: "email is not configured on this platform" }, 501);
+          const token = "rt_" + randomBytes(24).toString("base64url");
+          await createReset(createHash("sha256").update(token).digest("hex"), target.id, Date.now() + config.resetTtlMs);
+          sendRecoveryEmail(target.email, target.username, `${config.appUrl}/reset/${token}`).catch(() => {});
+          return json({ ok: true, email: target.email });
         }
         if (req.method === "PATCH" && !adminUserMatch[2]) {
           const { ok, body } = await readJson(req);
@@ -1931,7 +1941,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           const stored = await getMessages(conv.id);
           const lastStored = stored[stored.length - 1];
           if (lastUser && (!lastStored || lastStored.content !== lastUser.content || lastStored.role !== "user")) {
-            await addMessage(conv.id, "user", lastUser.content);
+            await addMessage(conv.id, "user", lastUser.content, body.model as string);
             if (conv.title === "New chat") {
               await updateConversation(conv.id, { title: lastUser.content.slice(0, 50) || "New chat" });
             }
@@ -1941,7 +1951,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
         const persistReply = async (text: string): Promise<void> => {
           if (conv && text) {
-            await addMessage(conv.id, "assistant", text);
+            await addMessage(conv.id, "assistant", text, body.model as string);
             await touchConversation(conv.id, body.model as string);
           }
         };
@@ -1950,7 +1960,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           try {
             const text = await driver.chat(messages, { model, signal: req.signal });
             await persistReply(text);
-            return json({ model: body.model, message: { role: "assistant", content: text } });
+            return json({ model: body.model, message: { role: "assistant", content: text, model: body.model } });
           } catch (e) {
             return json({ error: (e as Error).message }, 502);
           }

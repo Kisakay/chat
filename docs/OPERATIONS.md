@@ -126,7 +126,10 @@ dedicated per-IP envelope (separate from login brute-force protection):
 every hit counts, successes included (recovery answers are always-ok by
 design, so enumeration is impossible). Over-limit answers 429 with
 `retryAfterSec` + `Retry-After`. The limits are admin-configurable live in
-Admin Center → Mail → Password recovery limits, no restart.
+Admin Center → Mail → Password recovery limits, no restart. Admins can also
+email a one-time reset link to any user with an address from the Accounts
+tab (`POST /api/admin/users/:id/reset-link` — 409 without email, 501
+without SMTP).
 
 ## Model access policy (kill-switch + rate limits)
 

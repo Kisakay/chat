@@ -79,6 +79,9 @@ export function SharePage({ publicId }: { publicId: string }) {
               <div className="mb-1 flex items-center gap-1.5 text-xs opacity-60">
                 {m.role === "user" ? <UserIcon size={12} /> : <Bot size={12} />}
                 {m.role === "user" ? chat.authorName : "KisAssistant"}
+                {m.role !== "user" && m.model ? (
+                  <span title={m.model} className="max-w-40 truncate rounded-full bg-stone-200/70 px-2 py-0.5 font-mono text-[11px] dark:bg-zinc-800">{m.model}</span>
+                ) : null}
               </div>
               {m.role === "user" ? (
                 <div className="break-words whitespace-pre-wrap rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-5 py-3 text-[15px] dark:border-zinc-800 dark:bg-zinc-900"><UserMessageContent content={m.content} tone="plain" /></div>

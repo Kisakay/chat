@@ -432,7 +432,7 @@ export function App() {
     } else {
       setFlight(convId);
     }
-    const userMsg: ChatMessage = { role: "user", content: text };
+    const userMsg: ChatMessage = { role: "user", content: text, model };
     // Attachments travel as reviewed text blocks appended to the message.
     const blocks = attachments.map(
       (a) =>
@@ -460,7 +460,7 @@ export function App() {
       // switched chats mid-stream, the reply is already persisted
       // server-side and the other view reloads it on selection.
       if (activeIdRef.current === convId) {
-        setMessages([...history, { role: "assistant", content: full }]);
+        setMessages([...history, { role: "assistant", content: full, model }]);
       }
       setStreaming("");
       clearFailedEntry(convId!);
@@ -505,7 +505,7 @@ export function App() {
     try {
       const full = await streamReply(history, convId);
       if (activeIdRef.current === convId) {
-        setMessages([...history, { role: "assistant", content: full }]);
+        setMessages([...history, { role: "assistant", content: full, model }]);
       }
       setRetryCount(0);
       clearFailedEntry(convId);

@@ -34,6 +34,8 @@ export interface MessageRow {
   conv_id: string;
   role: string;
   content: string;
+  /** Fully-qualified model id that produced this message ("" = unknown/pre-migration). */
+  model: string;
   created_at: number;
 }
 
@@ -236,10 +238,10 @@ export async function deleteConversation(id: string): Promise<void> {
   });
 }
 
-export async function addMessage(convId: string, role: string, content: string): Promise<void> {
+export async function addMessage(convId: string, role: string, content: string, model = ""): Promise<void> {
   await db().run(
-    "INSERT INTO messages (conv_id, role, content, created_at) VALUES (?, ?, ?, ?)",
-    convId, role, content, Date.now(),
+    "INSERT INTO messages (conv_id, role, content, model, created_at) VALUES (?, ?, ?, ?, ?)",
+    convId, role, content, model.slice(0, 160), Date.now(),
   );
 }
 

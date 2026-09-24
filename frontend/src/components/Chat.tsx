@@ -44,8 +44,16 @@ function MessageBubble({ msg, index, authorAvatar, authorName, onReport, reports
             <Markdown text={msg.content} />
           </div>
         )}
-        {!isUser && (onReport || onToggleSpeak || (isFailed && onRetry)) && (
+        {!isUser && (msg.model || onReport || onToggleSpeak || (isFailed && onRetry)) && (
           <div className="mt-1.5 flex items-center gap-0.5 opacity-70 transition hover:opacity-100">
+            {msg.model ? (
+              <span
+                title={msg.model}
+                className="mr-1 max-w-40 truncate rounded-full bg-stone-200/70 px-2.5 py-1 font-mono text-[11px] opacity-80 dark:bg-zinc-800"
+              >
+                {msg.model}
+              </span>
+            ) : null}
             {onToggleSpeak && (
               <IconButton title={speaking ? t("voice.stopSpeak") : t("voice.speak")} onClick={onToggleSpeak}>
                 {speaking ? <VolumeX size={14} className="speaking-orb text-accent-500" /> : <Volume2 size={14} />}
@@ -534,7 +542,12 @@ export function Chat({
             <div className="flex gap-2 sm:gap-3">
               <AssistantAvatar size={32} dynamic />
               <div className="min-w-0 max-w-[88%] sm:max-w-[85%]">
-                <div className="mb-1 text-xs opacity-60">KisAssistant</div>
+                <div className="mb-1 flex items-center gap-1.5 text-xs opacity-60">
+                  <span>KisAssistant</span>
+                  {model ? (
+                    <span title={model} className="max-w-40 truncate rounded-full bg-stone-200/70 px-2 py-0.5 font-mono text-[11px] dark:bg-zinc-800">{model}</span>
+                  ) : null}
+                </div>
                 <div className="rounded-3xl rounded-tl-lg border border-stone-200/70 bg-white px-4 py-3 shadow-sm sm:px-5 sm:py-3.5 dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="typing-cursor"><Markdown text={streaming} /></div>
                 </div>

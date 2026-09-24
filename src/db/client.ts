@@ -397,6 +397,7 @@ const LATER_COLUMNS = [
   "ALTER TABLE users ADD COLUMN totp_secret TEXT NOT NULL DEFAULT ''",
   "ALTER TABLE users ADD COLUMN report_shadowbanned INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE conversations ADD COLUMN archived_at INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE messages ADD COLUMN model TEXT NOT NULL DEFAULT ''",
 ];
 
 /** Split a multi-statement DDL string into single statements. */
@@ -429,6 +430,10 @@ async function initSqliteSchema(c: DbClient): Promise<void> {
   const convCols = await c.all<{ name: string }>("PRAGMA table_info(conversations)");
   if (!convCols.some((col) => col.name === "archived_at")) {
     await c.exec("ALTER TABLE conversations ADD COLUMN archived_at INTEGER NOT NULL DEFAULT 0");
+  }
+  const msgCols = await c.all<{ name: string }>("PRAGMA table_info(messages)");
+  if (!msgCols.some((col) => col.name === "model")) {
+    await c.exec("ALTER TABLE messages ADD COLUMN model TEXT NOT NULL DEFAULT ''");
   }
   await ensureAdminRow(c);
 }

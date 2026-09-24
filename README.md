@@ -58,6 +58,7 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | GET/POST | `/api/admin/users` | admin | create returns `{user, key}` (key shown once) |
 | PATCH/DELETE | `/api/admin/users/:id` | admin | edit profile / delete + cascade |
 | POST | `/api/admin/users/:id/regenerate` | admin | new key, old sessions revoked |
+| POST | `/api/admin/users/:id/reset-link` | admin | email a one-time password-reset link (needs user email + SMTP) |
 | GET/PATCH | `/api/admin/settings` | admin | feature flags: registrationEnabled, ocrEnabled |
 | GET/POST | `/api/conversations` | Bearer | server-persisted chats (title, topic, model) |
 | GET | `/api/conversations/search?q=` | Bearer | search titles, topics + old prompts (with snippet) |

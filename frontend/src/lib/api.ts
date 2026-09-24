@@ -267,6 +267,7 @@ export const api = {
     req<{ user: User; key: string }>("/api/admin/users", { method: "POST", body: JSON.stringify(u) }),
   adminDelete: (id: string) => req<{ ok: boolean }>(`/api/admin/users/${id}`, { method: "DELETE" }),
   adminRegenerate: (id: string) => req<{ key: string }>(`/api/admin/users/${id}/regenerate`, { method: "POST" }),
+  adminResetLink: (id: string) => req<{ ok: boolean; email: string }>(`/api/admin/users/${id}/reset-link`, { method: "POST" }),
   adminShadowban: (id: string, shadowbanned: boolean) =>
     req<{ shadowbanned: boolean }>(`/api/admin/users/${id}/shadowban`, {
       method: "POST",

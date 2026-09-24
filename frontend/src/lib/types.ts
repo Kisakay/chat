@@ -23,6 +23,8 @@ export interface Conversation {
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+  /** Fully-qualified model id that produced this message (assistant only, "" = unknown). */
+  model?: string;
 }
 
 export interface DriverModel {

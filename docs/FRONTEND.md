@@ -81,6 +81,9 @@ No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
 - `Markdown.tsx` — `react-markdown` + GFM; code blocks get a language label, a
   copy button and dependency-free syntax highlighting (`lib/highlight.tsx` —
   regex tokenizer, no highlight.js, so the Nix offline lockfile is untouched).
+- Assistant bubbles show the producing model (`<model>` chip in the footer,
+  stored per message in `messages.model` — survives model switches; same
+  chip on the streaming bubble and shared pages).
 - Admin Center tabs are deep-linkable (`/admin`, `/admin/models`,
   `/admin/stats`, `/admin/access`, … — `lib/route.ts` `adminTabFromPath`, SPA fallback serves
   them all). Models tab: `OllamaNodes.tsx` (pool with weights, per-node live
