@@ -82,10 +82,18 @@ No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
   copy button and dependency-free syntax highlighting (`lib/highlight.tsx` —
   regex tokenizer, no highlight.js, so the Nix offline lockfile is untouched).
 - Admin Center tabs are deep-linkable (`/admin`, `/admin/models`,
-  `/admin/access`, … — `lib/route.ts` `adminTabFromPath`, SPA fallback serves
+  `/admin/stats`, `/admin/access`, … — `lib/route.ts` `adminTabFromPath`, SPA fallback serves
   them all). Models tab: `OllamaNodes.tsx` (pool with weights, per-node live
   status + 1h–30d load charts, generation timeout) and `OllamaCatalog.tsx`
   (live Hugging Face GGUF search + one-click `hf.co/…` pull to a node).
+  Stats tab: `StatsSection.tsx` (node/window pickers, bar/area/line dock, SVG
+  tooltips, platform host cards).
+- Accent color (`lib/accent.ts`) derives the 50–950 ramp from one hex and
+  also repaints the SVG favicon (data URL) so the tab icon matches the dress.
+- Voice (`lib/voice.ts`, no dependency): `Chat.tsx` composer mic with live
+  waveform + speech-recognition transcript (editable before send), per-bubble
+  TTS playback with glow, `Settings → Voice` prefs (voice/lang/speed/pitch,
+  localStorage), admin-editable preview lines.
 
 ## Theming
 

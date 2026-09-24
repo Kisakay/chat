@@ -68,6 +68,14 @@ export interface OllamaHostModel {
   modifiedAt: string | null;
 }
 
+export interface VoicePreview {
+  text: string;
+  lang: string;
+  rate: number;
+  pitch: number;
+  timbre: "masculine" | "feminine" | "any";
+}
+
 export interface PlatformInfo {
   hostname: string;
   kernel: string;
@@ -93,7 +101,7 @@ export interface AdminSettings {
   ollamaDefaultWeight: number;
   recoveryLimitMax: number;
   recoveryLimitWindowMin: number;
-  voicePreviews: string[];
+  voicePreviews: VoicePreview[];
 }
 
 export interface AdminSettingsPatch {
@@ -106,7 +114,7 @@ export interface AdminSettingsPatch {
   ollamaDefaultWeight?: number;
   recoveryLimitMax?: number;
   recoveryLimitWindowMin?: number;
-  voicePreviews?: string[];
+  voicePreviews?: VoicePreview[];
 }
 
 export interface OllamaNode {
@@ -432,7 +440,7 @@ export const api = {
   deleteProvider: (provider: string) =>
     req<{ providers: UserProvider[] }>(`/api/me/providers/${provider}`, { method: "DELETE" }),
 
-  tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[]; reportsEnabled: boolean; usernameChangeEnabled: boolean; voicePreviews: string[] }>("/api/tools"),
+  tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[]; reportsEnabled: boolean; usernameChangeEnabled: boolean; voicePreviews: VoicePreview[] }>("/api/tools"),
 
   /** Send an image to the platform OCR tool. Returns editable text (never the raw image). */
   ocrImage: async (file: File): Promise<{ text: string; truncated: boolean; chars: number }> => {

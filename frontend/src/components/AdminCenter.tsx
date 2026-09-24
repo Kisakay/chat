@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Boxes, Eye, EyeOff, Flag, Inbox, LayoutDashboard, Mail, Plus, Send, ShieldAlert, SlidersHorizontal, Trash2, TrendingUp, Users } from "lucide-react";
-import { api, getToken, type AccessStatus, type AdminSettings, type AdminSettingsPatch, type ReportStatus } from "../lib/api.ts";
+import { api, getToken, type AccessStatus, type AdminSettings, type AdminSettingsPatch, type ReportStatus, type VoicePreview } from "../lib/api.ts";
 import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import { navigate } from "../lib/route.ts";
 import { AdminPanel } from "./AdminPanel.tsx";
@@ -10,10 +10,10 @@ import { ModelsPanel } from "./ModelsPanel.tsx";
 import { StatsSection } from "./StatsSection.tsx";
 import { Toasts } from "./Toasts.tsx";
 import { pushToast } from "../lib/toasts.ts";
-import { Button, CopyButton, Field, FlowerMark, Input, LoadingScreen, Spinner, Switch } from "./ui.tsx";
+import { Button, CopyButton, Field, FlowerMark, Input, LoadingScreen, Picker, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 import { msUntilNextSolarSwitch, resolveThemeDark } from "../lib/solarTheme.ts";
-import { useT } from "../lib/i18n.ts";
+import { useT, type StringKey } from "../lib/i18n.ts";
 
 type Tab = "accounts" | "access" | "reports" | "models" | "stats" | "features" | "mail";
 
@@ -337,7 +337,7 @@ export function AdminCenter({ initialTab }: { initialTab?: string | null }) {
 /** Admin voice-preview lines (Settings → Voice for users). Empty = reset. */
 function VoicePreviewsCard() {
   const { t } = useT();
-  const [lines, setLines] = useState<string[]>([]);
+  const [lines, setLines] = useState<VoicePreview[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -351,7 +351,7 @@ function VoicePreviewsCard() {
       .catch(() => setLoaded(true));
   }, []);
 
-  async function save(next: string[]) {
+  async function save(next: VoicePreview[]) {
     setBusy(true);
     setMsg(null);
     try {
@@ -365,10 +365,12 @@ function VoicePreviewsCard() {
     }
   }
 
-  function commit(i: number, v: string) {
-    const trimmed = v.trim();
-    if (trimmed === "") {
-      // Emptied line: drop the row locally (server needs 1+ lines).
+  /** Commit one line after editing (empty text drops the row). */
+  function commit(i: number) {
+    const line = lines[i];
+    if (!line) return;
+    const text = line.text.trim();
+    if (text === "") {
       const next = lines.filter((_, j) => j !== i);
       if (next.length === 0) {
         setMsg({ ok: false, text: t("vfeat.invalid") });
@@ -378,7 +380,11 @@ function VoicePreviewsCard() {
       void save(next);
       return;
     }
-    void save(lines.map((l, j) => (j === i ? trimmed : l)));
+    void save(lines.map((l, j) => (j === i ? { ...l, text } : l)));
+  }
+
+  function patch(i: number, p: Partial<VoicePreview>) {
+    setLines((prev) => prev.map((l, j) => (j === i ? { ...l, ...p } : l)));
   }
 
   async function refreshLines() {
@@ -396,36 +402,84 @@ function VoicePreviewsCard() {
     <div className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <p className="text-sm font-medium">{t("vfeat.title")}</p>
       <p className="mb-3 mt-0.5 text-sm opacity-60">{t("vfeat.desc")}</p>
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {lines.map((line, i) => (
-          <li key={i} className="flex items-center gap-2">
-            <span className="w-40 shrink-0">
-              <Input
-                value={line}
-                disabled={busy}
-                maxLength={500}
-                aria-label={t("vfeat.line", { n: i + 1 })}
-                onChange={(e) => setLines((prev) => prev.map((l, j) => (j === i ? e.target.value : l)))}
-                onBlur={(e) => { if (e.target.value !== line) commit(i, e.target.value); }}
-                onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-              />
-            </span>
-            <span className="min-w-0 flex-1 truncate text-sm opacity-60">{line}</span>
-            <button
-              type="button"
-              disabled={busy || lines.length <= 1}
-              onClick={() => void save(lines.filter((_, j) => j !== i))}
-              aria-label={t("vfeat.remove", { n: i + 1 })}
-              className="shrink-0 rounded-full p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-30 dark:text-red-400 dark:hover:bg-red-950/40"
-            >
-              <Trash2 size={14} />
-            </button>
+          <li key={i} className="rounded-2xl border border-stone-200/70 p-3 dark:border-zinc-800">
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1">
+                <Input
+                  value={line.text}
+                  disabled={busy}
+                  maxLength={500}
+                  aria-label={t("vfeat.line", { n: i + 1 })}
+                  onChange={(e) => patch(i, { text: e.target.value })}
+                  onBlur={() => commit(i)}
+                  onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                />
+              </span>
+              <button
+                type="button"
+                disabled={busy || lines.length <= 1}
+                onClick={() => void save(lines.filter((_, j) => j !== i))}
+                aria-label={t("vfeat.remove", { n: i + 1 })}
+                className="shrink-0 rounded-full p-2 text-red-600 transition hover:bg-red-50 disabled:opacity-30 dark:text-red-400 dark:hover:bg-red-950/40"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-2">
+              <span className="w-36">
+                <Field label={t("vfeat.timbre")}>
+                  <Picker
+                    ariaLabel={t("vfeat.timbre")}
+                    value={line.timbre}
+                    onChange={(v) => {
+                      patch(i, { timbre: v as VoicePreview["timbre"] });
+                      // Persist timbre/rate/pitch tweaks live (text commits on blur).
+                      const next = lines.map((l, j) => (j === i ? { ...l, timbre: v as VoicePreview["timbre"] } : l));
+                      if (next[i]!.text.trim() !== "") void save(next);
+                    }}
+                    align="left"
+                    options={(["masculine", "feminine", "any"] as const).map((v) => ({ value: v, label: t(`voice.timbre.${v}` as StringKey) }))}
+                  />
+                </Field>
+              </span>
+              <label className="min-w-32 flex-1 text-xs opacity-80">
+                <span className="mb-1 block font-medium">{t("voice.rate")} · {line.rate.toFixed(2)}×</span>
+                <input
+                  type="range" min={0.5} max={1.5} step={0.05} value={line.rate}
+                  disabled={busy}
+                  onChange={(e) => patch(i, { rate: Number(e.target.value) })}
+                  onMouseUp={() => commitSliders(i)}
+                  onTouchEnd={() => commitSliders(i)}
+                  className="w-full accent-[rgb(var(--ka-accent-600))]"
+                  aria-label={t("voice.rate")}
+                />
+              </label>
+              <label className="min-w-32 flex-1 text-xs opacity-80">
+                <span className="mb-1 block font-medium">{t("voice.pitch")} · {line.pitch.toFixed(2)}×</span>
+                <input
+                  type="range" min={0.5} max={2} step={0.05} value={line.pitch}
+                  disabled={busy}
+                  onChange={(e) => patch(i, { pitch: Number(e.target.value) })}
+                  onMouseUp={() => commitSliders(i)}
+                  onTouchEnd={() => commitSliders(i)}
+                  className="w-full accent-[rgb(var(--ka-accent-600))]"
+                  aria-label={t("voice.pitch")}
+                />
+              </label>
+            </div>
           </li>
         ))}
       </ul>
       <div className="mt-3 flex flex-wrap gap-2">
         {lines.length < 6 && (
-          <Button variant="secondary" size="sm" disabled={busy} onClick={() => setLines((prev) => [...prev, ""])}>
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={busy}
+            onClick={() => setLines((prev) => [...prev, { text: "", lang: "auto", rate: 1, pitch: 1, timbre: "any" as const }])}
+          >
             <Plus size={14} /> {t("vfeat.add")}
           </Button>
         )}
@@ -440,6 +494,12 @@ function VoicePreviewsCard() {
       )}
     </div>
   );
+
+  function commitSliders(i: number) {
+    const line = lines[i];
+    if (!line || line.text.trim() === "") return;
+    void save(lines.map((l, j) => (j === i ? { ...l } : l)));
+  }
 }
 
 type SmtpInfo = {

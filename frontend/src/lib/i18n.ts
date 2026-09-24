@@ -597,6 +597,14 @@ const en = {
   "vfeat.line": "Line {n}",
   "vfeat.remove": "Remove line {n}",
   "vfeat.invalid": "1–6 non-empty lines, 500 chars max.",
+  "voice.timbre.masculine": "Masculine",
+  "voice.timbre.feminine": "Feminine",
+  "voice.timbre.any": "Any",
+  "voice.adopt": "Use this voice",
+  "voice.adopted": "Playback voice updated",
+  "vfeat.timbre": "Timbre",
+  "vfeat.rate": "Speed",
+  "vfeat.pitch": "Pitch",
 
 
   "msg.copy": "Copy message",
@@ -1281,6 +1289,14 @@ const es: Dict = {
   "vfeat.line": "Line {n}",
   "vfeat.remove": "Remove line {n}",
   "vfeat.invalid": "1–6 non-empty lines, 500 chars max.",
+  "voice.timbre.masculine": "Masculine",
+  "voice.timbre.feminine": "Feminine",
+  "voice.timbre.any": "Any",
+  "voice.adopt": "Use this voice",
+  "voice.adopted": "Playback voice updated",
+  "vfeat.timbre": "Timbre",
+  "vfeat.rate": "Speed",
+  "vfeat.pitch": "Pitch",
 
 
   "msg.copy": "Copiar mensaje",
@@ -1960,6 +1976,14 @@ const fr: Dict = {
   "vfeat.line": "Line {n}",
   "vfeat.remove": "Remove line {n}",
   "vfeat.invalid": "1–6 non-empty lines, 500 chars max.",
+  "voice.timbre.masculine": "Masculine",
+  "voice.timbre.feminine": "Feminine",
+  "voice.timbre.any": "Any",
+  "voice.adopt": "Use this voice",
+  "voice.adopted": "Playback voice updated",
+  "vfeat.timbre": "Timbre",
+  "vfeat.rate": "Speed",
+  "vfeat.pitch": "Pitch",
 
 
   "msg.copy": "Copier le message",
@@ -2627,6 +2651,14 @@ const ru: Dict = {
   "vfeat.line": "Line {n}",
   "vfeat.remove": "Remove line {n}",
   "vfeat.invalid": "1–6 non-empty lines, 500 chars max.",
+  "voice.timbre.masculine": "Masculine",
+  "voice.timbre.feminine": "Feminine",
+  "voice.timbre.any": "Any",
+  "voice.adopt": "Use this voice",
+  "voice.adopted": "Playback voice updated",
+  "vfeat.timbre": "Timbre",
+  "vfeat.rate": "Speed",
+  "vfeat.pitch": "Pitch",
 
 
   "msg.copy": "Скопировать сообщение",
@@ -3299,6 +3331,14 @@ const it: Dict = {
   "vfeat.line": "Line {n}",
   "vfeat.remove": "Remove line {n}",
   "vfeat.invalid": "1–6 non-empty lines, 500 chars max.",
+  "voice.timbre.masculine": "Masculine",
+  "voice.timbre.feminine": "Feminine",
+  "voice.timbre.any": "Any",
+  "voice.adopt": "Use this voice",
+  "voice.adopted": "Playback voice updated",
+  "vfeat.timbre": "Timbre",
+  "vfeat.rate": "Speed",
+  "vfeat.pitch": "Pitch",
 
 
   "msg.copy": "Copia messaggio",
@@ -3962,6 +4002,14 @@ const pt: Dict = {
   "vfeat.line": "Line {n}",
   "vfeat.remove": "Remove line {n}",
   "vfeat.invalid": "1–6 non-empty lines, 500 chars max.",
+  "voice.timbre.masculine": "Masculine",
+  "voice.timbre.feminine": "Feminine",
+  "voice.timbre.any": "Any",
+  "voice.adopt": "Use this voice",
+  "voice.adopted": "Playback voice updated",
+  "vfeat.timbre": "Timbre",
+  "vfeat.rate": "Speed",
+  "vfeat.pitch": "Pitch",
 
 
   "msg.copy": "Copiar mensagem",

@@ -67,6 +67,7 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | PATCH/DELETE | `/api/admin/ollama/nodes/:id` | admin | rename / reweight / enable / delete a node |
 | GET | `/api/admin/ollama/nodes/:id/status`, `…/stats?window=` | admin | live probe (version, running, VRAM) / load charts 1h–30d |
 | GET | `/api/admin/ollama/probe?host=` | admin | test a host before registering it |
+| GET | `/api/admin/platform` | admin | this host facts: hostname, kernel, uptime, load, memory, IPs |
 | GET | `/api/admin/ollama/status` | admin | Ollama connectivity probe: reachability, version, on-disk models |
 | POST | `/api/access/request` | public | reserve username+email with a motivation → ticket (`/review/:id`) |
 | GET/POST | `/api/access/ticket/:id` (+`/message`) | ticket bearer | follow + reply on an access request |

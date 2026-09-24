@@ -81,6 +81,48 @@ export interface SpeakOpts {
   onerror?: (msg: string) => void;
 }
 
+export type VoiceTimbre = "masculine" | "feminine" | "any";
+
+export interface PreviewVoice {
+  lang: string;
+  rate: number;
+  pitch: number;
+  timbre: VoiceTimbre;
+}
+
+// Name fragments hinting a masculine / feminine voice (Chrome, Edge,
+// Safari and Android voices carry such markers; absence falls back to
+// any same-language voice — never an error).
+const MASCULINE_HINTS = ["male", "homme", "masculin", "man", "garcon", "garçon", "david", "daniel", "thomas", "paul", "pierre", "jean", "marco", "jorge", "diego", "alex "];
+const FEMININE_HINTS = ["female", "femme", "féminin", "feminin", "woman", "girl", "fille", "samantha", "marie", "sophie", "anna", "alice", "amelie", "amélie", "camille", "léa", "lea", "chloe", "chloé", "zira", "eva"];
+
+/**
+ * Pick a voice for a language + timbre character. Explicit URI wins, then
+ * same-language voices matching the timbre hints, then any same-language
+ * voice, then the engine default.
+ */
+export function pickVoice(
+  voices: SpeechSynthesisVoice[],
+  opts: { lang: string; timbre?: VoiceTimbre; voiceURI?: string | null },
+): SpeechSynthesisVoice | null {
+  if (opts.voiceURI) {
+    const exact = voices.find((v) => v.voiceURI === opts.voiceURI);
+    if (exact) return exact;
+  }
+  const lang = opts.lang.toLowerCase();
+  const sameLang = voices.filter((v) => v.lang.toLowerCase().startsWith(lang));
+  const pool = sameLang.length > 0 ? sameLang : voices;
+  if (opts.timbre === "masculine" || opts.timbre === "feminine") {
+    const hints = opts.timbre === "masculine" ? MASCULINE_HINTS : FEMININE_HINTS;
+    const match = pool.find((v) => {
+      const n = `${v.name} ${v.voiceURI}`.toLowerCase();
+      return hints.some((h) => n.includes(h));
+    });
+    if (match) return match;
+  }
+  return pool.find((v) => v.default) ?? pool[0] ?? null;
+}
+
 /** Speak one message; cancels any current playback first. Returns false when unsupported. */
 export function speak(text: string, prefs: VoicePrefs, voices: SpeechSynthesisVoice[], opts: SpeakOpts = {}): boolean {
   if (!ttsSupported()) return false;
@@ -95,10 +137,7 @@ export function speak(text: string, prefs: VoicePrefs, voices: SpeechSynthesisVo
   utter.lang = lang;
   utter.rate = prefs.rate;
   utter.pitch = prefs.pitch;
-  const pick = voices.find((v) => prefs.voiceURI && v.voiceURI === prefs.voiceURI)
-    ?? voices.find((v) => v.lang.toLowerCase().startsWith(lang.toLowerCase()))
-    ?? voices.find((v) => v.default)
-    ?? voices[0];
+  const pick = pickVoice(voices, { lang, voiceURI: prefs.voiceURI });
   if (pick) utter.voice = pick;
   utter.onstart = () => opts.onstart?.();
   utter.onend = () => opts.onend?.();
@@ -117,6 +156,42 @@ export function stopSpeak(): void {
   } catch {
     // ignore
   }
+}
+
+/**
+ * Play a preview line with ITS OWN voice character (timbre + rate + pitch),
+ * never the user's global playback prefs — previews must sound different
+ * from each other. Returns the resolved voice (null when unsupported) so
+ * callers can offer "use this voice" adoption.
+ */
+export function speakPreview(
+  text: string,
+  preview: PreviewVoice,
+  voices: SpeechSynthesisVoice[],
+  opts: SpeakOpts = {},
+): SpeechSynthesisVoice | null {
+  if (!ttsSupported()) return null;
+  const synth = window.speechSynthesis;
+  try {
+    synth.cancel();
+  } catch {
+    // ignore
+  }
+  const lang = preview.lang === "auto" ? detectLang(text) : preview.lang;
+  const utter = new SpeechSynthesisUtterance(text.slice(0, 2000));
+  utter.lang = lang;
+  utter.rate = preview.rate;
+  utter.pitch = preview.pitch;
+  const pick = pickVoice(voices, { lang, timbre: preview.timbre });
+  if (pick) utter.voice = pick;
+  utter.onend = () => opts.onend?.();
+  utter.onerror = () => opts.onerror?.("error");
+  try {
+    synth.speak(utter);
+  } catch {
+    return null;
+  }
+  return pick;
 }
 
 // --- speech recognition (STT) ---

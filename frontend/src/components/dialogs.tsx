@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Archive, ArchiveRestore, Eye, Fingerprint, Globe, FileText, ImagePlus, KeyRound, Link2, Mail, Mic, Palette, Pencil, Play, Plug, ScanText, Search, Settings2, ShieldCheck, Sparkles, Square, Tag, Trash2, Unplug, User as UserIcon, Volume2, X } from "lucide-react";
-import { api, type UserProvider } from "../lib/api.ts";
+import { api, type UserProvider, type VoicePreview } from "../lib/api.ts";
 import { pushToast } from "../lib/toasts.ts";
 import { cn } from "../lib/cn.ts";
 import { ACCENT_PRESETS, applyAccent, currentAccent, previewAccent, type AccentState } from "../lib/accent.ts";
-import { detectLang, getVoicePrefs, listTtsVoices, setVoicePrefs, speak, stopSpeak, ttsSupported, type VoicePrefs } from "../lib/voice.ts";
+import { detectLang, getVoicePrefs, listTtsVoices, pickVoice, setVoicePrefs, speakPreview, stopSpeak, ttsSupported, type VoicePrefs } from "../lib/voice.ts";
 import { FEATURES, setFeature, useFeatures } from "../lib/features.ts";
 import type { Conversation, FilePreview, User } from "../lib/types.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
@@ -875,7 +875,7 @@ function VoiceSection() {
   const { t } = useT();
   const [prefs, setPrefs] = useState<VoicePrefs>(() => getVoicePrefs());
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [previews, setPreviews] = useState<VoicePreview[]>([]);
   const [playing, setPlaying] = useState<number | null>(null);
 
   useEffect(() => {
@@ -891,17 +891,34 @@ function VoiceSection() {
     setVoicePrefs(next);
   }
 
-  function preview(i: number, text: string) {
+  function preview(i: number, line: VoicePreview) {
     if (playing === i) {
       stopSpeak();
       setPlaying(null);
       return;
     }
-    const ok = speak(text, prefs, voices, {
+    // Each line plays with ITS OWN character (timbre/rate/pitch/lang) —
+    // never the global playback prefs.
+    const pick = speakPreview(line.text, line, voices, {
       onend: () => setPlaying(null),
       onerror: () => setPlaying(null),
     });
-    if (ok) setPlaying(i);
+    if (pick || ttsSupported()) setPlaying(i);
+  }
+
+  /** Adopt a preview's character as the global playback voice. */
+  function adoptVoice(line: VoicePreview) {
+    const lang = line.lang === "auto" ? detectLang(line.text) : line.lang;
+    const pick = pickVoice(voices, { lang, timbre: line.timbre });
+    const next: VoicePrefs = {
+      voiceURI: pick?.voiceURI ?? prefs.voiceURI,
+      rate: line.rate,
+      pitch: line.pitch,
+      lang,
+    };
+    setPrefs(next);
+    setVoicePrefs(next);
+    pushToast(t("voice.adopted"), { icon: "check" });
   }
 
   const supported = ttsSupported();
@@ -980,10 +997,22 @@ function VoiceSection() {
                 >
                   {playing === i ? <Square size={13} /> : <Play size={13} className="translate-x-[1px]" />}
                 </button>
-                <span className="min-w-0 flex-1 truncate text-sm">{line}</span>
-                <span className="hidden shrink-0 text-xs opacity-40 sm:block">
-                  {prefs.lang === "auto" ? detectLang(line) : prefs.lang} · {prefs.rate.toFixed(2)}×
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">{line.text}</span>
+                  <span className="block text-xs opacity-50">
+                    {t(`voice.timbre.${line.timbre}` as StringKey)} · {(line.lang === "auto" ? detectLang(line.text) : line.lang).toUpperCase()} · {line.rate.toFixed(2)}× / {line.pitch.toFixed(2)}×
+                  </span>
                 </span>
+                <button
+                  type="button"
+                  onClick={() => adoptVoice(line)}
+                  disabled={!supported}
+                  title={t("voice.adopt")}
+                  aria-label={`${t("voice.adopt")} ${i + 1}`}
+                  className="shrink-0 rounded-full px-2.5 py-1.5 text-xs font-medium text-accent-700 transition hover:bg-accent-600/10 disabled:opacity-40 dark:text-accent-400"
+                >
+                  {t("voice.adopt")}
+                </button>
               </li>
             ))}
           </ul>

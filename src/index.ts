@@ -224,33 +224,62 @@ async function probeOllamaHost(host: string): Promise<{
 }
 
 /**
- * Default TTS voice-preview lines (admin-editable, resettable). Short,
- * varied lines that show off grave/hesitant, grave/serious, cute feminine
- * and medium feminine deliveries.
+ * Voice-preview lines (admin-editable, resettable). Each line carries its
+ * OWN voice character — timbre/rate/pitch/lang — so previews sound
+ * different from each other instead of sharing the user's playback voice:
+ * deep-hesitant masculine, deep-serious masculine, cute feminine,
+ * medium feminine.
  */
-const DEFAULT_VOICE_PREVIEWS = [
-  "Salut, euhm, comment je peux t'aider aujourd'hui ?",
-  "5 sur 5 je recois ! Que veux-tu ?",
-  "Owww, ce chat est trop mignon, oops, pardon. Je me concentre, que puis-je faire pour toi ?",
-  "Hey, que puis-je faire pour toi ?",
+export interface VoicePreview {
+  text: string;
+  lang: string;
+  rate: number;
+  pitch: number;
+  timbre: "masculine" | "feminine" | "any";
+}
+
+const DEFAULT_VOICE_PREVIEWS: VoicePreview[] = [
+  { text: "Salut, euhm, comment je peux t'aider aujourd'hui ?", lang: "fr", rate: 0.85, pitch: 0.75, timbre: "masculine" },
+  { text: "5 sur 5 je recois ! Que veux-tu ?", lang: "fr", rate: 1, pitch: 0.8, timbre: "masculine" },
+  { text: "Owww, ce chat est trop mignon, oops, pardon. Je me concentre, que puis-je faire pour toi ?", lang: "fr", rate: 1.05, pitch: 1.35, timbre: "feminine" },
+  { text: "Hey, que puis-je faire pour toi ?", lang: "fr", rate: 1, pitch: 1.1, timbre: "feminine" },
 ];
 
-async function getVoicePreviews(): Promise<string[]> {
+function sanitizePreviewLine(v: unknown): VoicePreview | null {
+  // Legacy plain-string lines (first version) still play, neutrally.
+  if (typeof v === "string") {
+    const text = v.trim();
+    if (text.length === 0 || text.length > 500) return null;
+    return { text, lang: "auto", rate: 1, pitch: 1, timbre: "any" };
+  }
+  if (!v || typeof v !== "object") return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.text !== "string") return null;
+  const text = o.text.trim();
+  if (text.length === 0 || text.length > 500) return null;
+  const lang = typeof o.lang === "string" && o.lang.length > 0 && o.lang.length <= 12 ? o.lang : "auto";
+  const rate = typeof o.rate === "number" && o.rate >= 0.5 && o.rate <= 2 ? o.rate : 1;
+  const pitch = typeof o.pitch === "number" && o.pitch >= 0.5 && o.pitch <= 2 ? o.pitch : 1;
+  const timbre = o.timbre === "masculine" || o.timbre === "feminine" ? o.timbre : "any";
+  return { text, lang, rate, pitch, timbre };
+}
+
+async function getVoicePreviews(): Promise<VoicePreview[]> {
   try {
     const raw = await getSetting("voice_previews", "");
-    if (!raw) return [...DEFAULT_VOICE_PREVIEWS];
+    if (!raw) return DEFAULT_VOICE_PREVIEWS.map((p) => ({ ...p }));
     const arr = JSON.parse(raw) as unknown;
-    if (!Array.isArray(arr)) return [...DEFAULT_VOICE_PREVIEWS];
-    const clean = arr.filter((s): s is string => typeof s === "string").map((s) => s.trim()).filter((s) => s.length > 0 && s.length <= 500).slice(0, 6);
-    return clean.length > 0 ? clean : [...DEFAULT_VOICE_PREVIEWS];
+    if (!Array.isArray(arr)) return DEFAULT_VOICE_PREVIEWS.map((p) => ({ ...p }));
+    const clean = arr.map(sanitizePreviewLine).filter((p): p is VoicePreview => p !== null).slice(0, 6);
+    return clean.length > 0 ? clean : DEFAULT_VOICE_PREVIEWS.map((p) => ({ ...p }));
   } catch {
-    return [...DEFAULT_VOICE_PREVIEWS];
+    return DEFAULT_VOICE_PREVIEWS.map((p) => ({ ...p }));
   }
 }
 
-function sanitizeVoicePreviews(v: unknown): string[] | null {
+function sanitizeVoicePreviews(v: unknown): VoicePreview[] | null {
   if (!Array.isArray(v) || v.length === 0 || v.length > 6) return null;
-  const clean = v.map((s) => (typeof s === "string" ? s.trim() : "")).filter((s) => s.length > 0 && s.length <= 500);
+  const clean = v.map(sanitizePreviewLine).filter((p): p is VoicePreview => p !== null);
   return clean.length > 0 ? clean.slice(0, 6) : null;
 }
 
@@ -1067,7 +1096,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             await setSetting("voice_previews", "");
           } else {
             const clean = sanitizeVoicePreviews(body.voicePreviews);
-            if (!clean) return json({ error: "voicePreviews must be 1-6 non-empty strings (max 500 chars each), or [] to reset" }, 400);
+            if (!clean) return json({ error: "voicePreviews must be 1-6 lines {text, lang?, rate?, pitch?, timbre?}, or [] to reset" }, 400);
             await setSetting("voice_previews", JSON.stringify(clean));
           }
         }

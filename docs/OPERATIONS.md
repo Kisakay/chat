@@ -84,14 +84,16 @@ Notes:
 ## Admin Center (`/admin`) & self-registration
 
 The sidebar **Admin Center** button (admin only) opens the `/admin` page with
-six deep-linkable tabs (`/admin` = accounts, `/admin/models`, `/admin/access`,
-`/admin/reports`, `/admin/features`, `/admin/mail`): **Accounts** (same
-manager as before), **Access** (access-request wishlist triage, see below),
-**Reports**, **Models** (node pool, per-model policy, Ollama library + HF
-catalog), **Features** (server-side switches), **Mail** (SMTP credentials
-viewer + connectivity tester: `GET /api/admin/mail`,
-`POST /api/admin/mail/verify`, `POST /api/admin/mail/test`, admin Bearer
-only — plus the password-recovery rate limits below).
+seven deep-linkable tabs (`/admin` = accounts, `/admin/models`,
+`/admin/stats`, `/admin/access`, `/admin/reports`, `/admin/features`,
+`/admin/mail`): **Accounts** (same manager as before), **Access**
+(access-request wishlist triage, see below), **Reports**, **Models** (node
+pool, per-model policy, Ollama library + HF catalog), **Stats** (pool load
+charts + platform host facts, see below), **Features** (server-side
+switches + voice-preview lines), **Mail** (SMTP credentials viewer +
+connectivity tester: `GET /api/admin/mail`, `POST /api/admin/mail/verify`,
+`POST /api/admin/mail/test`, admin Bearer only — plus the password-recovery
+rate limits below).
 
 - `registration_enabled` (default off): when on, the login page shows a
   working **Register** button — anyone can create an account (key shown once)
@@ -172,6 +174,34 @@ invalidate the model list cache; `listModels` merges tags across nodes.
   /api/admin/ollama/nodes/:id`, `GET …/nodes/:id/status`,
   `GET …/nodes/:id/stats?window=1h|6h|24h|7d|30d`,
   `GET /api/admin/ollama/probe?host=…`.
+
+## Telemetry sub-page (`/admin/stats`) + platform facts
+
+The **Stats** tab is the pool observatory: node picker, window picker
+(1h / 6h / 24h / 7d / 30d), chart-type dock (bar / area / line SVG charts
+with hover tooltips: requests, errors, avg latency, tokens), totals tiles,
+and a latency underlay. Below, **platform host facts** for this server —
+hostname, kernel, arch/CPU, app + system uptime, load average, memory bar,
+runtime, network interfaces/IPs (`GET /api/admin/platform`, admin only).
+Disk meters are intentionally absent (models live on the Ollama hosts).
+
+## Voice: dictation + playback
+
+- **Composer mic** (browser speech recognition — Chrome/Edge): records with
+  a live gradient waveform, timer and live transcript; **Stop** drops the
+  transcript into the composer, editable before sending; **Discard** throws
+  it away. Unsupported browsers get a disabled mic with an explanatory
+  tooltip. No audio leaves the browser (no server STT endpoint yet —
+  whisper.cpp via `WHISPER_BIN` is the documented next step).
+- **Message playback**: every assistant bubble has a Listen button
+  (speechSynthesis, Siri-style breathing glow while speaking, click again to
+  stop; playback stops on send / new message / conversation switch).
+- **Settings → Voice** (per browser, localStorage): language (auto-detect
+  per message via `detectLang`, or forced), voice picker grouped by locale,
+  speed, pitch, and one-tap previews of the admin-set lines.
+- **Admin Center → Features → Voice previews**: the default playback lines
+  (`voice_previews` setting, 1–6 lines; empty list resets to the built-ins),
+  also served to users via `GET /api/tools`.
 
 ## Personal providers (BYOK)
 
