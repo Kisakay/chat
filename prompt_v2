@@ -1,0 +1,17 @@
+Il y as plusieurs bug d'UX bien chiant:
+Quand un modèle as une erreur: Le modèle le dit, je refresh, le message d'errur à disparue -> Rendre ces message perisstant
+Quand j'envoie un message dans une conversation , l'IA think: je vais sur une autre, sont overly aussi overide une autre conversation: bien segmenter sa
+Le modèles choisis n'est pas sauvegarder, rend l'user choix perssistant
+
+
+____
+
+Pouvoir ajouter d'autre node ollama dans l'admin center. modale, composant, gestion de priorité avec des "poids" comme un firewall
+Gestions des rate-limites pour recovery password...
+admin center: gérer les url pages 
+
+exemple: ouverture catégorie modèles: <host>/admin/models
+fait un timeout sur les requete envoyez au ollama , configurable dans l'admin center.
+Faire un catalog des modèles ollama via internet /hugging face compatible ollama.
+voir les détails des nodes ollama (charge cpu, mémoire, vram..., sur le temps (1h,6h,12h,24h,7w,14w,1m))
+leur composants,...

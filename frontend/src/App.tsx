@@ -27,6 +27,7 @@ import { ReviewPage } from "./components/ReviewPage.tsx";
 import { ConfirmDialog, LoadingScreen } from "./components/ui.tsx";
 import { Toasts } from "./components/Toasts.tsx";
 import { pushToast } from "./lib/toasts.ts";
+import { clearFailedEntry, getFailedEntry, getSavedModel, pickModel, setFailedEntry, setSavedModel } from "./lib/localPrefs.ts";
 import { msUntilNextSolarSwitch, resolveThemeDark } from "./lib/solarTheme.ts";
 import { useT } from "./lib/i18n.ts";
 
@@ -126,6 +127,14 @@ export function App() {
   // its conversation, and how many times this prompt was already retried.
   const [failed, setFailed] = useState<{ index: number; convId: string } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  // Conversation currently receiving a streamed reply (null when idle).
+  // Streaming / thinking / sending UI is rendered ONLY there — every other
+  // conversation stays clean and selectable while a reply lands.
+  const [sendingFor, setSendingFor] = useState<string | null>(null);
+  function setFlight(id: string | null): void {
+    sendingForRef.current = id;
+    setSendingFor(id);
+  }
   const { t } = useT();
 
   // Public routes: no auth needed. IDs are constant for the page lifetime.
@@ -199,7 +208,7 @@ export function App() {
         setReportsEnabled(t.reportsEnabled ?? true);
         setUsernameChangeEnabled(t.usernameChangeEnabled ?? true);
         setModels(m.models);
-        if (m.models.length > 0) setModel(m.models[0]!.id);
+        if (m.models.length > 0) setModel(pickModel(m.models, getSavedModel(res.user.username)));
         setConvs(c.conversations);
         setConvsReady(true);
         // Deep link: /chat/<id> opens that conversation directly.
@@ -290,9 +299,24 @@ export function App() {
     // stream lands — the server list is still empty mid-flight, so a refetch
     // here would blank the fresh exchange (displayed as a recreated chat).
     if (sendingForRef.current === activeId) return;
+    const id = activeId;
     api
-      .getConv(activeId)
-      .then((res) => setMessages(res.messages))
+      .getConv(id)
+      .then((res) => {
+        if (activeIdRef.current !== id || sendingForRef.current === id) return;
+        setMessages(res.messages);
+        // A model error is persisted browser-side (never server-side, so
+        // history stays clean): re-create the trailing error bubble + retry
+        // state after a refresh. Stale entries (conversation moved on) drop.
+        const entry = getFailedEntry(id);
+        if (entry && entry.index === res.messages.length) {
+          setMessages([...res.messages, { role: "assistant", content: t("attach.chatError") }]);
+          setFailed({ index: entry.index, convId: id });
+          setRetryCount(entry.retryCount);
+        } else if (entry) {
+          clearFailedEntry(id);
+        }
+      })
       .catch(() => setMessages([]));
   }, [activeId]);
 
@@ -327,7 +351,7 @@ export function App() {
       .models()
       .then((m) => {
         setModels(m.models);
-        if (m.models.length > 0) setModel(m.models[0]!.id);
+        if (m.models.length > 0) setModel(pickModel(m.models, getSavedModel(u.username)));
       })
       .catch(() => {});
     api
@@ -380,7 +404,14 @@ export function App() {
   }
 
   async function send(text: string) {
-    if (sending || !model || archivedConv) return;
+    if (sending || !model || archivedConv) {
+      // Single flight: another conversation is streaming — say so instead
+      // of silently swallowing the submit.
+      if (sending && sendingForRef.current && sendingForRef.current !== activeIdRef.current) {
+        pushToast(t("chat.busyOther"), { icon: "model" });
+      }
+      return;
+    }
     let convId = activeId;
     if (!convId) {
       try {
@@ -390,16 +421,16 @@ export function App() {
         // render): the URL is still bare /chat while the selection already
         // points at the new id, and sendingForRef shields both until the
         // stream lands. Then refresh the list and move the URL to /chat/<id>.
-        sendingForRef.current = convId;
+        setFlight(convId);
         setActiveId(convId);
         await refreshConvs(convId);
         navigate(`/chat/${convId}`);
       } catch (err) {
-        sendingForRef.current = null;
+        setFlight(null);
         return;
       }
     } else {
-      sendingForRef.current = convId;
+      setFlight(convId);
     }
     const userMsg: ChatMessage = { role: "user", content: text };
     // Attachments travel as reviewed text blocks appended to the message.
@@ -412,7 +443,11 @@ export function App() {
     );
     if (blocks.length > 0)
       userMsg.content = [text, ...blocks].filter(Boolean).join("\n\n");
-    const history = [...messages, userMsg];
+    // A trailing error bubble is display-only: never send the fake error
+    // text to the model, whether it was just created or restored.
+    const cleanBase =
+      failed && failed.convId === convId ? messages.filter((_, i) => i !== failed.index) : messages;
+    const history = [...cleanBase, userMsg];
     setMessages(history);
     setAttachments([]);
     setFailed(null);
@@ -428,6 +463,7 @@ export function App() {
         setMessages([...history, { role: "assistant", content: full }]);
       }
       setStreaming("");
+      clearFailedEntry(convId!);
       // Explicit select: never let the post-stream refresh drift the
       // selection (or the URL) away from this conversation.
       await refreshConvs(convId!);
@@ -440,9 +476,12 @@ export function App() {
         ]);
         setFailed({ index: history.length, convId: convId! });
       }
+      // Persist the failure browser-side so the bubble + retry survive a
+      // refresh (nothing fake is written server-side).
+      setFailedEntry(convId!, { index: history.length, retryCount: 0, at: Date.now() });
       setStreaming("");
     } finally {
-      if (sendingForRef.current === convId) sendingForRef.current = null;
+      if (sendingForRef.current === convId) setFlight(null);
       setSending(false);
     }
   }
@@ -456,10 +495,11 @@ export function App() {
     if (sending || !failed || retryCount >= MAX_RETRIES || !model || archivedConv) return;
     const history = messages.slice(0, failed.index);
     const convId = failed.convId;
-    sendingForRef.current = convId;
+    const nextCount = retryCount + 1;
+    setFlight(convId);
     setMessages(history);
     setFailed(null);
-    setRetryCount((c) => c + 1);
+    setRetryCount(nextCount);
     setSending(true);
     setStreaming("");
     try {
@@ -468,6 +508,7 @@ export function App() {
         setMessages([...history, { role: "assistant", content: full }]);
       }
       setRetryCount(0);
+      clearFailedEntry(convId);
       await refreshConvs(convId);
       if (activeIdRef.current === convId) navigate(`/chat/${convId}`);
     } catch {
@@ -478,9 +519,10 @@ export function App() {
         ]);
         setFailed({ index: history.length, convId });
       }
+      setFailedEntry(convId, { index: history.length, retryCount: nextCount, at: Date.now() });
       setStreaming("");
     } finally {
-      if (sendingForRef.current === convId) sendingForRef.current = null;
+      if (sendingForRef.current === convId) setFlight(null);
       setSending(false);
     }
   }
@@ -552,6 +594,7 @@ export function App() {
   async function removeConv(c: Conversation) {
     try {
       await api.deleteConv(c.id);
+      clearFailedEntry(c.id);
       if (activeId === c.id) {
         setActiveId(null);
         setMessages([]);
@@ -637,7 +680,9 @@ export function App() {
       const m = await api.models();
       setModels(m.models);
       setModel((cur) =>
-        cur && m.models.some((x) => x.id === cur) ? cur : (m.models[0]?.id ?? ""),
+        cur && m.models.some((x) => x.id === cur)
+          ? cur
+          : pickModel(m.models, user ? getSavedModel(user.username) : null),
       );
     } catch {
       // ignore (session errors reload the page via api layer)
@@ -715,12 +760,15 @@ export function App() {
         user={user}
         conv={active}
         messages={messages}
-        streaming={streaming}
-        sending={sending}
+        // Streaming / thinking / sending UI lives only in the conversation
+        // being generated for — anywhere else renders clean and stays usable.
+        streaming={sendingFor === activeId ? streaming : ""}
+        sending={sending && sendingFor === activeId}
         models={models}
         model={model}
         onModelChange={(id) => {
           setModel(id);
+          setSavedModel(user.username, id);
           pushToast(t("toast.modelChanged", { label: models.find((m) => m.id === id)?.label ?? id }), {
             icon: "model",
             tag: "model",
@@ -741,7 +789,7 @@ export function App() {
           setAttachments((prev) => prev.filter((a) => a.id !== id))
         }
         onPickFile={handlePickFile}
-        failedIndex={failed?.index ?? null}
+        failedIndex={failed && failed.convId === activeId ? failed.index : null}
         retryCount={retryCount}
         maxRetries={MAX_RETRIES}
         onRetry={readOnly ? undefined : retryFailed}
