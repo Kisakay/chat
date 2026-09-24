@@ -123,21 +123,23 @@ function mixHex(hex: string, target: number, amount: number): string {
 }
 
 /**
- * Favicon follows the accent: a mini flower (petals in the accent ramp,
- * amber core like the logo) swapped in as an SVG data URL, so the tab icon
- * always matches the platform dress.
+ * Favicon follows the accent AND the theme: the tile background is
+ * theme-owned (white by day, near-black by night) while the flower itself
+ * wears the accent ramp — never an accent tile.
  */
-export function paintFavicon(baseHex: string): void {
+export function paintFavicon(baseHex: string, dark?: boolean): void {
   if (typeof document === "undefined") return;
   const base = /^#?[0-9a-f]{6}$/i.test(baseHex.trim()) ? baseHex.trim().replace(/^#?/, "#") : "#10b981";
-  const dark = mixHex(base, 0, 0.35);
+  const isDark = dark ?? document.documentElement.classList.contains("dark");
+  const tile = isDark ? "#09090b" : "#ffffff";
+  const ring = isDark ? "#27272a" : "#e7e5e4";
   const light = mixHex(base, 255, 0.55);
   const petals = [8, 80, 151, 223, 295].map(
     (a) => `<ellipse cx="50" cy="28" rx="13" ry="20" fill="${base}" transform="rotate(${a} 50 50)"/>`,
   ).join("");
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">` +
-    `<rect width="100" height="100" rx="22" fill="${dark}"/>${petals}` +
+    `<rect width="100" height="100" rx="22" fill="${tile}" stroke="${ring}" stroke-width="3"/>${petals}` +
     `<ellipse cx="50" cy="28" rx="13" ry="20" fill="${light}" opacity="0.45" transform="rotate(8 50 50)"/>` +
     `<circle cx="50" cy="50" r="10" fill="#fbbf24"/></svg>`;
   const url = `data:image/svg+xml,${encodeURIComponent(svg)}`;
@@ -151,6 +153,24 @@ export function paintFavicon(baseHex: string): void {
     link.type = rel === "icon" ? "image/svg+xml" : link.type;
     link.href = url;
   }
+}
+
+/** Last accent base, so theme flips can repaint without knowing the color. */
+let lastBase = "#10b981";
+
+function repaint(): void {
+  paintFavicon(lastBase);
+}
+
+if (typeof document !== "undefined" && typeof MutationObserver !== "undefined") {
+  new MutationObserver((muts) => {
+    for (const m of muts) {
+      if (m.attributeName === "class") {
+        repaint();
+        break;
+      }
+    }
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 }
 
 // Restore the saved accent on load.

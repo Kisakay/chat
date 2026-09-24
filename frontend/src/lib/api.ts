@@ -446,7 +446,7 @@ export const api = {
   tools: () => req<{ tools: { name: string; description: string; available: boolean; reason: string | null }[]; reportsEnabled: boolean; usernameChangeEnabled: boolean; voicePreviews: VoicePreview[] }>("/api/tools"),
 
   /** Neural TTS provider status (null = browser speech fallback). */
-  ttsInfo: () => req<{ provider: "elevenlabs" | "openai" | "piper" | null; voices: string[]; available: boolean; reason: string | null }>("/api/tools/tts/info"),
+  ttsInfo: () => req<{ provider: "elevenlabs" | "openai" | "piper" | null; voices: { id: string; name: string }[]; available: boolean; reason: string | null }>("/api/tools/tts/info"),
 
   /** Synthesize text server-side (neural voice). Returns audio bytes. */
   ttsSpeak: async (text: string, voice?: string): Promise<Blob> => {

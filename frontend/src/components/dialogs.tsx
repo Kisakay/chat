@@ -877,7 +877,7 @@ function VoiceSection() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [previews, setPreviews] = useState<VoicePreview[]>([]);
   const [playing, setPlaying] = useState<number | null>(null);
-  const [ttsServer, setTtsServer] = useState<{ available: boolean; provider: string | null; voices: string[] } | null>(null);
+  const [ttsServer, setTtsServer] = useState<{ available: boolean; provider: string | null; voices: { id: string; name: string }[] } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -979,7 +979,7 @@ function VoiceSection() {
       </Field>
       {(prefs.engine !== "browser") && (
         ttsServer?.available ? (
-          ttsServer.provider === "openai" ? (
+          ttsServer.voices.length > 0 ? (
             <Field label={t("voice.serverVoice")}>
               <Picker
                 ariaLabel={t("voice.serverVoice")}
@@ -987,7 +987,7 @@ function VoiceSection() {
                 value={prefs.serverVoice ?? ""}
                 onChange={(v) => update({ serverVoice: v || null })}
                 align="left"
-                options={[{ value: "", label: t("voice.defaultVoice") }, ...ttsServer.voices.map((v) => ({ value: v, label: v }))]}
+                options={[{ value: "", label: t("voice.defaultVoice") }, ...ttsServer.voices.map((v) => ({ value: v.id, label: v.name }))]}
               />
             </Field>
           ) : ttsServer.provider === "elevenlabs" ? (

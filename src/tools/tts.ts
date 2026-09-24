@@ -65,6 +65,11 @@ function piperBin(): string {
   return process.env["PIPER_BIN"] || "piper";
 }
 
+export interface TtsVoice {
+  id: string;
+  name: string;
+}
+
 async function piperAvailable(): Promise<boolean> {
   if (!config.piperModel) return false;
   try {
@@ -140,8 +145,33 @@ function pruneCache(): void {
   }
 }
 
-async function synthElevenlabs(text: string, voiceId: string): Promise<{ audio: Uint8Array; contentType: string }> {
-  const res = await fetch(`${elevenlabsBase()}/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
+// ElevenLabs voice catalog (cached 5 min, best-effort — drives the admin
+// voice select menus; never blocks synthesis when unreachable).
+let elVoicesCache: { at: number; voices: TtsVoice[] } | null = null;
+
+export async function elevenlabsVoices(): Promise<TtsVoice[]> {
+  const now = Date.now();
+  if (elVoicesCache && now - elVoicesCache.at < 300_000) return elVoicesCache.voices;
+  const fallback = config.elevenlabsVoice ? [{ id: config.elevenlabsVoice, name: config.elevenlabsVoice }] : [];
+  try {
+    const res = await fetch(`${elevenlabsBase()}/v1/voices`, {
+      headers: { "xi-api-key": config.elevenlabsApiKey },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`status ${res.status}`);
+    const data = (await res.json()) as { voices?: { voice_id?: unknown; name?: unknown }[] };
+    const voices = (data.voices ?? [])
+      .filter((v) => typeof v.voice_id === "string" && typeof v.name === "string")
+      .map((v) => ({ id: v.voice_id as string, name: v.name as string }));
+    if (voices.length === 0) return fallback;
+    elVoicesCache = { at: now, voices };
+    return [...voices, ...fallback.filter((f) => !voices.some((v) => v.id === f.id))];
+  } catch {
+    return fallback;
+  }
+}
+
+async function synthElevenlabs(text: string, voiceId: string): Promise<{ audio: Uint8Array; contentType: string }> {  const res = await fetch(`${elevenlabsBase()}/v1/text-to-speech/${encodeURIComponent(voiceId)}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -228,11 +258,11 @@ export class TtsTool implements PlatformTool {
     return null;
   }
 
-  async providerInfo(): Promise<{ provider: TtsProvider | null; voices: string[] }> {
+  async providerInfo(): Promise<{ provider: TtsProvider | null; voices: TtsVoice[] }> {
     const p = await activeTtsProvider();
     if (!p) return { provider: null, voices: [] };
-    if (p === "openai") return { provider: p, voices: [...OPENAI_VOICES] };
-    if (p === "elevenlabs") return { provider: p, voices: config.elevenlabsVoice ? [config.elevenlabsVoice] : [] };
+    if (p === "openai") return { provider: p, voices: OPENAI_VOICES.map((v) => ({ id: v, name: v })) };
+    if (p === "elevenlabs") return { provider: p, voices: await elevenlabsVoices() };
     return { provider: p, voices: [] };
   }
 

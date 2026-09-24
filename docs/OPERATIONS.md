@@ -205,19 +205,20 @@ Disk meters are intentionally absent (models live on the Ollama hosts).
   `TTS_PROVIDER` forces one; `TTS_VOICE` / `ELEVENLABS_VOICE` set defaults.
   Output is cached on disk (sha of provider|voice|text, 200 files cap),
   rate-limited to 30 jobs/hour/account (429), kill-switched via
-  `tools_tts_enabled` (Admin Center → Features). Test overrides:
-  `ELEVENLABS_BASE_URL` / `OPENAI_BASE_URL`.
+  `tools_tts_enabled` (Admin Center → Features). Preview lines are
+  pre-generated once at boot and right after each preview save, so serving
+  users always hits the cache (`X-TTS-Cache: HIT/MISS` proves it). Test
+  overrides: `ELEVENLABS_BASE_URL` / `OPENAI_BASE_URL`.
 - **Settings → Voice** (per browser, localStorage): engine, language
   (auto-detect per message or forced), browser voice/rate/pitch, neural
   voice id, and one-tap previews of the admin-set lines.
 - **Admin Center → Features → Voice previews**: the default playback lines
   (`voice_previews` setting, 1–6 lines `{text, lang, rate, pitch, timbre,
   voice}`, each with its OWN voice character — masculine/feminine/any
-  timbre hint, speed, pitch, optional server voice id — so previews sound
-  different from each other; timbre matching is best-effort over the
-  browser's voice names, rate/pitch always apply; empty list resets to the
-  built-ins), also served to users via `GET /api/tools`. Users can adopt
-  any preview's character as their own playback voice from Settings → Voice.
+  timbre hint, speed, pitch, optional server voice id picked from a select
+  menu fed by the provider catalog), also served to users via
+  `GET /api/tools`. Users can adopt any preview's character as their own
+  playback voice from Settings → Voice.
 
 ## Personal providers (BYOK)
 

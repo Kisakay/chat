@@ -287,6 +287,28 @@ function sanitizeVoicePreviews(v: unknown): VoicePreview[] | null {
   return clean.length > 0 ? clean.slice(0, 6) : null;
 }
 
+/**
+ * Generate every preview line's audio ONCE (background, best-effort) so
+ * serving users always hits the disk cache — no synthesis latency on
+ * playback, no repeated provider cost. Runs at boot and after each
+ * preview save; failures are swallowed (first playback synthesizes).
+ */
+async function pregenerateVoicePreviews(): Promise<void> {
+  try {
+    const tts = tools.tts;
+    if (!await tts.isAvailable()) return;
+    for (const line of await getVoicePreviews()) {
+      try {
+        await tts.synthesize(line.text, line.voice || undefined);
+      } catch {
+        // one line must not block the others
+      }
+    }
+  } catch {
+    // pregen must never break boot or saves
+  }
+}
+
 function clientIp(req: Request, server: { requestIP?: (r: Request) => { address: string } | null }): string {
   try {
     const info = server.requestIP?.(req);
@@ -1104,6 +1126,8 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             if (!clean) return json({ error: "voicePreviews must be 1-6 lines {text, lang?, rate?, pitch?, timbre?, voice?}, or [] to reset" }, 400);
             await setSetting("voice_previews", JSON.stringify(clean));
           }
+          // New/changed lines get their audio generated once, right away.
+          void pregenerateVoicePreviews();
         }
         if (body.ttsEnabled !== undefined) {
           if (typeof body.ttsEnabled !== "boolean") return json({ error: "ttsEnabled must be boolean" }, 400);
@@ -1846,10 +1870,10 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         }
         recordTtsJob(user.id);
         try {
-          const { audio, contentType } = await tts.synthesize(text, typeof body.voice === "string" ? body.voice : undefined);
+          const { audio, contentType, fromCache } = await tts.synthesize(text, typeof body.voice === "string" ? body.voice : undefined);
           const bytes = audio.buffer.slice(audio.byteOffset, audio.byteOffset + audio.byteLength) as ArrayBuffer;
           return new Response(bytes, {
-            headers: { "Content-Type": contentType, "Cache-Control": "private, max-age=86400" },
+            headers: { "Content-Type": contentType, "Cache-Control": "private, max-age=86400", "X-TTS-Cache": fromCache ? "HIT" : "MISS" },
           });
         } catch (e) {
           const msg = (e as Error).message;
@@ -2010,3 +2034,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 console.log(`KisAssistant listening on http://${config.host}:${config.port}`);
 console.log(`Drivers (priority order): ${registry.ordered().map((d) => `${d.name}${d.enabled ? "" : " [disabled]"}`).join(" -> ")}`);
 void server;
+
+// Preview voice lines get their audio generated once at boot so playback
+// always serves the disk cache (background, best-effort).
+void pregenerateVoicePreviews();

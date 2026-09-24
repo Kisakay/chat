@@ -348,6 +348,7 @@ function VoicePreviewsCard() {
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [serverVoices, setServerVoices] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     api.adminGetSettings()
@@ -356,6 +357,7 @@ function VoicePreviewsCard() {
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
+    api.ttsInfo().then((r) => setServerVoices(r.voices)).catch(() => {});
   }, []);
 
   async function save(next: VoicePreview[]) {
@@ -453,16 +455,30 @@ function VoicePreviewsCard() {
               </span>
               <span className="w-40">
                 <Field label={t("vfeat.voice")} hint={t("vfeat.voiceHint")}>
-                  <Input
-                    value={line.voice}
-                    disabled={busy}
-                    maxLength={64}
-                    placeholder={t("vfeat.voicePh")}
-                    aria-label={t("vfeat.voice")}
-                    onChange={(e) => patch(i, { voice: e.target.value })}
-                    onBlur={() => commit(i)}
-                    onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                  />
+                  {serverVoices.length > 0 ? (
+                    <Picker
+                      ariaLabel={t("vfeat.voice")}
+                      value={line.voice}
+                      onChange={(v) => {
+                        patch(i, { voice: v });
+                        const next = lines.map((l, j) => (j === i ? { ...l, voice: v } : l));
+                        if (next[i]!.text.trim() !== "") void save(next);
+                      }}
+                      align="left"
+                      options={[{ value: "", label: t("vfeat.voicePh") }, ...serverVoices.map((v) => ({ value: v.id, label: v.name }))]}
+                    />
+                  ) : (
+                    <Input
+                      value={line.voice}
+                      disabled={busy}
+                      maxLength={64}
+                      placeholder={t("vfeat.voicePh")}
+                      aria-label={t("vfeat.voice")}
+                      onChange={(e) => patch(i, { voice: e.target.value })}
+                      onBlur={() => commit(i)}
+                      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                    />
+                  )}
                 </Field>
               </span>
               <label className="min-w-32 flex-1 text-xs opacity-80">
