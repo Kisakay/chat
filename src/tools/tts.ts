@@ -178,7 +178,7 @@ async function synthElevenlabs(text: string, voiceId: string): Promise<{ audio: 
       Accept: "audio/mpeg",
       "xi-api-key": config.elevenlabsApiKey,
     },
-    body: JSON.stringify({ text, model_id: "eleven_turbo_v2_5" }),
+    body: JSON.stringify({ text, model_id: "eleven_multilingual_v2" }),
     signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
   });
   if (!res.ok) {

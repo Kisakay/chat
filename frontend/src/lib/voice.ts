@@ -51,8 +51,42 @@ export function setVoicePrefs(p: VoicePrefs): void {
   }
 }
 
-/** Naive per-message language guess (accents + stop-words). */
-export function detectLang(text: string): string {
+/** Max chars sent to any TTS engine (server enforces the same cap). */
+export const SPEECH_MAX_CHARS = 2000;
+
+/**
+ * Markdown → clean speakable text. Code blocks become a pause (reading
+ * code aloud is noise), formatting/links/URLs are stripped to their
+ * readable part, paragraphs become pauses. Over-long texts are cut at a
+ * sentence boundary so playback never stops mid-word.
+ */
+export function toSpeechText(md: string): string {
+  let s = md;
+  s = s.replace(/```[\s\S]*?```/g, ". ");
+  s = s.replace(/`([^`]+)`/g, "$1");
+  s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
+  s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+  s = s.replace(/^#{1,6}\s+/gm, "");
+  s = s.replace(/(\*\*|__)(.*?)\1/g, "$2");
+  s = s.replace(/(^|[\s(])[*_]([^*_\n]+)[*_]/g, "$1$2");
+  s = s.replace(/^>\s?/gm, "");
+  s = s.replace(/^\s*(?:[-*+]|\d+[.)])\s+/gm, "");
+  s = s.replace(/^(\*\*\*|---|___)\s*$/gm, "");
+  s = s.replace(/<[^>]+>/g, " ");
+  s = s.replace(/https?:\/\/[^\s)]+/g, " ");
+  s = s.replace(/[ \t]+/g, " ");
+  s = s.replace(/\n{2,}/g, ". ");
+  s = s.replace(/\n/g, " ");
+  s = s.replace(/\s{2,}/g, " ").trim();
+  if (s.length > SPEECH_MAX_CHARS) {
+    const cut = s.slice(0, SPEECH_MAX_CHARS);
+    const m = cut.match(/.*[.!?…]["»\s]/);
+    s = (m ? m[0] : cut).trim();
+  }
+  return s;
+}
+
+/** Naive per-message language guess (accents + stop-words). */export function detectLang(text: string): string {
   const t = ` ${text.toLowerCase()} `;
   if (/[àâäéèêëîïôöùûüÿçœæ]/.test(text)) return "fr";
   const fr = [" le ", " la ", " les ", " un ", " une ", " des ", " est ", " sont ", " que ", " qui ", " pour ", " dans ", " avec ", " je ", " tu ", " vous ", " pas ", " plus ", " cette ", " comme "];
@@ -231,9 +265,13 @@ export interface PlayRequest {
  */
 export function playText(req: PlayRequest): PlayHandle {
   stopPlayback();
-  const wantServer = req.serverAvailable && req.engine !== "browser";
-  if (wantServer) return playServer(req, req.engine === "auto");
-  return playBrowser(req);
+  // Never read markdown cruft aloud; fall back to raw text when cleaning
+  // leaves nothing (e.g. a code-only message).
+  const clean = toSpeechText(req.text) || req.text.slice(0, SPEECH_MAX_CHARS);
+  const cleanReq: PlayRequest = { ...req, text: clean };
+  const wantServer = cleanReq.serverAvailable && cleanReq.engine !== "browser";
+  if (wantServer) return playServer(cleanReq, cleanReq.engine === "auto");
+  return playBrowser(cleanReq);
 }
 
 function playServer(req: PlayRequest, allowFallback: boolean): PlayHandle {
