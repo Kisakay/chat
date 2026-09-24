@@ -67,7 +67,7 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | POST | `/api/access/request` | public | reserve username+email with a motivation → ticket (`/review/:id`) |
 | GET/POST | `/api/access/ticket/:id` (+`/message`) | ticket bearer | follow + reply on an access request |
 | WS | `/api/access/ws/:id` | ticket bearer | live ticket messages + status (ping/pong heartbeat) |
-| WS | `/api/admin/ws?token=…` | admin | firehose of all access events (badge + triage list) |
+| WS | `/api/admin/ws?token=…` | admin | firehose of all access + report events (badges + triage lists, full payloads, no polling) |
 | GET/PATCH/POST | `/api/admin/access…` | admin | wishlist triage: list, accept/refuse/review, reply |
 | POST | `/api/reports` | Bearer | flag an AI response (copyright/gore/falseinfo/bug) → `{report}` (201) |
 | GET/PATCH | `/api/admin/reports`, `/api/admin/reports/:id` | admin | report triage: list, reviewing/resolved/dismissed + note |

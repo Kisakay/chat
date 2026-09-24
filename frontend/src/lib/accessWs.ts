@@ -1,4 +1,4 @@
-import type { AccessMessage, AccessRequest } from "./api.ts";
+import type { AccessMessage, AccessRequest, Report } from "./api.ts";
 
 /**
  * Shared WebSocket pool for live access-request updates.
@@ -7,13 +7,21 @@ import type { AccessMessage, AccessRequest } from "./api.ts";
  * AdminCenter badge and the triage list share the admin firehose).
  * Auto-reconnects with backoff; every (re)connect triggers onSync so
  * components resync over HTTP and never miss an event sent while offline.
- * A 25s client ping keeps idle connections alive through proxies.
+ * A 25s client ping keeps idle connections alive through proxies, and a
+ * pong watchdog reconnects half-dead sockets (ping answered by nobody)
+ * that would otherwise silently stop notifying.
+ *
+ * Events carry their full payload — handlers apply them straight to state.
+ * HTTP resync (onSync) is only the offline-gap fallback, never the
+ * per-event path.
  */
 
 export type AccessLiveEvent =
   | { type: "access_message"; request_id: string; message: AccessMessage }
   | { type: "access_status"; request_id: string; request: AccessRequest }
-  | { type: "access_created"; request_id: string; request: AccessRequest }
+  | { type: "access_created"; request_id: string; request: AccessRequest; message: AccessMessage; message_count: number }
+  | { type: "report_created"; report: Report }
+  | { type: "report_status"; report: Report }
   | { type: "pong" };
 
 export interface AccessLiveListener {
@@ -28,13 +36,49 @@ interface Pool {
   backoff: number;
   retryTimer: ReturnType<typeof setTimeout> | null;
   pingTimer: ReturnType<typeof setInterval> | null;
+  /** Last time the server proved liveness (open or pong). 0 = unknown. */
+  lastLive: number;
 }
 
+let globalHooksInstalled = false;
+
 const pools = new Map<string, Pool>();
+
+/** Ping period; the watchdog tolerates one missed pong plus slack. */
+const PING_MS = 25_000;
+const WATCHDOG_MS = PING_MS + 10_000;
 
 export function wsUrl(path: string): string {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${window.location.host}${path}`;
+}
+
+/** Reconnect every pooled socket now (tab visible again / back online). */
+function reconnectAll(): void {
+  for (const [url, pool] of pools) {
+    if (pool.listeners.size === 0) continue;
+    if (pool.retryTimer) {
+      clearTimeout(pool.retryTimer);
+      pool.retryTimer = null;
+    }
+    try {
+      pool.ws?.close();
+    } catch {
+      // already gone — connect() below redials
+    }
+    pool.ws = null;
+    pool.backoff = 0;
+    connect(url, pool);
+  }
+}
+
+function installGlobalHooks(): void {
+  if (globalHooksInstalled || typeof document === "undefined") return;
+  globalHooksInstalled = true;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") reconnectAll();
+  });
+  window.addEventListener("online", () => reconnectAll());
 }
 
 function connect(url: string, pool: Pool): void {
@@ -49,15 +93,27 @@ function connect(url: string, pool: Pool): void {
 
   ws.onopen = () => {
     pool.backoff = 0;
+    pool.lastLive = Date.now();
     pool.pingTimer = setInterval(() => {
+      // Half-dead socket: OPEN but the server hasn't proved liveness for
+      // over a ping period + grace (proxy killed it, server restarted…).
+      // Close it so onclose schedules a fresh dial.
       if (ws.readyState === WebSocket.OPEN) {
+        if (Date.now() - pool.lastLive > WATCHDOG_MS) {
+          try {
+            ws.close();
+          } catch {
+            // close handler reconnects
+          }
+          return;
+        }
         try {
           ws.send(JSON.stringify({ type: "ping" }));
         } catch {
           // send failed — the close handler will schedule a retry
         }
       }
-    }, 25_000);
+    }, PING_MS);
     for (const l of [...pool.listeners]) {
       try {
         l.onSync?.();
@@ -75,6 +131,8 @@ function connect(url: string, pool: Pool): void {
       return;
     }
     if (!parsed || typeof parsed.type !== "string") return;
+    // Any frame (event or pong) proves the socket is alive.
+    if (pool.ws === ws) pool.lastLive = Date.now();
     for (const l of [...pool.listeners]) {
       try {
         l.onEvent(parsed);
@@ -110,10 +168,12 @@ function scheduleRetry(url: string, pool: Pool): void {
 }
 
 export function subscribeAccessLive(url: string, listener: AccessLiveListener): () => void {
-  let pool = pools.get(url);
+  let pool: Pool | undefined = pools.get(url);
   if (!pool) {
-    pool = { ws: null, listeners: new Set(), backoff: 0, retryTimer: null, pingTimer: null };
-    pools.set(url, pool);
+    const fresh: Pool = { ws: null, listeners: new Set(), backoff: 0, retryTimer: null, pingTimer: null, lastLive: 0 };
+    pools.set(url, fresh);
+    pool = fresh;
+    installGlobalHooks();
     connect(url, pool);
   }
   pool.listeners.add(listener);

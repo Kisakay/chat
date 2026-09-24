@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
   Clock,
@@ -19,6 +19,8 @@ import {
   Modal,
   Spinner,
 } from "./ui.tsx";
+import { Toasts } from "./Toasts.tsx";
+import { pushToast } from "../lib/toasts.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
 import { cn } from "../lib/cn.ts";
 
@@ -70,10 +72,28 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
   const { t } = useT();
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const threadRef = useRef<HTMLDivElement>(null);
+  // Message ids already applied (WS echo + HTTP response race): each lands once.
+  const seenIds = useRef(new Set<number>());
+  function appendMessage(msg: AccessMessage): boolean {
+    if (seenIds.current.has(msg.id)) return false;
+    seenIds.current.add(msg.id);
+    setMessages((prev) => [...prev, msg]);
+    return true;
+  }
+
+  // Follow live traffic: stick to the bottom while the user already is.
+  useEffect(() => {
+    const el = threadRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
+    if (nearBottom) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   async function load() {
     try {
       const res = await api.accessTicket(ticketId);
+      for (const m of res.messages) seenIds.current.add(m.id);
       setRequest(res.request);
       setMessages(res.messages);
     } catch {
@@ -87,6 +107,7 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
   async function refreshSilent() {
     try {
       const res = await api.accessTicket(ticketId);
+      for (const m of res.messages) seenIds.current.add(m.id);
       setRequest(res.request);
       setMessages(res.messages);
     } catch {
@@ -96,16 +117,21 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
 
   useEffect(() => {
     load();
-    // Live updates over WebSocket: admin replies and the decision arrive
-    // instantly; resync on (re)connect covers events missed while offline.
+    // Live updates over WebSocket with full payloads: admin replies and the
+    // decision apply straight to state (no refetch); resync on (re)connect
+    // covers events missed while offline.
     const close = subscribeAccessLive(wsUrl(`/api/access/ws/${ticketId}`), {
       onEvent: (evt) => {
-        if (evt.type === "pong" || evt.request_id !== ticketId) return;
+        // Report events only travel the admin firehose — never ticket sockets.
+        if (evt.type === "pong" || evt.type === "report_created" || evt.type === "report_status") return;
+        if (evt.request_id !== ticketId) return;
         if (evt.type === "access_message") {
-          const msg = evt.message;
-          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+          if (appendMessage(evt.message) && evt.message.author === "admin") {
+            pushToast(t("live.adminReply"), { icon: "mail" });
+          }
         } else if (evt.type === "access_status") {
           setRequest(evt.request);
+          pushToast(t("live.ticketStatus", { status: t(`review.status.${evt.request.status}` as StringKey) }), { icon: "inbox" });
         }
       },
       onSync: () => {
@@ -124,7 +150,7 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
     setError("");
     try {
       const res = await api.accessReply(ticketId, body);
-      setMessages((prev) => [...prev, res.message]);
+      appendMessage(res.message);
       setDraft("");
     } catch (err) {
       setError(err instanceof Error ? err.message : t("access.sendFailed"));
@@ -190,7 +216,7 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
               </>
             )}
 
-            <div className="max-h-80 space-y-2.5 overflow-y-auto rounded-2xl border border-stone-200/70 p-3 dark:border-zinc-800">
+            <div ref={threadRef} className="max-h-80 space-y-2.5 overflow-y-auto rounded-2xl border border-stone-200/70 p-3 dark:border-zinc-800">
               {messages.map((m) => (
                 <div
                   key={m.id}
@@ -259,6 +285,7 @@ export function ReviewPage({ ticketId }: { ticketId: string }) {
           </div>
         )}
       </div>
+      <Toasts />
     </div>
   );
 }

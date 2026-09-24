@@ -171,9 +171,13 @@ UUID, same pattern as share links).
   (ticket bearer — pushes `access_message` + `access_status` for that ticket)
   and `GET /api/admin/ws?token=…` (admin Bearer in query string, browsers
   can't set WS headers — pushes `access_message` + `access_status` +
-  `access_created` for every ticket, driving the AdminCenter badge and the
-  triage list). Clients ping every 25 s (`{"type":"ping"}` → `{"type":"pong"}`)
-  and resync over HTTP on every (re)connect.
+  `access_created` for every ticket plus `report_created` + `report_status`,
+  driving the AdminCenter badges and the triage lists). Every event carries
+  its full payload (`access_created` bundles the ticket, its first message
+  and the message count), so clients apply it straight to state — HTTP
+  resync only happens on (re)connect to cover the offline gap. Clients ping
+  every 25 s (`{"type":"ping"}` → `{"type":"pong"}`) with a pong watchdog
+  that redials half-dead sockets.
 
 ## Content reports (flagged AI responses)
 

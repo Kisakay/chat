@@ -3,6 +3,7 @@ import { CheckCircle2, Clock, Inbox, Search, SendHorizontal, Undo2, XCircle } fr
 import { api, getToken, type AccessMessage, type AccessRequest, type AccessStatus } from "../lib/api.ts";
 import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import { Button, CopyButton, Field, Input, Spinner } from "./ui.tsx";
+import { pushToast } from "../lib/toasts.ts";
 import { useT, type StringKey } from "../lib/i18n.ts";
 import { cn } from "../lib/cn.ts";
 
@@ -16,6 +17,22 @@ const STATUS_STYLE: Record<AccessStatus, { cls: string }> = {
 type Filter = "all" | AccessStatus;
 const FILTERS: Filter[] = ["all", "pending", "reviewing", "accepted", "refused"];
 
+/**
+ * Message ids already applied (WS echo + HTTP response race). Shared by the
+ * list (count bumps) and the open thread (appends) so each message lands
+ * exactly once no matter which arrives first.
+ */
+const seenAccessMsgIds = new Set<number>();
+function markAccessMsgSeen(msg: AccessMessage): boolean {
+  if (seenAccessMsgIds.has(msg.id)) return false;
+  seenAccessMsgIds.add(msg.id);
+  if (seenAccessMsgIds.size > 1000) {
+    const oldest = seenAccessMsgIds.values().next().value;
+    if (oldest !== undefined) seenAccessMsgIds.delete(oldest);
+  }
+  return true;
+}
+
 /** Admin triage for the access-request wishlist: accept / refuse / review. */
 export function AccessRequestsPanel() {
   const [requests, setRequests] = useState<(AccessRequest & { message_count: number })[]>([]);
@@ -24,11 +41,23 @@ export function AccessRequestsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { t } = useT();
+  // State mirrors for the WS handler (no side effects inside updaters).
+  const rowsRef = useRef(requests);
+  const selectedRef = useRef(selectedId);
+  rowsRef.current = requests;
+  selectedRef.current = selectedId;
+  function setRows(fn: (prev: (AccessRequest & { message_count: number })[]) => (AccessRequest & { message_count: number })[]): void {
+    setRequests((prev) => {
+      const next = fn(prev);
+      rowsRef.current = next;
+      return next;
+    });
+  }
 
   async function refresh(select?: string) {
     try {
       const res = await api.adminAccessList();
-      setRequests(res.requests);
+      setRows(() => res.requests);
       if (select) setSelectedId(select);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("admin.loadFailed"));
@@ -39,14 +68,40 @@ export function AccessRequestsPanel() {
 
   useEffect(() => {
     refresh();
-    // Live list: the admin firehose pushes every access event (shares its
-    // socket with the AdminCenter badge via the pool). Resync on
-    // (re)connect covers events missed while offline.
+    // Live list: the admin firehose pushes full payloads, so rows update
+    // incrementally with zero HTTP (shares its socket with the AdminCenter
+    // badge via the pool). Full resync only on (re)connect (offline gap).
     const token = getToken();
     if (!token) return;
     return subscribeAccessLive(wsUrl(`/api/admin/ws?token=${encodeURIComponent(token)}`), {
       onEvent: (evt) => {
-        if (evt.type !== "pong") refresh();
+        if (evt.type === "pong") return;
+        if (evt.type === "access_created") {
+          markAccessMsgSeen(evt.message);
+          setRows((prev) =>
+            prev.some((r) => r.id === evt.request_id)
+              ? prev
+              : [{ ...evt.request, message_count: evt.message_count }, ...prev],
+          );
+        } else if (evt.type === "access_message") {
+          if (!markAccessMsgSeen(evt.message)) return;
+          const row = rowsRef.current.find((r) => r.id === evt.request_id);
+          if (row && evt.message.author === "user" && selectedRef.current !== evt.request_id) {
+            pushToast(t("live.newMessage", { user: row.username }), { icon: "mail" });
+          }
+          setRows((prev) =>
+            prev.map((r) =>
+              r.id === evt.request_id ? { ...r, message_count: r.message_count + 1 } : r,
+            ),
+          );
+        } else if (evt.type === "access_status") {
+          setRows((prev) =>
+            prev.map((r) =>
+              r.id === evt.request_id ? { ...evt.request, message_count: r.message_count } : r,
+            ),
+          );
+        }
+        // Report events: the ReportsPanel owns them; badges own the counts.
       },
       onSync: () => {
         refresh();
@@ -121,7 +176,7 @@ export function AccessRequestsPanel() {
                 {t(`access.status.${r.status}` as StringKey)}
               </span>
             </button>
-            {selectedId === r.id && <TicketDetail request={r} onChanged={() => refresh(r.id)} />}
+            {selectedId === r.id && <TicketDetail request={r} onUpdated={(updated) => setRows((prev) => prev.map((x) => x.id === updated.id ? { ...updated, message_count: x.message_count } : x))} />}
           </li>
         ))}
       </ul>
@@ -129,7 +184,7 @@ export function AccessRequestsPanel() {
   );
 }
 
-function TicketDetail({ request, onChanged }: { request: AccessRequest; onChanged: () => void }) {
+function TicketDetail({ request, onUpdated }: { request: AccessRequest; onUpdated: (r: AccessRequest) => void }) {
   const [messages, setMessages] = useState<AccessMessage[]>([]);
   const [reason, setReason] = useState(request.reason);
   const [draft, setDraft] = useState("");
@@ -137,29 +192,19 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
   const [error, setError] = useState("");
   const { t } = useT();
   const [freshKey, setFreshKey] = useState<string | null>(null);
-  // Latest callbacks / server state without restarting the poll loop.
-  const onChangedRef = useRef(onChanged);
-  onChangedRef.current = onChanged;
-  const known = useRef({ status: request.status, reason: request.reason });
 
   useEffect(() => {
     setReason(request.reason);
     setFreshKey(null);
-    known.current = { status: request.status, reason: request.reason };
-    // Live thread: requester replies arrive instantly, and a status change
-    // made elsewhere syncs the list (badges, filters). Resync on
-    // (re)connect covers events missed while offline.
+    // Live thread: requester replies arrive instantly with their full
+    // payload (no refetch); status changes made elsewhere arrive on the
+    // parent's firehose and flow back down as props. Full reload only on
+    // (re)connect (offline gap).
     async function fetchOnce() {
       try {
         const res = await api.adminAccessGet(request.id);
+        for (const m of res.messages) markAccessMsgSeen(m);
         setMessages(res.messages);
-        if (
-          res.request.status !== known.current.status ||
-          res.request.reason !== known.current.reason
-        ) {
-          known.current = { status: res.request.status, reason: res.request.reason };
-          onChangedRef.current();
-        }
       } catch {
         // Transient failure: keep last state.
       }
@@ -167,15 +212,14 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
     fetchOnce();
     return subscribeAccessLive(wsUrl(`/api/access/ws/${request.id}`), {
       onEvent: (evt) => {
-        if (evt.type === "pong" || evt.request_id !== request.id) return;
+        // Report events only travel the admin firehose — never ticket sockets.
+        if (evt.type === "pong" || evt.type === "report_created" || evt.type === "report_status") return;
+        if (evt.request_id !== request.id) return;
         if (evt.type === "access_message") {
-          const msg = evt.message;
-          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
-          onChangedRef.current();
-        } else if (evt.type === "access_status") {
-          known.current = { status: evt.request.status, reason: evt.request.reason };
-          onChangedRef.current();
+          if (!markAccessMsgSeen(evt.message)) return;
+          setMessages((prev) => [...prev, evt.message]);
         }
+        // access_status flows via the parent firehose -> onUpdated -> props.
       },
       onSync: () => {
         fetchOnce();
@@ -192,8 +236,7 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
     try {
       const res = await api.adminAccessPatch(request.id, { status, reason: reason.trim() });
       if (res.key) setFreshKey(res.key);
-      known.current = { status: res.request.status, reason: res.request.reason };
-      onChanged();
+      onUpdated(res.request);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("access.updateFailed"));
     } finally {
@@ -209,9 +252,10 @@ function TicketDetail({ request, onChanged }: { request: AccessRequest; onChange
     setError("");
     try {
       const res = await api.adminAccessReply(request.id, body);
-      setMessages((prev) => [...prev, res.message]);
+      // The broadcast echo of our own message may already be applied —
+      // the shared seen-set keeps exactly one copy either way.
+      if (markAccessMsgSeen(res.message)) setMessages((prev) => [...prev, res.message]);
       setDraft("");
-      onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("access.sendFailed"));
     } finally {

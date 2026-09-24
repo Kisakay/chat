@@ -560,8 +560,10 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       const created = await createAccessRequest({ username, email, message });
       const firstMsg = await addAccessMessage(created.id, "user", message);
       clearAttempts(ip);
-      broadcastAccessLive({ type: "access_created", request_id: created.id, request: created });
-      broadcastAccessLive({ type: "access_message", request_id: created.id, message: firstMsg });
+      // One event carries the whole creation (ticket + its first message):
+      // subscribers apply it directly, no HTTP refetch. No ticket socket
+      // can exist for this id yet, so nothing needs the message separately.
+      broadcastAccessLive({ type: "access_created", request_id: created.id, request: created, message: firstMsg, message_count: 1 });
       // Ticket page: /review/<uuid> (unguessable, same pattern as share links).
       const reviewUrl = `${config.appUrl}/review/${created.id}`;
       sendAccessReceivedEmail(email, username, reviewUrl).catch(() => {});
@@ -1093,6 +1095,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             clientPrompt,
             clientModel,
           });
+          broadcastAccessLive({ type: "report_created", report });
           return json({ report }, 201);
         } catch (e) {
           if ((e as Error).message === "TOO_MANY_OPEN") return json({ error: "too many open reports" }, 429);
@@ -1122,7 +1125,9 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           }
           const adminNote = cleanOptionalStr(body.adminNote, 1000);
           if (adminNote === null) return json({ error: "adminNote: max 1000 chars" }, 400);
-          return json({ report: await setReportStatus(target.id, status, adminNote) });
+          const updated = await setReportStatus(target.id, status, adminNote);
+          if (updated) broadcastAccessLive({ type: "report_status", report: updated });
+          return json({ report: updated });
         }
       }
 

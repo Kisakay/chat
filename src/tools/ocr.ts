@@ -77,8 +77,7 @@ export class OcrTool implements PlatformTool {
   async transcribe(image: Uint8Array): Promise<{ text: string; truncated: boolean }> {
     if (!(await this.isAvailable())) throw new Error((await this.unavailableReason()) ?? "ocr unavailable");
     const t0 = Date.now();
-    const maxChars = config.ocrMaxChars;
-    let proc;
+    const maxChars = config.ocrMaxChars;    let proc;
     try {
       proc = Bun.spawn([tessBin(), "stdin", "stdout", "-l", config.ocrLang, "--psm", "3"], {
         stdin: image,
@@ -104,7 +103,7 @@ export class OcrTool implements PlatformTool {
       if (code !== 0) {
         throw new Error(`ocr failed (exit ${code}): ${errText.trim().slice(0, 300)}`);
       }
-      let text = out.replace(/\f/g, "").trim();
+      let text = sanitizeOcrText(out);
       let truncated = false;
       if (text.length > maxChars) {
         text = text.slice(0, maxChars);
@@ -116,6 +115,52 @@ export class OcrTool implements PlatformTool {
       clearTimeout(timeout);
     }
   }
+}
+
+/**
+ * Strip unrecognizable output from the OCR engine while preserving every
+ * legitimate character (accents, CJK, punctuation, emoji…).
+ *
+ * Tesseract emits raw control bytes, Unicode private-use / unassigned /
+ * surrogate code points and U+FFFD replacement chars when glyphs are
+ * unreadable, plus form-feeds between pages and \r line endings. Those
+ * poison the model prompt and the attachment preview, so they are removed
+ * here. Visible-but-dubious glyphs (|, ~, …) are kept: they may be real
+ * content and only the user can judge them in the review step.
+ */
+export function sanitizeOcrText(raw: string): string {
+  // Normalize line endings first; form-feeds are page breaks, not content.
+  let text = raw.replace(/\r\n?/g, "\n").replace(/\f/g, "\n");
+  // Strip BOMs / zero-width no-break spaces anywhere (keep ZWJ + VS16 so
+  // emoji sequences survive).
+  text = text.replace(/[\uFEFF\u200B\u200C\u2060\u180E]/g, "");
+  let out = "";
+  for (const ch of text) {
+    if (ch === "\n" || ch === "\t" || ch === "\u200D" || ch === "\uFE0F") {
+      out += ch;
+      continue;
+    }
+    const cp = ch.codePointAt(0)!;
+    // U+FFFD (replacement char) and U+FFFE/FFFF are the engine's markers
+    // for unreadable glyphs — never real content.
+    if (cp === 0xfffd || cp === 0xfffe || cp === 0xffff) continue;
+    // Keep letters, marks, numbers, punctuation, symbols and spaces.
+    // Drops Cc/Cf/Cs/Co/Cn (controls, formats, surrogates, private-use,
+    // unassigned) and Zl/Zp separators.
+    if (/^[\p{L}\p{M}\p{N}\p{P}\p{S}\p{Zs}]$/u.test(ch)) {
+      out += ch;
+    }
+    // Anything else is unrecognizable — drop it.
+  }
+  // Tidy whitespace without touching indentation: trim line ends, collapse
+  // 3+ blank lines, drop leading/trailing blank lines.
+  out = out
+    .split("\n")
+    .map((line) => line.replace(/[ \t\u00A0]+$/g, ""))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return out;
 }
 
 export { OCR_MAX_BYTES };

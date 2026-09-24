@@ -1,8 +1,11 @@
+import { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CopyButton } from "./ui.tsx";
+import { highlightCode } from "../lib/highlight.tsx";
 
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
+  const nodes = useMemo(() => highlightCode(code, lang), [code, lang]);
   return (
     <div className="relative">
       {lang && (
@@ -12,7 +15,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
         <CopyButton text={code} />
       </div>
       <pre className={lang ? "pt-9" : ""}>
-        <code>{code}</code>
+        <code>{nodes}</code>
       </pre>
     </div>
   );

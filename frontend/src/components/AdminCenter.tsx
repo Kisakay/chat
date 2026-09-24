@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Boxes, Eye, EyeOff, Flag, Inbox, LayoutDashboard, Mail, Send, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
-import { api, getToken } from "../lib/api.ts";
+import { api, getToken, type AccessStatus, type ReportStatus } from "../lib/api.ts";
 import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import { AdminPanel } from "./AdminPanel.tsx";
 import { AccessRequestsPanel } from "./AccessRequests.tsx";
 import { ReportsPanel } from "./ReportsPanel.tsx";
 import { ModelsPanel } from "./ModelsPanel.tsx";
+import { Toasts } from "./Toasts.tsx";
+import { pushToast } from "../lib/toasts.ts";
 import { Button, CopyButton, FlowerMark, Input, LoadingScreen, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 import { msUntilNextSolarSwitch, resolveThemeDark } from "../lib/solarTheme.ts";
@@ -29,6 +31,9 @@ export function AdminCenter() {
   const [saving, setSaving] = useState(false);
   const [openAccessCount, setOpenAccessCount] = useState(0);
   const [openReportCount, setOpenReportCount] = useState(0);
+  // Full badge resync (HTTP) — only for mount, reconnect gaps and rare
+  // actions with no WS event (reporter shadow-ban). Hot path is incremental.
+  const resyncBadgesRef = useRef<() => void>(() => {});
 
   const TABS: { id: Tab; label: string; icon: typeof Users }[] = [
     { id: "accounts", label: t("center.tabAccounts"), icon: Users },
@@ -64,40 +69,74 @@ export function AdminCenter() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  // Live badges on the Access/Reports tabs: the admin firehose pushes every access
-  // event, so the open counts stay fresh with zero polling (reports re-fetch
-  // alongside). Resync on (re)connect covers events missed while offline.
+  // Live badges on the Access/Reports tabs: the admin firehose pushes full
+  // payloads, so the open counts update incrementally with zero HTTP.
+  // Resync on (re)connect covers events missed while offline.
   useEffect(() => {
     if (!allowed) return;
-    async function fetchCount() {
+    const accessById = new Map<string, AccessStatus>();
+    const reportById = new Map<string, { status: ReportStatus; shadowbanned: number }>();
+    function recount() {
+      let access = 0;
+      for (const s of accessById.values()) if (s === "pending" || s === "reviewing") access++;
+      let reports = 0;
+      for (const r of reportById.values()) {
+        if ((r.status === "open" || r.status === "reviewing") && r.shadowbanned !== 1) reports++;
+      }
+      setOpenAccessCount(access);
+      setOpenReportCount(reports);
+    }
+    async function resync() {
       try {
         const res = await api.adminAccessList();
-        setOpenAccessCount(
-          res.requests.filter((r) => r.status === "pending" || r.status === "reviewing").length,
-        );
+        accessById.clear();
+        for (const r of res.requests) accessById.set(r.id, r.status);
       } catch {
-        // Transient failure: keep last count.
+        // Transient failure: keep last counts.
       }
       try {
         const res = await api.adminReportList();
-        setOpenReportCount(
-          res.reports.filter((r) => (r.status === "open" || r.status === "reviewing") && r.reporter_shadowbanned !== 1).length,
-        );
+        reportById.clear();
+        for (const r of res.reports) {
+          reportById.set(r.id, { status: r.status, shadowbanned: r.reporter_shadowbanned });
+        }
       } catch {
-        // Transient failure: keep last count.
+        // Transient failure: keep last counts.
       }
+      recount();
     }
-    fetchCount();
+    resyncBadgesRef.current = resync;
+    resync();
     const token = getToken();
     if (!token) return;
     return subscribeAccessLive(wsUrl(`/api/admin/ws?token=${encodeURIComponent(token)}`), {
       onEvent: (evt) => {
-        if (evt.type !== "pong") fetchCount();
+        if (evt.type === "pong" || evt.type === "access_message") return;
+        if (evt.type === "access_created") {
+          accessById.set(evt.request_id, evt.request.status);
+          recount();
+          pushToast(t("live.newRequest", { user: evt.request.username }), { icon: "inbox" });
+        } else if (evt.type === "access_status") {
+          accessById.set(evt.request_id, evt.request.status);
+          recount();
+        } else if (evt.type === "report_created") {
+          reportById.set(evt.report.id, { status: evt.report.status, shadowbanned: evt.report.reporter_shadowbanned });
+          recount();
+          pushToast(t("live.newReport", { reason: evt.report.reason }), { icon: "mail" });
+        } else if (evt.type === "report_status") {
+          const prev = reportById.get(evt.report.id);
+          reportById.set(evt.report.id, {
+            status: evt.report.status,
+            shadowbanned: prev?.shadowbanned ?? evt.report.reporter_shadowbanned,
+          });
+          recount();
+        }
       },
       onSync: () => {
-        fetchCount();
+        resync();
       },
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed]);
 
   async function toggle(patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean; reportsEnabled?: boolean; usernameChangeEnabled?: boolean }) {
@@ -199,7 +238,7 @@ export function AdminCenter() {
 
         {tab === "reports" && (
           <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <ReportsPanel />
+            <ReportsPanel onShadowbanChanged={() => resyncBadgesRef.current()} />
           </section>
         )}
 
@@ -265,6 +304,7 @@ export function AdminCenter() {
 
         {tab === "mail" && <MailPanel />}
       </main>
+      <Toasts />
     </div>
   );
 }

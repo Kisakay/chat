@@ -16,7 +16,9 @@ export type ToastIcon =
   | "accent"
   | "unshare"
   | "edit"
-  | "check";
+  | "check"
+  | "mail"
+  | "inbox";
 
 export interface Toast {
   id: number;

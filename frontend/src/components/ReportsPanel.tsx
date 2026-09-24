@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Clock, Eye, EyeOff, Flag, Inbox, Search, Undo2, XCircle } from "lucide-react";
-import { api, type Report, type ReportStatus } from "../lib/api.ts";
+import { api, getToken, type Report, type ReportStatus } from "../lib/api.ts";
+import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
 import { Button, ConfirmDialog, Field, Input, Spinner } from "./ui.tsx";
 import { useT, type StringKey } from "../lib/i18n.ts";
 import { cn } from "../lib/cn.ts";
@@ -16,7 +17,7 @@ type Filter = "all" | ReportStatus;
 const FILTERS: Filter[] = ["all", "open", "reviewing", "resolved", "dismissed"];
 
 /** Admin triage for user-flagged AI responses: review / resolve / dismiss. */
-export function ReportsPanel() {
+export function ReportsPanel({ onShadowbanChanged }: { onShadowbanChanged?: () => void }) {
   const [reports, setReports] = useState<Report[]>([]);
   const [filter, setFilter] = useState<Filter>("open");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -42,11 +43,24 @@ export function ReportsPanel() {
 
   useEffect(() => {
     refresh();
-    // Live list: new reports pop without manual refresh.
-    const id = setInterval(() => {
-      if (!document.hidden) refresh();
-    }, 15000);
-    return () => clearInterval(id);
+    // Live list: the admin firehose pushes full report payloads, so rows
+    // update incrementally with zero HTTP (shares its socket with the
+    // AdminCenter badge via the pool). Full resync only on (re)connect.
+    const token = getToken();
+    if (!token) return;
+    return subscribeAccessLive(wsUrl(`/api/admin/ws?token=${encodeURIComponent(token)}`), {
+      onEvent: (evt) => {
+        if (evt.type === "report_created") {
+          setReports((prev) => (prev.some((r) => r.id === evt.report.id) ? prev : [evt.report, ...prev]));
+        } else if (evt.type === "report_status") {
+          setReports((prev) => prev.map((r) => (r.id === evt.report.id ? evt.report : r)));
+        }
+        // Access events: the AccessRequestsPanel owns them.
+      },
+      onSync: () => {
+        refresh();
+      },
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -124,7 +138,18 @@ export function ReportsPanel() {
                 </span>
               )}
             </button>
-            {selectedId === r.id && <ReportDetail report={r} onChanged={() => refresh(r.id)} />}
+            {selectedId === r.id && (
+              <ReportDetail
+                report={r}
+                onPatched={(updated) => setReports((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
+                onBanned={(reporterId, shadowbanned) => {
+                  setReports((prev) =>
+                    prev.map((x) => (x.reporter_id === reporterId ? { ...x, reporter_shadowbanned: shadowbanned ? 1 : 0 } : x)),
+                  );
+                  onShadowbanChanged?.();
+                }}
+              />
+            )}
           </li>
         ))}
       </ul>
@@ -132,7 +157,7 @@ export function ReportsPanel() {
   );
 }
 
-function ReportDetail({ report, onChanged }: { report: Report; onChanged: () => void }) {
+function ReportDetail({ report, onPatched, onBanned }: { report: Report; onPatched: (r: Report) => void; onBanned: (reporterId: string, shadowbanned: boolean) => void }) {
   const [note, setNote] = useState(report.admin_note);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -149,8 +174,10 @@ function ReportDetail({ report, onChanged }: { report: Report; onChanged: () => 
     setBusy(true);
     setError("");
     try {
-      await api.adminReportPatch(report.id, { status, adminNote: note.trim() });
-      onChanged();
+      // The report_status broadcast echoes the same payload to every admin —
+      // applying the response directly keeps this view instant and idempotent.
+      const res = await api.adminReportPatch(report.id, { status, adminNote: note.trim() });
+      onPatched(res.report);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("reports.updateFailed"));
     } finally {
@@ -163,7 +190,9 @@ function ReportDetail({ report, onChanged }: { report: Report; onChanged: () => 
     setError("");
     try {
       await api.adminShadowban(report.reporter_id, shadowbanned);
-      onChanged();
+      // Shadow-ban has no WS event (per-user, not per-report): patch every
+      // row of this reporter locally and resync the badges over HTTP.
+      onBanned(report.reporter_id, shadowbanned);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("reports.updateFailed"));
     } finally {

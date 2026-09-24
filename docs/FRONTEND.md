@@ -78,8 +78,9 @@ No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
   (`{ title, topic, model, authorName, authorAvatarUrl, archived, sharedAt, messages }`);
   user messages render the author's avatar via `Avatar` (URL or initials);
   an "Archived" pill shows when the source conversation is archived.
-- `Markdown.tsx` — `react-markdown` + GFM; code blocks get a language label and
-  a copy button.
+- `Markdown.tsx` — `react-markdown` + GFM; code blocks get a language label, a
+  copy button and dependency-free syntax highlighting (`lib/highlight.tsx` —
+  regex tokenizer, no highlight.js, so the Nix offline lockfile is untouched).
 
 ## Theming
 

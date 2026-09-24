@@ -108,7 +108,10 @@ exists: key = account id (`/cdn/avatar/<id>.png`), ownership enforced.
 tesseract binary, availability probed at boot). `POST /api/tools/ocr` takes
 raw image bytes (5 MB, magic-verified, 20 jobs/hour/account) and returns
 `{ text, truncated, chars }` — transcription happens server-side with
-per-driver-style stdout logging; a missing binary yields a clean 501. Text
+per-driver-style stdout logging; a missing binary yields a clean 501.
+`sanitizeOcrText` strips engine noise (control/format/private-use code
+points, U+FFFD markers, form-feeds) while keeping legitimate text
+(accents, CJK, emoji). Text
 attachments use the `text` CDN namespace (500 KB, UTF-8 validated). The model
 only ever sees reviewed text blocks, never raw files.
 

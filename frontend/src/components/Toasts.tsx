@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Archive, ArchiveRestore, Check, Cpu, Palette, Pencil, SunMoon, Trash2, Unplug, type LucideIcon } from "lucide-react";
+import { Archive, ArchiveRestore, Check, Cpu, Inbox, Mail, Palette, Pencil, SunMoon, Trash2, Unplug, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn.ts";
 import { removeToast, TOAST_DISPLAY_MS, useToasts, type Toast, type ToastIcon } from "../lib/toasts.ts";
 
@@ -13,6 +13,8 @@ const ICONS: Record<ToastIcon, LucideIcon> = {
   unshare: Unplug,
   edit: Pencil,
   check: Check,
+  mail: Mail,
+  inbox: Inbox,
 };
 
 /** Must match the .toast-exit animation duration in index.css. */
