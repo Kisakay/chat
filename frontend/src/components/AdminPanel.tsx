@@ -192,6 +192,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [resetSent, setResetSent] = useState<{ username: string; email: string } | null>(null);
+  const [regenTarget, setRegenTarget] = useState<User | null>(null);
   // Listing: search + sort + filter + pagination (server-side).
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -264,6 +265,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
 
   async function regenerate(u: User) {
     setError("");
+    setFreshKey(null);
     try {
       const res = await api.adminRegenerate(u.id);
       setFreshKey({ username: u.username, key: res.key });
@@ -390,7 +392,7 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
                 {!u.isAdmin && (
                   <div className="flex shrink-0 gap-1">
                     <button title={t("admin.editProfile")} onClick={() => setEditTarget(u)} className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"><Pencil size={15} /></button>
-                    <button title={t("admin.regenKey")} onClick={() => regenerate(u)} className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"><RefreshCw size={15} /></button>
+                    <button title={t("admin.regenKey")} onClick={() => setRegenTarget(u)} className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"><RefreshCw size={15} /></button>
                     <button title={t("admin.resetLink")} onClick={() => setResetTarget(u)} className="rounded-full p-2 transition hover:bg-stone-100 dark:hover:bg-zinc-800"><Mail size={15} /></button>
                     <button title={t("admin.deleteAccount")} onClick={() => setDeleteTarget(u)} className="rounded-full p-2 text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><Trash2 size={15} /></button>
                   </div>
@@ -440,6 +442,19 @@ export function AdminPanel({ open, onClose, bare }: { open: boolean; onClose: ()
           const u = resetTarget;
           setResetTarget(null);
           if (u) void sendResetLink(u);
+        }}
+      />
+
+      <ConfirmDialog
+        open={regenTarget !== null}
+        onClose={() => setRegenTarget(null)}
+        title={t("admin.regenTitle", { user: regenTarget?.username ?? "" })}
+        message={t("admin.regenMsg")}
+        confirmLabel={t("admin.regenConfirm")}
+        onConfirm={() => {
+          const u = regenTarget;
+          setRegenTarget(null);
+          if (u) void regenerate(u);
         }}
       />
 
