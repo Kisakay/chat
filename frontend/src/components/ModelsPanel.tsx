@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
-import { Activity, Bot, Undo2 } from "lucide-react";
-import { api, type OllamaStatus, type PolicyModel } from "../lib/api.ts";
+import { useEffect, useState } from "react";
+import { Bot, Undo2 } from "lucide-react";
+import { api, type PolicyModel } from "../lib/api.ts";
 import { OllamaModelsModal } from "./AdminPanel.tsx";
+import { NodesSection } from "./OllamaNodes.tsx";
+import { CatalogSection } from "./OllamaCatalog.tsx";
 import { Button, Input, Spinner, Switch } from "./ui.tsx";
 import { useT } from "../lib/i18n.ts";
 import { cn } from "../lib/cn.ts";
 
-/** Admin models section: per-model kill-switch + rate limits, Ollama library. */
+/** Admin models section: node pool, per-model policy, Ollama library + HF catalog. */
 export function ModelsPanel() {
   const [models, setModels] = useState<PolicyModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export function ModelsPanel() {
 
   return (
     <div className="space-y-5">
-      <OllamaConnectivity />
+      <NodesSection />
 
       <section>
         <div className="mb-2 flex items-center gap-2">
@@ -103,143 +105,13 @@ export function ModelsPanel() {
           refresh();
         }}
       />
+
+      <CatalogSection />
     </div>
   );
 }
 
-/* ---------- Ollama connectivity probe (admin) ---------- */
-
-function fmtSize(bytes: number): string {
-  if (!bytes || bytes < 0) return "—";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let v = bytes;
-  let i = 0;
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
-  return `${v >= 100 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
-}
-
-/** Live Ollama host status: reachability, version, latency, on-disk models. */
-function OllamaConnectivity() {
-  const [status, setStatus] = useState<OllamaStatus | null>(null);
-  const [checking, setChecking] = useState(true);
-  const { t } = useT();
-
-  const check = useCallback(async () => {
-    setChecking(true);
-    try {
-      setStatus(await api.ollamaStatus());
-    } catch {
-      setStatus(null);
-    } finally {
-      setChecking(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void check();
-  }, [check]);
-
-  const state = !status ? "unknown" : !status.enabled ? "disabled" : status.reachable ? "online" : "offline";
-  const dot =
-    state === "online"
-      ? "bg-emerald-500"
-      : state === "offline"
-        ? "bg-red-500"
-        : "bg-stone-400 dark:bg-zinc-500";
-  const stateLabel =
-    state === "online"
-      ? t("models.connOnline")
-      : state === "offline"
-        ? t("models.connOffline")
-        : state === "disabled"
-          ? t("models.connDisabledState")
-          : t("common.loading");
-
-  return (
-    <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="mb-1 flex items-center gap-2">
-        <p className="flex items-center gap-1.5 text-sm font-medium">
-          <Activity size={14} className="opacity-60" /> {t("models.connTitle")}
-        </p>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-            state === "online" && "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
-            state === "offline" && "bg-red-500/10 text-red-600 dark:text-red-400",
-            (state === "disabled" || state === "unknown") && "bg-stone-200/70 dark:bg-zinc-800",
-          )}
-          role="status"
-        >
-          <span className={cn("h-2 w-2 rounded-full", dot, checking && "animate-pulse")} />
-          {checking && !status ? t("common.loading") : stateLabel}
-        </span>
-        <button
-          onClick={() => void check()}
-          disabled={checking}
-          className="ml-auto rounded-full p-2 opacity-60 transition hover:bg-stone-200/60 hover:opacity-100 disabled:opacity-30 dark:hover:bg-zinc-800"
-          title={t("models.connCheck")}
-          aria-label={t("models.connCheckAria")}
-        >
-          <Undo2 size={15} className={checking ? "animate-spin" : undefined} />
-        </button>
-      </div>
-      <p className="mb-3 text-sm opacity-60">{t("models.connDesc")}</p>
-
-      {status && (
-        <dl className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className="rounded-2xl bg-stone-100/70 px-3 py-2 dark:bg-zinc-800/60">
-            <dt className="text-[11px] uppercase tracking-wider opacity-50">{t("models.connHost")}</dt>
-            <dd className="truncate font-mono text-sm" title={status.host}>{status.host}</dd>
-          </div>
-          <div className="rounded-2xl bg-stone-100/70 px-3 py-2 dark:bg-zinc-800/60">
-            <dt className="text-[11px] uppercase tracking-wider opacity-50">{t("models.connVersion")}</dt>
-            <dd className="truncate font-mono text-sm">{status.version ?? "—"}</dd>
-          </div>
-          <div className="rounded-2xl bg-stone-100/70 px-3 py-2 dark:bg-zinc-800/60">
-            <dt className="text-[11px] uppercase tracking-wider opacity-50">{t("models.connLatency")}</dt>
-            <dd className="truncate font-mono text-sm">{status.latencyMs === null ? "—" : `${status.latencyMs} ms`}</dd>
-          </div>
-          <div className="rounded-2xl bg-stone-100/70 px-3 py-2 dark:bg-zinc-800/60">
-            <dt className="text-[11px] uppercase tracking-wider opacity-50">{t("models.connModels")}</dt>
-            <dd className="truncate font-mono text-sm">{status.models.length}</dd>
-          </div>
-        </dl>
-      )}
-
-      {!checking && !status && (
-        <p className="mb-3 rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm text-red-600 dark:text-red-400" role="alert">
-          {t("admin.loadFailed")}
-        </p>
-      )}
-      {status && status.error && (
-        <p className="mb-3 rounded-2xl bg-red-500/10 px-4 py-2.5 text-sm text-red-600 dark:text-red-400" role="alert">
-          <span className="block font-mono text-[13px]">{status.error}</span>
-          <span className="mt-0.5 block opacity-80">{t("models.connHint")}</span>
-        </p>
-      )}
-
-      {status && status.reachable && (
-        status.models.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-stone-300 px-4 py-4 text-center text-sm opacity-50 dark:border-zinc-700">
-            {t("models.connEmpty")}
-          </p>
-        ) : (
-          <ul className="max-h-64 space-y-1.5 overflow-y-auto">
-            {status.models.map((m) => (
-              <li
-                key={m.name}
-                className="flex items-center gap-3 rounded-2xl border border-stone-200/70 px-3.5 py-2 dark:border-zinc-800"
-              >
-                <span className="min-w-0 flex-1 truncate font-mono text-sm">{m.name}</span>
-                <span className="shrink-0 text-xs opacity-60">{fmtSize(m.size)}</span>
-              </li>
-            ))}
-          </ul>
-        )
-      )}
-    </section>
-  );
-}
+/* ---------- per-model policy rows ---------- */
 
 function ModelRow({ model, onChanged, onError }: {
   model: PolicyModel;

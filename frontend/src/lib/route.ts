@@ -23,6 +23,14 @@ export function chatIdFromPath(pathname: string): string | null {
   return m ? decodeURIComponent(m[1]!) : null;
 }
 
+/** Admin section from /admin itself (null) or /admin/<tab>. */
+export function adminTabFromPath(pathname: string): string | null {
+  const p = normalizePath(pathname);
+  if (p === "/admin") return null;
+  const m = p.match(/^\/admin\/([^/]+)$/);
+  return m ? decodeURIComponent(m[1]!) : null;
+}
+
 /** Client-side navigation without reload (same-origin path only). */
 export function navigate(to: string, replace = false): void {
   const dest = normalizePath(to);

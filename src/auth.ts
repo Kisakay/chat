@@ -4,6 +4,7 @@ import {
   createSession,
   deleteSession,
   getSession,
+  getSetting,
   getUserById,
   getUserByUsername,
   toPublicUser,
@@ -108,4 +109,40 @@ export function recordAttempt(ip: string): void {
 
 export function clearAttempts(ip: string): void {
   attempts.delete(ip);
+}
+
+// --- dedicated rate limiter for password recovery (admin-configurable) ---
+// Separate bucket from login: recovery is anonymous-by-design (always-ok
+// answers) so it needs its own, usually stricter, envelope.
+
+const recoveryAttempts = new Map<string, number[]>();
+
+function clampSettingInt(raw: string, min: number, max: number, fallback: number): number {
+  const v = Number.parseInt(raw, 10);
+  if (!Number.isInteger(v)) return fallback;
+  return Math.min(max, Math.max(min, v));
+}
+
+export async function recoveryLimitMax(): Promise<number> {
+  return clampSettingInt(await getSetting("recovery_limit_max", "5"), 1, 100, 5);
+}
+
+export async function recoveryLimitWindowMs(): Promise<number> {
+  return clampSettingInt(await getSetting("recovery_limit_window_min", "60"), 1, 1440, 60) * 60_000;
+}
+
+export async function isRecoveryLimited(ip: string): Promise<{ limited: boolean; retryAfterSec: number }> {
+  const windowMs = await recoveryLimitWindowMs();
+  const max = await recoveryLimitMax();
+  const now = Date.now();
+  const list = (recoveryAttempts.get(ip) ?? []).filter((t) => t > now - windowMs);
+  recoveryAttempts.set(ip, list);
+  if (list.length < max) return { limited: false, retryAfterSec: 0 };
+  return { limited: true, retryAfterSec: Math.max(1, Math.ceil((list[0]! + windowMs - now) / 1000)) };
+}
+
+export function recordRecoveryAttempt(ip: string): void {
+  const list = recoveryAttempts.get(ip) ?? [];
+  list.push(Date.now());
+  recoveryAttempts.set(ip, list);
 }

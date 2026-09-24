@@ -121,7 +121,11 @@ only ever sees reviewed text blocks, never raw files.
 Models are addressed as `"driver:model"` (split on the first `:`).
 
 - `OllamaDriver`: model discovery via `GET {OLLAMA_HOST}/api/tags`, chat via
-  `POST /api/chat` with NDJSON streaming.
+  `POST /api/chat` with NDJSON streaming. Multi-node pool (`src/ollamaNodes.ts`:
+  `ollama_nodes` table + `effectiveOllamaNodes()`): each generation picks a
+  node by weighted random and fails over pre-stream on error/timeout
+  (`ollama_timeout_s` setting); per-attempt telemetry (ok, latency, token
+  counts) lands in `ollama_stats` for the admin charts.
 - `GET /api/models` is served from an in-memory cache in `DriverRegistry`
   (`MODEL_CACHE_TTL_MS` = 60 s) so logins don't hit Ollama every time.
   Concurrent misses share one in-flight upstream fetch. Admins pass

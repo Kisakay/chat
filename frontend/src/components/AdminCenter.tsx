@@ -1,19 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Boxes, Eye, EyeOff, Flag, Inbox, LayoutDashboard, Mail, Send, ShieldAlert, SlidersHorizontal, Users } from "lucide-react";
-import { api, getToken, type AccessStatus, type ReportStatus } from "../lib/api.ts";
+import { api, getToken, type AccessStatus, type AdminSettings, type AdminSettingsPatch, type ReportStatus } from "../lib/api.ts";
 import { subscribeAccessLive, wsUrl } from "../lib/accessWs.ts";
+import { navigate } from "../lib/route.ts";
 import { AdminPanel } from "./AdminPanel.tsx";
 import { AccessRequestsPanel } from "./AccessRequests.tsx";
 import { ReportsPanel } from "./ReportsPanel.tsx";
 import { ModelsPanel } from "./ModelsPanel.tsx";
 import { Toasts } from "./Toasts.tsx";
 import { pushToast } from "../lib/toasts.ts";
-import { Button, CopyButton, FlowerMark, Input, LoadingScreen, Spinner, Switch } from "./ui.tsx";
+import { Button, CopyButton, Field, FlowerMark, Input, LoadingScreen, Spinner, Switch } from "./ui.tsx";
 import { cn } from "../lib/cn.ts";
 import { msUntilNextSolarSwitch, resolveThemeDark } from "../lib/solarTheme.ts";
 import { useT } from "../lib/i18n.ts";
 
 type Tab = "accounts" | "access" | "reports" | "models" | "features" | "mail";
+
+const VALID_TABS: readonly string[] = ["accounts", "access", "reports", "models", "features", "mail"];
+
+function validTab(v: string | null | undefined): Tab {
+  return v !== null && v !== undefined && (VALID_TABS as readonly string[]).includes(v) ? (v as Tab) : "accounts";
+}
 
 function applyTheme(theme: string) {
   const root = document.documentElement;
@@ -22,15 +29,28 @@ function applyTheme(theme: string) {
   root.style.colorScheme = dark ? "dark" : "light";
 }
 
-export function AdminCenter() {
+export function AdminCenter({ initialTab }: { initialTab?: string | null }) {
   const { t } = useT();
   const [allowed, setAllowed] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<Tab>("accounts");
-  const [settings, setSettings] = useState<{ registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean; reportsEnabled: boolean; usernameChangeEnabled: boolean } | null>(null);
+  const [tab, setTab] = useState<Tab>(() => validTab(initialTab));
+  const [settings, setSettings] = useState<AdminSettings | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [openAccessCount, setOpenAccessCount] = useState(0);
   const [openReportCount, setOpenReportCount] = useState(0);
+  // Deep links (/admin, /admin/models, …): unknown sections bounce to /admin.
+  useEffect(() => {
+    if (initialTab !== null && initialTab !== undefined && !VALID_TABS.includes(initialTab)) {
+      navigate("/admin", true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function selectTab(id: Tab): void {
+    setTab(id);
+    navigate(id === "accounts" ? "/admin" : `/admin/${id}`);
+  }
+
   // Full badge resync (HTTP) — only for mount, reconnect gaps and rare
   // actions with no WS event (reporter shadow-ban). Hot path is incremental.
   const resyncBadgesRef = useRef<() => void>(() => {});
@@ -139,7 +159,7 @@ export function AdminCenter() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed]);
 
-  async function toggle(patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean; reportsEnabled?: boolean; usernameChangeEnabled?: boolean }) {
+  async function toggle(patch: AdminSettingsPatch) {
     setSaving(true);
     setError("");
     try {
@@ -187,7 +207,7 @@ export function AdminCenter() {
             {TABS.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setTab(t.id)}
+                onClick={() => selectTab(t.id)}
                 className={cn(
                   "relative flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition",
                   tab === t.id
@@ -330,9 +350,17 @@ function MailPanel() {
   const [verifying, setVerifying] = useState(false);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [recMax, setRecMax] = useState("5");
+  const [recWindow, setRecWindow] = useState("60");
+  const [recSaving, setRecSaving] = useState(false);
+  const [recMsg, setRecMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     api.adminMailStatus().then((r) => setSmtp(r.smtp)).catch((e) => setError(e instanceof Error ? e.message : t("admin.loadFailed")));
+    api.adminGetSettings().then((r) => {
+      setRecMax(String(r.settings.recoveryLimitMax));
+      setRecWindow(String(r.settings.recoveryLimitWindowMin));
+    }).catch(() => {});
   }, []);
 
   async function verify() {
@@ -368,6 +396,27 @@ function MailPanel() {
         <span className="min-w-0 flex-1 truncate text-sm">{children}</span>
       </div>
     );
+  }
+
+  async function saveRecoveryLimits() {
+    const max = Number(recMax);
+    const win = Number(recWindow);
+    if (!Number.isInteger(max) || max < 1 || max > 100 || !Number.isInteger(win) || win < 1 || win > 1440) {
+      setRecMsg({ ok: false, text: t("rec.invalid") });
+      return;
+    }
+    setRecSaving(true);
+    setRecMsg(null);
+    try {
+      const res = await api.adminPatchSettings({ recoveryLimitMax: max, recoveryLimitWindowMin: win });
+      setRecMax(String(res.settings.recoveryLimitMax));
+      setRecWindow(String(res.settings.recoveryLimitWindowMin));
+      setRecMsg({ ok: true, text: t("rec.saved") });
+    } catch (e) {
+      setRecMsg({ ok: false, text: e instanceof Error ? e.message : t("common.saveFailed") });
+    } finally {
+      setRecSaving(false);
+    }
   }
 
   return (
@@ -464,6 +513,31 @@ function MailPanel() {
             )}
           >
             {result.text}
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-stone-200/70 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <p className="text-sm font-medium">{t("rec.title")}</p>
+        <p className="mt-0.5 text-sm opacity-60">{t("rec.desc")}</p>
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <div className="w-32">
+            <Field label={t("rec.max")} hint={t("rec.maxHint")}>
+              <Input type="number" min={1} max={100} value={recMax} onChange={(e) => setRecMax(e.target.value)} disabled={recSaving} />
+            </Field>
+          </div>
+          <div className="w-32">
+            <Field label={t("rec.window")} hint={t("rec.windowHint")}>
+              <Input type="number" min={1} max={1440} value={recWindow} onChange={(e) => setRecWindow(e.target.value)} disabled={recSaving} />
+            </Field>
+          </div>
+          <Button size="sm" onClick={saveRecoveryLimits} disabled={recSaving}>
+            {recSaving ? <Spinner size={14} /> : null} {t("rec.save")}
+          </Button>
+        </div>
+        {recMsg && (
+          <p role={recMsg.ok ? "status" : "alert"} className={cn("mt-3 rounded-2xl px-4 py-2.5 text-sm", recMsg.ok ? "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400" : "bg-red-500/10 text-red-600 dark:text-red-400")}>
+            {recMsg.text}
           </p>
         )}
       </section>

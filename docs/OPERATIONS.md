@@ -84,11 +84,14 @@ Notes:
 ## Admin Center (`/admin`) & self-registration
 
 The sidebar **Admin Center** button (admin only) opens the `/admin` page with
-four tabs: **Accounts** (same manager as before, incl. the Ollama model
-catalog), **Access** (access-request wishlist triage, see below),
-**Features** (server-side switches), **Mail** (SMTP credentials viewer +
-connectivity tester: `GET /api/admin/mail`, `POST /api/admin/mail/verify`,
-`POST /api/admin/mail/test`, admin Bearer only).
+six deep-linkable tabs (`/admin` = accounts, `/admin/models`, `/admin/access`,
+`/admin/reports`, `/admin/features`, `/admin/mail`): **Accounts** (same
+manager as before), **Access** (access-request wishlist triage, see below),
+**Reports**, **Models** (node pool, per-model policy, Ollama library + HF
+catalog), **Features** (server-side switches), **Mail** (SMTP credentials
+viewer + connectivity tester: `GET /api/admin/mail`,
+`POST /api/admin/mail/verify`, `POST /api/admin/mail/test`, admin Bearer
+only — plus the password-recovery rate limits below).
 
 - `registration_enabled` (default off): when on, the login page shows a
   working **Register** button — anyone can create an account (key shown once)
@@ -108,7 +111,20 @@ connectivity tester: `GET /api/admin/mail`, `POST /api/admin/mail/verify`,
   Admins bypass it (`PATCH /api/admin/users/:id` still works). Surfaced to
   clients via `GET /api/tools`.
 - Flags live in the `settings` SQLite table, edited via
-  `GET/PATCH /api/admin/settings` (admin Bearer only).
+  `GET/PATCH /api/admin/settings` (admin Bearer only). The same endpoint
+  carries the Ollama pool tuning (`ollama_timeout_s` 5–3600, default 300;
+  `ollama_default_weight` 0–1000, default 100) and the recovery envelope
+  (`recovery_limit_max` 1–100, default 5; `recovery_limit_window_min`
+  1–1440, default 60).
+
+## Password recovery rate limits
+
+`POST /api/auth/recover` and the `/api/auth/reset/:token` endpoints share a
+dedicated per-IP envelope (separate from login brute-force protection):
+every hit counts, successes included (recovery answers are always-ok by
+design, so enumeration is impossible). Over-limit answers 429 with
+`retryAfterSec` + `Retry-After`. The limits are admin-configurable live in
+Admin Center → Mail → Password recovery limits, no restart.
 
 ## Model access policy (kill-switch + rate limits)
 
@@ -124,10 +140,38 @@ an **Enabled** switch and **hourly / daily** per-user request caps
   toward limits even when generation later fails; over-limit answers 429.
 - Routes: `GET /api/admin/model-policy[?refresh=1]`,
   `PATCH /api/admin/model-policy` (`{model, enabled?, hourly?, daily?}`).
-  Ollama library: `POST /api/admin/ollama/pull` (NDJSON progress),
-  `DELETE /api/admin/ollama/models/:name`, and the connectivity probe
-  `GET /api/admin/ollama/status` (reachability, version, on-disk models —
-  surfaced in Admin Center → Models).
+  Ollama library: `POST /api/admin/ollama/pull` (`{name, nodeId?}`, NDJSON
+  progress — library tags AND `hf.co/user/repo:quant` references),
+  `DELETE /api/admin/ollama/models/:name[?node=]`, and the connectivity probe
+  `GET /api/admin/ollama/status` (default node — surfaced in the node pool).
+
+## Ollama node pool (multi-host, weighted)
+
+Admin Center → Models → **Ollama nodes**: register extra Ollama hosts
+(modal with name, host, weight + a Test probe before saving). The
+env-configured `OLLAMA_HOST` stays as the implicit `default` node (read-only
+row, `env` badge). Each generation picks a node by **weighted random**
+among enabled nodes with weight > 0 (share shown as % — firewall-like
+priority, heaviest first) and fails over to the next node on error or
+timeout, but only before any token was produced (a started reply never
+restarts elsewhere). Weight 0 or disabled = no traffic. Pool changes
+invalidate the model list cache; `listModels` merges tags across nodes.
+
+- `ollama_timeout_s` (default 300 s, Admin Center → Models): max time for
+  one generation per node attempt (caller aborts propagate instantly and
+  never fail over).
+- Node detail view: live probe (version, latency, on-disk models, running
+  models with VRAM via `/api/ps`) + load charts over 1h / 6h / 24h / 7d /
+  30d (requests, errors, avg latency, tokens/s from app-side generation
+  telemetry in `ollama_stats`, 35-day retention — Ollama exposes no CPU/RAM
+  API, so host CPU/RAM meters are intentionally absent).
+- HF catalog (same tab): live Hugging Face search (`filter=gguf`, sorted by
+  downloads), per-repo quantization picker, one-click pull to the selected
+  node. Needs Ollama with `hf.co/…` support + internet on that host.
+- Routes: `GET/POST /api/admin/ollama/nodes`, `PATCH/DELETE
+  /api/admin/ollama/nodes/:id`, `GET …/nodes/:id/status`,
+  `GET …/nodes/:id/stats?window=1h|6h|24h|7d|30d`,
+  `GET /api/admin/ollama/probe?host=…`.
 
 ## Personal providers (BYOK)
 

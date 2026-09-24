@@ -15,3 +15,28 @@ fait un timeout sur les requete envoyez au ollama , configurable dans l'admin ce
 Faire un catalog des modèles ollama via internet /hugging face compatible ollama.
 voir les détails des nodes ollama (charge cpu, mémoire, vram..., sur le temps (1h,6h,12h,24h,7w,14w,1m))
 leur composants,...
+
+--- 
+
+Changer le favicon en fonction de la couleur accentique.
+Revoir la plate-forme
+
+----
+
+Proposer un Text-to-speech dans le composer de message via un Modèle comme whisper ou autre (voir tts)
+le composer message qui fait les message vocaux, doit respecter la DA du site, un beau truc, avec les waves form jolie du message vocal en real time, proposer de stoper la vocal, transcribe en texte, proposer l'édition avant envoie
+
+---- pour les telemtry des nodes ollama
+Vraiment rendre le truc super clean: telemtry avec très beau graphe, dock bar, pour changer le type de graphique, faire une vrai sous-page dans le admin center, avec de magnifique graphe, mangifique tooltip vraiment sympathique, voir le host, kernel, uptime, network, ip, etc
+
+--- pour les waves formes du message vocal, rendre le tout vraiment vraiment beau, un beau composer unique.
+--- Nouvel outil, l'ia en temps réel:
+Faire un Speech-To-Speech, soit avec whisper + LLM ,etc proposer à l'utilisateur sont combo modèle + très belle animation quand le modèle parle, un peu style siri ai. (Apple Inteligence) , outil potentiel à inclur: FlowerlyTTS local ou bien modèle whisper , speech2speech. Proposer dans l'admin center sa configuration , avec les outils, etc...
+Le modèle doit détecter la langue par le texte/etc. l'user peut customiser l'accent sur sa langue configuré(accent féminin, accent masculin, avec preview audio sur un text déjà pré-encoder: Exemple: 
+"Salut, euhm, comment je peux t'aider aujourd'hui ?"> voix grave héistante
+"5 sur 5 je recois! Que-veux-tu ?" voix grave ton serieux
+"Owwww, ce chat est trop mignon, oops, pardon. Je me concentre, que puis-je faire pour toi  " voix fémine, mignonne
+"Hey , que puis-je faire pour toi ? " voix féminine médium par exemple
+
+Ces exemples sont les default voix preview . dans l'admin center , l'utilisateur peut les modifier /revenir à défaut
+L'utilisateur doit pouvoir configurée ces ai,vocaux,voix,langue dans une sous-section dédier dans ces paramètres.

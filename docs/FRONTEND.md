@@ -81,6 +81,11 @@ No router library — a tiny history wrapper (`lib/route.ts`: `navigate()`,
 - `Markdown.tsx` — `react-markdown` + GFM; code blocks get a language label, a
   copy button and dependency-free syntax highlighting (`lib/highlight.tsx` —
   regex tokenizer, no highlight.js, so the Nix offline lockfile is untouched).
+- Admin Center tabs are deep-linkable (`/admin`, `/admin/models`,
+  `/admin/access`, … — `lib/route.ts` `adminTabFromPath`, SPA fallback serves
+  them all). Models tab: `OllamaNodes.tsx` (pool with weights, per-node live
+  status + 1h–30d load charts, generation timeout) and `OllamaCatalog.tsx`
+  (live Hugging Face GGUF search + one-click `hf.co/…` pull to a node).
 
 ## Theming
 

@@ -9,7 +9,7 @@ import type {
   FilePreview,
   User,
 } from "./lib/types.ts";
-import { chatIdFromPath, isChatPath, navigate, normalizePath, useRoute } from "./lib/route.ts";
+import { adminTabFromPath, chatIdFromPath, isChatPath, navigate, normalizePath, useRoute } from "./lib/route.ts";
 import { Login } from "./components/Login.tsx";
 import { RegisterPage } from "./components/RegisterPage.tsx";
 import { Sidebar } from "./components/Sidebar.tsx";
@@ -44,7 +44,7 @@ const RESET_TOKEN = typeof window !== "undefined" ? resetTokenFromPath() : null;
 const REVIEW_ID = typeof window !== "undefined" ? reviewIdFromPath() : null;
 const IS_ADMIN_PAGE =
   typeof window !== "undefined" &&
-  /^\/admin\/?$/.test(window.location.pathname);
+  (/^\/admin\/?$/.test(window.location.pathname) || adminTabFromPath(window.location.pathname) !== null);
 
 function resetTokenFromPath(): string | null {
   const m = window.location.pathname.match(
@@ -139,7 +139,7 @@ export function App() {
 
   // Public routes: no auth needed. IDs are constant for the page lifetime.
   if (IS_ADMIN_PAGE) {
-    return <AdminCenter />;
+    return <AdminCenter initialTab={adminTabFromPath(window.location.pathname)} />;
   }
   if (RESET_TOKEN) {
     return <ResetPage token={RESET_TOKEN} />;

@@ -68,6 +68,74 @@ export interface OllamaHostModel {
   modifiedAt: string | null;
 }
 
+export interface AdminSettings {
+  registrationEnabled: boolean;
+  accessRequestEnabled: boolean;
+  ocrEnabled: boolean;
+  reportsEnabled: boolean;
+  usernameChangeEnabled: boolean;
+  ollamaTimeoutS: number;
+  ollamaDefaultWeight: number;
+  recoveryLimitMax: number;
+  recoveryLimitWindowMin: number;
+}
+
+export interface AdminSettingsPatch {
+  registrationEnabled?: boolean;
+  accessRequestEnabled?: boolean;
+  ocrEnabled?: boolean;
+  reportsEnabled?: boolean;
+  usernameChangeEnabled?: boolean;
+  ollamaTimeoutS?: number;
+  ollamaDefaultWeight?: number;
+  recoveryLimitMax?: number;
+  recoveryLimitWindowMin?: number;
+}
+
+export interface OllamaNode {
+  id: string;
+  name: string;
+  host: string;
+  weight: number;
+  enabled: boolean;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface EffectiveOllamaNode {
+  id: string;
+  name: string;
+  host: string;
+  weight: number;
+}
+
+export interface OllamaNodeStatus {
+  reachable: boolean;
+  host: string;
+  version: string | null;
+  latencyMs: number | null;
+  models: OllamaHostModel[];
+  running: { name: string; sizeVram: number; size: number; expiresAt: string | null }[];
+  error: string | null;
+}
+
+export interface OllamaStatsBucket {
+  t: number;
+  req: number;
+  err: number;
+  avgMs: number | null;
+  promptTok: number;
+  evalTok: number;
+}
+
+export interface OllamaNodeStats {
+  window: string;
+  from: number;
+  to: number;
+  totals: { req: number; err: number; avgMs: number | null; promptTok: number; evalTok: number; tokPerSec: number | null };
+  buckets: OllamaStatsBucket[];
+}
+
 export interface OllamaStatus {
   enabled: boolean;
   host: string;
@@ -188,9 +256,9 @@ export const api = {
   adminPatch: (id: string, patch: { username?: string; displayName?: string; avatarUrl?: string; theme?: string; email?: string }) =>
     req<{ user: User }>(`/api/admin/users/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
 
-  adminGetSettings: () => req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean; reportsEnabled: boolean; usernameChangeEnabled: boolean } }>("/api/admin/settings"),
-  adminPatchSettings: (patch: { registrationEnabled?: boolean; accessRequestEnabled?: boolean; ocrEnabled?: boolean; reportsEnabled?: boolean; usernameChangeEnabled?: boolean }) =>
-    req<{ settings: { registrationEnabled: boolean; accessRequestEnabled: boolean; ocrEnabled: boolean; reportsEnabled: boolean; usernameChangeEnabled: boolean } }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
+  adminGetSettings: () => req<{ settings: AdminSettings }>("/api/admin/settings"),
+  adminPatchSettings: (patch: AdminSettingsPatch) =>
+    req<{ settings: AdminSettings }>("/api/admin/settings", { method: "PATCH", body: JSON.stringify(patch) }),
 
   /** Admin: SMTP credentials viewer (password included, blur it by default) + connectivity. */
   adminMailStatus: () =>
@@ -281,11 +349,12 @@ export const api = {
   ollamaPull: async (
     name: string,
     onProgress: (p: { status?: string; digest?: string; total?: number; completed?: number; error?: string }) => void,
+    opts: { nodeId?: string } = {},
   ): Promise<void> => {
     const res = await fetch("/api/admin/ollama/pull", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, ...(opts.nodeId ? { nodeId: opts.nodeId } : {}) }),
     });
     if (res.status === 401) {
       clearToken();
@@ -313,7 +382,23 @@ export const api = {
   },
 
   /** Admin: delete a local Ollama model (frees disk on the Ollama host). */
-  ollamaDelete: (name: string) => req<{ ok: boolean }>(`/api/admin/ollama/models/${encodeURIComponent(name)}`, { method: "DELETE" }),
+  ollamaDelete: (name: string, nodeId?: string) =>
+    req<{ ok: boolean }>(`/api/admin/ollama/models/${encodeURIComponent(name)}${nodeId ? `?node=${encodeURIComponent(nodeId)}` : ""}`, { method: "DELETE" }),
+
+  /** Admin: Ollama node pool (extra hosts with firewall-like weights). */
+  ollamaNodes: () => req<{ nodes: OllamaNode[]; effective: EffectiveOllamaNode[] }>("/api/admin/ollama/nodes"),
+  ollamaNodeCreate: (n: { name: string; host: string; weight: number; enabled: boolean }) =>
+    req<{ node: OllamaNode }>("/api/admin/ollama/nodes", { method: "POST", body: JSON.stringify(n) }),
+  ollamaNodePatch: (id: string, patch: { name?: string; host?: string; weight?: number; enabled?: boolean }) =>
+    req<{ node: OllamaNode }>(`/api/admin/ollama/nodes/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) }),
+  ollamaNodeDelete: (id: string) =>
+    req<{ ok: boolean }>(`/api/admin/ollama/nodes/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  ollamaNodeStatus: (id: string) =>
+    req<OllamaNodeStatus>(`/api/admin/ollama/nodes/${encodeURIComponent(id)}/status`),
+  ollamaNodeProbe: (host: string) =>
+    req<OllamaNodeStatus>(`/api/admin/ollama/probe?host=${encodeURIComponent(host)}`),
+  ollamaNodeStats: (id: string, window: string) =>
+    req<{ stats: OllamaNodeStats }>(`/api/admin/ollama/nodes/${encodeURIComponent(id)}/stats?window=${encodeURIComponent(window)}`),
 
   /** Admin: Ollama connectivity probe (reachability, version, on-disk models). */
   ollamaStatus: () => req<OllamaStatus>("/api/admin/ollama/status"),

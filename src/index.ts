@@ -5,14 +5,35 @@ import {
   extractBearer,
   hashSecret,
   isRateLimited,
+  isRecoveryLimited,
   issueToken,
   login,
   newAccessKey,
   recordAttempt,
+  recordRecoveryAttempt,
+  recoveryLimitMax,
+  recoveryLimitWindowMs,
   revokeToken,
   verifyToken,
   type PublicUser,
 } from "./auth.ts";
+import {
+  createOllamaNode,
+  DEFAULT_NODE_ID,
+  deleteOllamaNode,
+  effectiveOllamaNodes,
+  getOllamaDefaultWeight,
+  getOllamaNode,
+  getOllamaTimeoutMs,
+  listOllamaNodes,
+  nodeStats,
+  resolveOllamaHost,
+  sanitizeNodeHost,
+  sanitizeNodeName,
+  sanitizeWeight,
+  updateOllamaNode,
+  type StatsWindow,
+} from "./ollamaNodes.ts";
 import {
   addMessage,
   consumeReset,
@@ -123,6 +144,7 @@ import {
 } from "./cdn.ts";
 import { OCR_MAX_BYTES, ocrAllowed, recordOcrJob } from "./tools/ocr.ts";
 import { tools } from "./tools/registry.ts";
+import { initOllamaNodes } from "./ollamaNodes.ts";
 
 assertConfig();
 await initDb();
@@ -134,12 +156,71 @@ await initAccessTables();
 await initReportsTables();
 await initModelUsageTables();
 await initTotpTables();
+await initOllamaNodes();
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
+}
+
+/**
+ * Live probe of one Ollama host: version, latency, on-disk models and
+ * running models (/api/ps — the only load signal Ollama exposes, with
+ * per-model VRAM usage). Always resolves (reachability is data).
+ */
+async function probeOllamaHost(host: string): Promise<{
+  reachable: boolean;
+  host: string;
+  version: string | null;
+  latencyMs: number | null;
+  models: { name: string; size: number; modifiedAt: string | null }[];
+  running: { name: string; sizeVram: number; size: number; expiresAt: string | null }[];
+  error: string | null;
+}> {
+  const t0 = Date.now();
+  try {
+    const verRes = await fetch(`${host}/api/version`, { signal: AbortSignal.timeout(8000) });
+    if (!verRes.ok) {
+      return { reachable: false, host, version: null, latencyMs: Date.now() - t0, models: [], running: [], error: `ollama /api/version failed: ${verRes.status}` };
+    }
+    const ver = (await verRes.json().catch(() => ({}))) as { version?: unknown };
+    const tagsRes = await fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(8000) });
+    const tags = (await tagsRes.json().catch(() => ({}))) as { models?: { name?: unknown; size?: unknown; modified_at?: unknown }[] };
+    const models = tagsRes.ok && Array.isArray(tags.models)
+      ? tags.models
+        .filter((m) => typeof m.name === "string")
+        .map((m) => ({
+          name: m.name as string,
+          size: typeof m.size === "number" ? m.size : 0,
+          modifiedAt: typeof m.modified_at === "string" ? (m.modified_at as string) : null,
+        }))
+      : [];
+    const psRes = await fetch(`${host}/api/ps`, { signal: AbortSignal.timeout(8000) });
+    const ps = (await psRes.json().catch(() => ({}))) as { models?: { name?: unknown; size_vram?: unknown; size?: unknown; expires_at?: unknown }[] };
+    const running = psRes.ok && Array.isArray(ps.models)
+      ? ps.models
+        .filter((m) => typeof m.name === "string")
+        .map((m) => ({
+          name: m.name as string,
+          sizeVram: typeof m.size_vram === "number" ? m.size_vram : 0,
+          size: typeof m.size === "number" ? m.size : 0,
+          expiresAt: typeof m.expires_at === "string" ? (m.expires_at as string) : null,
+        }))
+      : [];
+    return {
+      reachable: true,
+      host,
+      version: typeof ver.version === "string" ? ver.version : null,
+      latencyMs: Date.now() - t0,
+      models,
+      running,
+      error: null,
+    };
+  } catch (e) {
+    return { reachable: false, host, version: null, latencyMs: Date.now() - t0, models: [], running: [], error: (e as Error).message };
+  }
 }
 
 function clientIp(req: Request, server: { requestIP?: (r: Request) => { address: string } | null }): string {
@@ -487,6 +568,16 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
     if (path === "/api/auth/recover" && req.method === "POST") {
       const ip = clientIp(req, server);
       if (isRateLimited(ip)) return json({ error: "too many attempts, try again later" }, 429);
+      // Dedicated recovery envelope (admin-configurable, stricter than
+      // login): every hit counts, successes included (anonymous by design).
+      const rl = await isRecoveryLimited(ip);
+      if (rl.limited) {
+        return new Response(
+          JSON.stringify({ error: "too many recovery attempts, try again later", retryAfterSec: rl.retryAfterSec }),
+          { status: 429, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Retry-After": String(rl.retryAfterSec) } },
+        );
+      }
+      recordRecoveryAttempt(ip);
       const { ok, body } = await readJson(req);
       // Never enumerate accounts: always answer ok.
       if (ok && typeof body.username === "string") {
@@ -507,6 +598,15 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
 
     const resetMatch = path.match(/^\/api\/auth\/reset\/([A-Za-z0-9_-]{6,80})$/);
     if (resetMatch) {
+      const ip = clientIp(req, server);
+      const rl = await isRecoveryLimited(ip);
+      if (rl.limited) {
+        return new Response(
+          JSON.stringify({ error: "too many recovery attempts, try again later", retryAfterSec: rl.retryAfterSec }),
+          { status: 429, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Retry-After": String(rl.retryAfterSec) } },
+        );
+      }
+      recordRecoveryAttempt(ip);
       const tokenHash = createHash("sha256").update(resetMatch[1]!).digest("hex");
       if (req.method === "GET") {
         const r = await peekReset(tokenHash);
@@ -866,6 +966,10 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             ocrEnabled: (await getSetting("tools_ocr_enabled", "1")) === "1",
             reportsEnabled: await isReportsEnabled(),
             usernameChangeEnabled: await isUsernameChangeEnabled(),
+            ollamaTimeoutS: Math.round(await getOllamaTimeoutMs() / 1000),
+            ollamaDefaultWeight: await getOllamaDefaultWeight(),
+            recoveryLimitMax: await recoveryLimitMax(),
+            recoveryLimitWindowMin: Math.round(await recoveryLimitWindowMs() / 60_000),
           },
         });
       }
@@ -901,6 +1005,30 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
           if (typeof body.usernameChangeEnabled !== "boolean") return json({ error: "usernameChangeEnabled must be boolean" }, 400);
           await setSetting("username_change_enabled", body.usernameChangeEnabled ? "1" : "0");
         }
+        if (body.ollamaTimeoutS !== undefined) {
+          if (!Number.isInteger(body.ollamaTimeoutS) || (body.ollamaTimeoutS as number) < 5 || (body.ollamaTimeoutS as number) > 3600) {
+            return json({ error: "ollamaTimeoutS must be an integer 5-3600 (seconds)" }, 400);
+          }
+          await setSetting("ollama_timeout_s", String(body.ollamaTimeoutS));
+        }
+        if (body.ollamaDefaultWeight !== undefined) {
+          if (!Number.isInteger(body.ollamaDefaultWeight) || (body.ollamaDefaultWeight as number) < 0 || (body.ollamaDefaultWeight as number) > 1000) {
+            return json({ error: "ollamaDefaultWeight must be an integer 0-1000 (0 = never use the default node)" }, 400);
+          }
+          await setSetting("ollama_default_weight", String(body.ollamaDefaultWeight));
+        }
+        if (body.recoveryLimitMax !== undefined) {
+          if (!Number.isInteger(body.recoveryLimitMax) || (body.recoveryLimitMax as number) < 1 || (body.recoveryLimitMax as number) > 100) {
+            return json({ error: "recoveryLimitMax must be an integer 1-100" }, 400);
+          }
+          await setSetting("recovery_limit_max", String(body.recoveryLimitMax));
+        }
+        if (body.recoveryLimitWindowMin !== undefined) {
+          if (!Number.isInteger(body.recoveryLimitWindowMin) || (body.recoveryLimitWindowMin as number) < 1 || (body.recoveryLimitWindowMin as number) > 1440) {
+            return json({ error: "recoveryLimitWindowMin must be an integer 1-1440 (minutes)" }, 400);
+          }
+          await setSetting("recovery_limit_window_min", String(body.recoveryLimitWindowMin));
+        }
         return json({
           settings: {
             registrationEnabled: await isRegistrationEnabled(),
@@ -908,6 +1036,10 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
             ocrEnabled: (await getSetting("tools_ocr_enabled", "1")) === "1",
             reportsEnabled: await isReportsEnabled(),
             usernameChangeEnabled: await isUsernameChangeEnabled(),
+            ollamaTimeoutS: Math.round(await getOllamaTimeoutMs() / 1000),
+            ollamaDefaultWeight: await getOllamaDefaultWeight(),
+            recoveryLimitMax: await recoveryLimitMax(),
+            recoveryLimitWindowMin: Math.round(await recoveryLimitWindowMs() / 60_000),
           },
         });
       }
@@ -965,6 +1097,16 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         const name = typeof body.name === "string" ? body.name.trim() : "";
         if (!/^[a-z0-9._:\/-]{1,100}$/i.test(name)) return json({ error: "invalid model name" }, 400);
         if (!ollamaDriver.enabled) return json({ error: "ollama driver is disabled" }, 502);
+        // Target node for the pull (library tags AND hf.co/... references).
+        let pullHost = ollamaDriver.host;
+        if (body.nodeId !== undefined) {
+          if (typeof body.nodeId !== "string") return json({ error: "nodeId must be a string" }, 400);
+          try {
+            pullHost = (await resolveOllamaHost(body.nodeId === DEFAULT_NODE_ID ? undefined : body.nodeId)).host;
+          } catch {
+            return json({ error: "unknown ollama node" }, 404);
+          }
+        }
         const abortUpstream = new AbortController();
         const onClientAbort = () => abortUpstream.abort();
         req.signal.addEventListener("abort", onClientAbort);
@@ -983,7 +1125,7 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
               }
             };
             try {
-              const res = await fetch(`${ollamaDriver.host}/api/pull`, {
+              const res = await fetch(`${pullHost}/api/pull`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ model: name, stream: true }),
@@ -1038,8 +1180,17 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
       if (ollamaDeleteMatch && req.method === "DELETE") {
         if (!admin) return json({ error: "forbidden" }, 403);
         if (!ollamaDriver.enabled) return json({ error: "ollama driver is disabled" }, 502);
+        const nodeParam = url.searchParams.get("node");
+        let deleteHost = ollamaDriver.host;
+        if (nodeParam) {
+          try {
+            deleteHost = (await resolveOllamaHost(nodeParam === DEFAULT_NODE_ID ? undefined : nodeParam)).host;
+          } catch {
+            return json({ error: "unknown ollama node" }, 404);
+          }
+        }
         try {
-          const res = await fetch(`${ollamaDriver.host}/api/delete`, {
+          const res = await fetch(`${deleteHost}/api/delete`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ model: ollamaDeleteMatch[1] }),
@@ -1166,6 +1317,117 @@ const server = Bun.serve<{ ticketId: string | null; isAdmin: boolean }>({
         } catch {
           return json({ error: "enabled must be boolean, hourly/daily integers 0-1000000" }, 400);
         }
+      }
+
+      // --- admin: ollama nodes (multi-host pool, firewall-like weights) ---
+      if (path === "/api/admin/ollama/nodes" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        return json({ nodes: await listOllamaNodes(), effective: await effectiveOllamaNodes() });
+      }
+
+      if (path === "/api/admin/ollama/nodes" && req.method === "POST") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const { ok, body } = await readJson(req);
+        if (!ok) return json({ error: "invalid JSON" }, 400);
+        const name = sanitizeNodeName(body.name);
+        const host = sanitizeNodeHost(body.host);
+        const weight = sanitizeWeight(body.weight ?? 100);
+        if (!name) return json({ error: "name: 1-60 chars" }, 400);
+        if (!host) return json({ error: "host: http(s) base URL without path (e.g. http://10.0.0.5:11434)" }, 400);
+        if (weight === null) return json({ error: "weight: integer 0-1000" }, 400);
+        if (body.enabled !== undefined && typeof body.enabled !== "boolean") {
+          return json({ error: "enabled must be boolean" }, 400);
+        }
+        try {
+          const node = await createOllamaNode({ name, host, weight, enabled: body.enabled ?? true });
+          registry.invalidateModelsCache();
+          return json({ node }, 201);
+        } catch (e) {
+          if ((e as Error).message === "HOST_TAKEN") return json({ error: "this host is already registered" }, 409);
+          throw e;
+        }
+      }
+
+      const nodeMatch = path.match(/^\/api\/admin\/ollama\/nodes\/([A-Za-z0-9_-]{1,64})$/);
+      if (nodeMatch && !path.endsWith("/status") && !path.endsWith("/stats")) {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const id = nodeMatch[1]!;
+        if (id === DEFAULT_NODE_ID) return json({ error: "the default node comes from OLLAMA_HOST and cannot be edited here" }, 400);
+        if (req.method === "DELETE") {
+          if (!await deleteOllamaNode(id)) return json({ error: "node not found" }, 404);
+          registry.invalidateModelsCache();
+          return json({ ok: true });
+        }
+        if (req.method === "PATCH") {
+          const { ok, body } = await readJson(req);
+          if (!ok) return json({ error: "invalid JSON" }, 400);
+          const patch: { name?: string; host?: string; weight?: number; enabled?: boolean } = {};
+          if (body.name !== undefined) {
+            const name = sanitizeNodeName(body.name);
+            if (!name) return json({ error: "name: 1-60 chars" }, 400);
+            patch.name = name;
+          }
+          if (body.host !== undefined) {
+            const host = sanitizeNodeHost(body.host);
+            if (!host) return json({ error: "host: http(s) base URL without path" }, 400);
+            patch.host = host;
+          }
+          if (body.weight !== undefined) {
+            const weight = sanitizeWeight(body.weight);
+            if (weight === null) return json({ error: "weight: integer 0-1000" }, 400);
+            patch.weight = weight;
+          }
+          if (body.enabled !== undefined) {
+            if (typeof body.enabled !== "boolean") return json({ error: "enabled must be boolean" }, 400);
+            patch.enabled = body.enabled;
+          }
+          try {
+            const updated = await updateOllamaNode(id, patch);
+            if (!updated) return json({ error: "node not found" }, 404);
+            registry.invalidateModelsCache();
+            return json({ node: updated });
+          } catch (e) {
+            if ((e as Error).message === "HOST_TAKEN") return json({ error: "this host is already registered" }, 409);
+            throw e;
+          }
+        }
+        return json({ error: "not found" }, 404);
+      }
+
+      // Per-node live probe: version, latency, on-disk models, running models
+      // (/api/ps — the only load signal Ollama exposes, with VRAM usage).
+      const nodeStatusMatch = path.match(/^\/api\/admin\/ollama\/nodes\/([A-Za-z0-9_-]{1,64})\/status$/);
+      if (nodeStatusMatch && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        let host: string;
+        try {
+          host = (await resolveOllamaHost(nodeStatusMatch[1] === DEFAULT_NODE_ID ? undefined : nodeStatusMatch[1])).host;
+        } catch {
+          return json({ error: "unknown ollama node" }, 404);
+        }
+        return json(await probeOllamaHost(host));
+      }
+
+      // Probe an arbitrary (not yet registered) host from the node form.
+      if (path === "/api/admin/ollama/probe" && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const host = sanitizeNodeHost(url.searchParams.get("host"));
+        if (!host) return json({ error: "host: http(s) base URL without path" }, 400);
+        return json(await probeOllamaHost(host));
+      }
+
+      // Per-node generation telemetry aggregated over a window.
+      const nodeStatsMatch = path.match(/^\/api\/admin\/ollama\/nodes\/([A-Za-z0-9_-]{1,64})\/stats$/);
+      if (nodeStatsMatch && req.method === "GET") {
+        if (!admin) return json({ error: "forbidden" }, 403);
+        const raw = (url.searchParams.get("window") ?? "24h").toLowerCase();
+        const win: StatsWindow = raw === "1h" || raw === "6h" || raw === "24h" || raw === "7d" || raw === "30d" ? raw : "24h";
+        try {
+          await resolveOllamaHost(nodeStatsMatch[1] === DEFAULT_NODE_ID ? undefined : nodeStatsMatch[1]);
+        } catch {
+          return json({ error: "unknown ollama node" }, 404);
+        }
+        return json({ stats: await nodeStats(nodeStatsMatch[1]!, win) });
       }
 
       // --- admin: access-request wishlist triage ---

@@ -61,8 +61,12 @@ from the **Accounts** panel (each gets a one-time access key to hand over).
 | GET/PATCH | `/api/admin/settings` | admin | feature flags: registrationEnabled, ocrEnabled |
 | GET/POST | `/api/conversations` | Bearer | server-persisted chats (title, topic, model) |
 | GET | `/api/conversations/search?q=` | Bearer | search titles, topics + old prompts (with snippet) |
-| POST | `/api/admin/ollama/pull` | admin | pull a model from the Ollama library (NDJSON progress) |
-| DELETE | `/api/admin/ollama/models/:name` | admin | remove a local Ollama model |
+| POST | `/api/admin/ollama/pull` | admin | pull a model (library tag or `hf.co/…`, `{name, nodeId?}`, NDJSON progress) |
+| DELETE | `/api/admin/ollama/models/:name` | admin | remove a local Ollama model (`?node=` for a pool node) |
+| GET/POST | `/api/admin/ollama/nodes` | admin | Ollama pool: list (+effective order) / register a host |
+| PATCH/DELETE | `/api/admin/ollama/nodes/:id` | admin | rename / reweight / enable / delete a node |
+| GET | `/api/admin/ollama/nodes/:id/status`, `…/stats?window=` | admin | live probe (version, running, VRAM) / load charts 1h–30d |
+| GET | `/api/admin/ollama/probe?host=` | admin | test a host before registering it |
 | GET | `/api/admin/ollama/status` | admin | Ollama connectivity probe: reachability, version, on-disk models |
 | POST | `/api/access/request` | public | reserve username+email with a motivation → ticket (`/review/:id`) |
 | GET/POST | `/api/access/ticket/:id` (+`/message`) | ticket bearer | follow + reply on an access request |
